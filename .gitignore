@@ -95,6 +95,7 @@ worktrees
 
 assets/playwright-report
 assets/test-results
+assets/scenario-reports
 .tsbuildinfo
 .tsimp
 

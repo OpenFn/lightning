@@ -38,8 +38,7 @@ export const versionChip = (page: Page) =>
 export const runStep = (page: Page, stepId: string) =>
   page.locator(`li[data-step-id="${stepId}"]`);
 
-// A step's own link, which holds its name. The port's name is a bare text
-// node beside the inspect icon and the time, so it is found by the link.
+// A step's own link, which holds its name.
 const stepLink = (page: Page, stepId: string, name: string) =>
   runStep(page, stepId).getByRole('link').filter({ hasText: name }).first();
 

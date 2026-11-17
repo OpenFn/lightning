@@ -1,0 +1,35 @@
+#!/bin/sh
+# Starts the e2e Lightning instance the scenario tests run against (port 4003,
+# database lightning_test_e2e), waits for it and its worker, then writes the
+# seeded ids and users to $STATE for the tests. Stop it with `bin/e2e stop`.
+#   assets/test/scenarios/start [scenario]     (default: example)
+set -e
+cd "$(dirname "$0")/../../.." || exit 1
+root=$(pwd)
+scenario=${1:-example}
+STATE=/tmp/verify-lightning/state # read by workers.ts and global-setup.ts
+mkdir -p $STATE
+log=$STATE/server.log
+
+# psql and pg_dump must be on PATH; bin/e2e exits silently without them.
+command -v brew >/dev/null && PATH="$(brew --prefix libpq)/bin:$PATH"
+command -v psql >/dev/null || { echo "psql not found (brew install libpq)"; exit 1; }
+export PATH
+
+RTM=true nohup bin/e2e start --scenario "$scenario" >"$log" 2>&1 &
+echo "Starting Lightning (log: $log)..."
+i=0
+until curl -sf -o /dev/null http://localhost:4003/users/log_in && grep -q 'JOINED worker:queue' "$log"; do
+  i=$((i + 1))
+  [ $i -gt 300 ] && { echo "Not up after 10 minutes; see $log"; exit 1; }
+  sleep 2
+done
+
+file=$(ls bin/e2e.d/scenarios/"$scenario".y*ml 2>/dev/null | head -1)
+[ -n "$file" ] || file=$scenario
+# Kickstart is idempotent: on the seeded database it only writes the manifest.
+MIX_ENV=dev DATABASE_URL=${LIGHTNING_DB:-postgres://postgres:postgres@localhost/lightning_test_e2e} \
+  mix lightning.kickstart "$file" --manifest $STATE/manifest.json >/dev/null
+printf '{"root":"%s","scenario":"%s","started_at":"%s"}\n' \
+  "$root" "$root/$file" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >$STATE/instance.json
+echo "Ready at http://localhost:4003"

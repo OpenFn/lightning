@@ -204,7 +204,7 @@ const credentialsOf = (projectId: string) =>
 //   When I open the sandboxes page of "Malawi HIV"
 //   Then I see a card for "Malawi HIV" with the badges "main" and "active"
 //   And I see cards for "sb-1" and "sb-2"
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -228,7 +228,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the "Malawi HIV" card shows "production"
 //   And the "sb-1" card shows "staging"
 //   And the "sb-2" card shows no environment badge
-test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     env: 'production',
@@ -254,7 +254,7 @@ test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the sandboxes page of "Malawi HIV"
 //   Then I see "with-me"
 //   And I do not see "without-me"
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner', [OTHER]: 'admin' },
@@ -277,7 +277,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the sandboxes page of "team-space"
 //   Then I see "team-space" and "leaf"
 //   And I do not see "Hidden root"
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const w = given(
     {
       name: 'Hidden root',
@@ -306,7 +306,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the sandboxes page of "Malawi HIV"
 //   Then I see "No sandboxes found"
 //   And I see a "Create your first sandbox" link
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const w = given({ name: 'Malawi HIV', members: { [ME]: 'editor' } });
 
   await onSandboxes(page, w.id('Malawi HIV'));
@@ -321,7 +321,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given project "Malawi HIV" has sandbox "sb-1" that I belong to
 //   When I click the "sb-1" card
 //   Then I am on the workflows page of "sb-1"
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -344,7 +344,7 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am on the workflows page of sandbox "test-sandbox"
 //   And I see "Sandbox created"
 //   And sandbox "test-sandbox" has env "dev" and the colour I picked
-test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const w = given({ name: 'Malawi HIV', members: { [ME]: 'editor' } });
   const root = w.id('Malawi HIV');
 
@@ -366,7 +366,7 @@ test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given "owner@example.org" is the owner, I am an admin and "ed@example.org" is an editor on project "Malawi HIV"
 //   When I create sandbox "admin-test-sandbox"
 //   Then on "admin-test-sandbox" I am an owner, "owner@example.org" is an admin and "ed@example.org" is an editor
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [OTHER]: 'owner', [ME]: 'admin', [THIRD]: 'editor' },
@@ -390,7 +390,7 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given project "Malawi HIV" allows support access
 //   When I create sandbox "test-sandbox"
 //   Then "test-sandbox" allows support access
-test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -414,7 +414,7 @@ test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I create sandbox "test-sandbox"
 //   Then "test-sandbox" has a workflow "Intake"
 //   And its trigger is disabled
-test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -438,7 +438,7 @@ test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given project "Malawi HIV" has sandbox "test-sandbox"
 //   When I start creating a sandbox and type "Test Sandbox"
 //   Then I see "Sandbox name already exists"
-test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -463,7 +463,7 @@ test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I start creating a sandbox and clear the name
 //   Then I see "can't be blank" once
 //   And the "Create sandbox" button is disabled
-test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const w = given({ name: 'Malawi HIV', members: { [ME]: 'owner' } });
   const root = w.id('Malawi HIV');
 
@@ -486,7 +486,7 @@ test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I go to "/projects/<Malawi HIV>/sandboxes/new"
 //   Then I am on the sandboxes page of "Malawi HIV"
 //   And I see "You are not authorized to create sandboxes in this workspace"
-test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const NOT_AUTHORIZED =
     'You are not authorized to create sandboxes in this workspace';
   const w = given({ name: 'Malawi HIV', members: { [ME]: 'viewer' } }, OTHER);
@@ -512,27 +512,23 @@ test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the "Create Sandbox" button is disabled and I see "Sandbox limit reached"
 //   When I go to "/projects/<Malawi HIV>/sandboxes/new"
 //   Then I am on the sandboxes page of "Malawi HIV" with the error "Sandbox limit reached"
-test(
-  '@S14',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const LIMIT = 'Sandbox limit reached';
-    const w = given({ name: 'Malawi HIV', members: { [ME]: 'owner' } });
-    const root = w.id('Malawi HIV');
-    withSetting(withLimiterRefusing('new_sandbox', LIMIT));
+test('@S14', { tag: ['@serial'] }, async ({ page }) => {
+  const LIMIT = 'Sandbox limit reached';
+  const w = given({ name: 'Malawi HIV', members: { [ME]: 'owner' } });
+  const root = w.id('Malawi HIV');
+  withSetting(withLimiterRefusing('new_sandbox', LIMIT));
 
-    await onSandboxes(page, root);
-    await expect(createButton(page)).toBeDisabled();
-    await hoverDisabled(createButton(page));
-    await expect(
-      page.getByRole('tooltip').filter({ hasText: LIMIT })
-    ).toBeVisible();
+  await onSandboxes(page, root);
+  await expect(createButton(page)).toBeDisabled();
+  await hoverDisabled(createButton(page));
+  await expect(
+    page.getByRole('tooltip').filter({ hasText: LIMIT })
+  ).toBeVisible();
 
-    await open(page, `${sandboxesPath(root)}/new`);
-    await expectAt(page, sandboxesPath(root));
-    await expect(flashMessages.toast(page, LIMIT)).toBeVisible();
-  }
-);
+  await open(page, `${sandboxesPath(root)}/new`);
+  await expectAt(page, sandboxesPath(root));
+  await expect(flashMessages.toast(page, LIMIT)).toBeVisible();
+});
 
 // @S15 @variant:nesting-capped
 // Scenario: The create button is off at the nesting limit
@@ -541,28 +537,24 @@ test(
 //   When I open the sandboxes page of "deep-sb-1"
 //   Then the "Create Sandbox" button is disabled
 //   And I see "Maximum sandbox nesting depth reached"
-test(
-  '@S15',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const w = given({
-      name: 'deep-root',
-      members: { [ME]: 'owner' },
-      sandboxes: [{ name: 'deep-sb-1' }],
-    });
-    withSetting(withSandboxNestingDepth(1));
+test('@S15', { tag: ['@serial'] }, async ({ page }) => {
+  const w = given({
+    name: 'deep-root',
+    members: { [ME]: 'owner' },
+    sandboxes: [{ name: 'deep-sb-1' }],
+  });
+  withSetting(withSandboxNestingDepth(1));
 
-    await onSandboxes(page, w.id('deep-sb-1'));
+  await onSandboxes(page, w.id('deep-sb-1'));
 
-    await expect(createButton(page)).toBeDisabled();
-    await hoverDisabled(createButton(page));
-    await expect(
-      page
-        .getByRole('tooltip')
-        .filter({ hasText: 'Maximum sandbox nesting depth reached' })
-    ).toBeVisible();
-  }
-);
+  await expect(createButton(page)).toBeDisabled();
+  await hoverDisabled(createButton(page));
+  await expect(
+    page
+      .getByRole('tooltip')
+      .filter({ hasText: 'Maximum sandbox nesting depth reached' })
+  ).toBeVisible();
+});
 
 // @S16
 // Scenario: Admin renames a sandbox
@@ -573,7 +565,7 @@ test(
 //   Then I am on the sandboxes page
 //   And I see "Sandbox updated"
 // Also recolours it in the same save, so the colour is checked to be stored.
-test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const w = given(
     {
       name: 'Malawi HIV',
@@ -608,7 +600,7 @@ test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Sandbox name already exists"
 //   When I type "sb-1"
 //   Then I see no name error
-test('@S17', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -640,7 +632,7 @@ test('@S17', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the merge, edit and delete actions on "test-sandbox" are disabled
 //   And their tooltips say "You are not authorized to merge this sandbox", "You are not authorized to edit this sandbox" and "You are not authorized to delete this sandbox"
 // And a delete or merge request from me is refused.
-test('@S18', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const w = given(
     {
       name: 'Malawi HIV',
@@ -686,7 +678,7 @@ test('@S18', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I go to "/projects/<Malawi HIV>/sandboxes/<test-sandbox>/edit"
 //   Then I am on the sandboxes page of "Malawi HIV"
 //   And I see "You are not authorized to edit this sandbox"
-test('@S19', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const w = given(
     {
       name: 'Malawi HIV',
@@ -714,7 +706,7 @@ test('@S19', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the "workspace-root" card has no edit, delete or merge actions
 //   And a delete or merge request for "workspace-root" says "You are not authorized to delete this sandbox" or "You are not authorized to merge this sandbox"
 //   And "workspace-root" is not scheduled for deletion and its trigger is still enabled
-test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const w = given(
     {
       name: 'workspace-root',
@@ -755,7 +747,7 @@ test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When a delete, restore or merge request for "hidden-sandbox" reaches the page
 //   Then I see "Sandbox not found"
 //   And no modal opens
-test('@S21', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S21', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner', [OTHER]: 'admin' },
@@ -802,7 +794,7 @@ test('@S21', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I type "sb-1" and click "Delete sandbox"
 //   Then I see "Sandbox sb-1 scheduled for deletion."
 //   And "sb-1" is listed under "Scheduled for deletion" with a "Restore" button
-test('@S22', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S22', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -832,7 +824,7 @@ test('@S22', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I type "wrong"
 //   Then the "Delete sandbox" button is disabled with "Type the sandbox name to enable"
 // And a delete request with the wrong name deletes nothing.
-test('@S23', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S23', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -864,7 +856,7 @@ test('@S23', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given sandbox "sb-1" has three active child sandboxes and one already scheduled for deletion
 //   When I open the delete modal for "sb-1"
 //   Then I see "Its 3 child sandboxes will also be deleted."
-test('@S24', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S24', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -892,7 +884,7 @@ test('@S24', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given sandboxes are kept for 7 days after deletion
 //   When I open the delete modal for "sb-1"
 //   Then I see "This sandbox will be retained for 7 days before being permanently removed."
-test('@S25', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S25', async ({ page }) => {
   expect(onNode('Lightning.Config.purge_deleted_after_days()').trim()).toBe(
     '7'
   );
@@ -917,7 +909,7 @@ test('@S25', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then "sb-1" and "child" are scheduled for deletion with the same date
 //   And every trigger in "sb-1" and "child" is disabled
 //   And the flow "flow-sandbox-scheduled-deletion" has started for "sb-1"
-test('@S26', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S26', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -948,7 +940,7 @@ test('@S26', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And the delete modal warns "You are currently viewing this project" when I open it for my current project
 //   When I delete "child-sandbox"
 //   Then I am on the sandboxes page of "parent"
-test('@S27', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S27', async ({ page }) => {
   const w = given({
     name: 'parent',
     members: { [ME]: 'owner' },
@@ -972,7 +964,7 @@ test('@S27', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the sandboxes page
 //   Then "later" is struck through and can't be opened
 //   And hovering it shows "Scheduled for deletion on <date> (in 5 days). Cancel the deletion to restore it."
-test('@S28', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S28', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -1004,7 +996,7 @@ test('@S28', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I click "Restore" on "scheduled"
 //   Then I see "Cancelled deletion of sandbox scheduled."
 //   And "scheduled" is back in the active list with its actions
-test('@S29', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S29', async ({ page }) => {
   const w = given({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -1033,7 +1025,7 @@ test('@S29', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the sandboxes page
 //   Then the "Restore" button on "scheduled" is disabled with "You are not authorized to cancel deletion of this sandbox"
 // And a restore request from me is refused.
-test('@S30', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S30', async ({ page }) => {
   const w = given(
     {
       name: 'Malawi HIV',
@@ -1064,26 +1056,22 @@ test('@S30', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And sandbox "scheduled" is scheduled for deletion
 //   When I open the sandboxes page
 //   Then the "Restore" button on "scheduled" is disabled and I see "stub-blocked-message"
-test(
-  '@S31',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const w = given({
-      name: 'Malawi HIV',
-      members: { [ME]: 'owner' },
-      sandboxes: [{ name: 'scheduled', scheduledInDays: 3 }],
-    });
-    const sb = w.id('scheduled');
-    withSetting(withLimiterRefusing('new_sandbox', 'stub-blocked-message'));
+test('@S31', { tag: ['@serial'] }, async ({ page }) => {
+  const w = given({
+    name: 'Malawi HIV',
+    members: { [ME]: 'owner' },
+    sandboxes: [{ name: 'scheduled', scheduledInDays: 3 }],
+  });
+  const sb = w.id('scheduled');
+  withSetting(withLimiterRefusing('new_sandbox', 'stub-blocked-message'));
 
-    await onSandboxes(page, w.id('Malawi HIV'));
-    await expect(restoreButton(page, sb)).toBeDisabled();
-    await hoverDisabled(restoreButton(page, sb));
-    await expect(
-      page.getByRole('tooltip').filter({ hasText: 'stub-blocked-message' })
-    ).toBeVisible();
-  }
-);
+  await onSandboxes(page, w.id('Malawi HIV'));
+  await expect(restoreButton(page, sb)).toBeDisabled();
+  await hoverDisabled(restoreButton(page, sb));
+  await expect(
+    page.getByRole('tooltip').filter({ hasText: 'stub-blocked-message' })
+  ).toBeVisible();
+});
 
 // Given I own "parent" and its sandbox "test-sandbox", which has a workflow
 // "Beta flow" the parent doesn't
@@ -1105,7 +1093,7 @@ function parentAndSandbox(extra: Partial<WorkspaceSeed> = {}) {
 //   Then I am on the workflows page of "parent"
 //   And I see "Successfully merged test-sandbox into parent. Sandbox scheduled for deletion."
 //   And the flow "flow-sandbox-merge" has started for "test-sandbox" into "parent"
-test('@S32', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S32', async ({ page }) => {
   const w = parentAndSandbox();
   const parent = w.id('parent');
   const sb = w.id('test-sandbox');
@@ -1131,7 +1119,7 @@ test('@S32', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And "root" has sandboxes "child2", "child3", "viewer-only" where I am a viewer, and "retiring" scheduled for deletion
 //   When I open the merge modal for "child1"
 //   Then the target options are "root", "child2" and "child3"
-test('@S33', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S33', async ({ page }) => {
   const w = given({
     name: 'root',
     members: { [ME]: 'owner', [OTHER]: 'admin' },
@@ -1162,7 +1150,7 @@ test('@S33', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When a merge request names "restricted-target" where I am a viewer
 //   Then I see "You are not authorized to merge into this project"
 //   And nothing is merged
-test('@S34', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S34', async ({ page }) => {
   const w = given({
     name: 'parent',
     members: { [ME]: 'owner', [OTHER]: 'admin' },
@@ -1206,7 +1194,7 @@ test('@S34', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then "Changed" is checked and labelled "Changed"
 //   And "Beta" is checked and labelled "New"
 //   And "Unchanged" is not checked
-test('@S35', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S35', async ({ page }) => {
   const w = given({
     name: 'parent',
     members: { [ME]: 'owner' },
@@ -1232,7 +1220,7 @@ test('@S35', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the merge modal for "test-sandbox"
 //   Then "Test Workflow" is labelled "Diverged"
 //   And I see "Any conflicting changes in the target are lost."
-test('@S36', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S36', async ({ page }) => {
   const w = given({
     name: 'parent',
     members: { [ME]: 'owner' },
@@ -1262,7 +1250,7 @@ test('@S36', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When instead I check "Gamma" and merge
 //   Then "Gamma" is deleted from "parent"
 // The "instead" merge uses a second sandbox in the same position, "sb-b".
-test('@S37', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S37', async ({ page }) => {
   const w = given({
     name: 'parent',
     members: { [ME]: 'owner' },
@@ -1298,7 +1286,7 @@ test('@S37', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the merge modal for "test-sandbox"
 //   Then "Added Later" is not listed
 //   And a request to select it is ignored and it survives the merge
-test('@S38', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S38', async ({ page }) => {
   const w = parentAndSandbox();
   const parent = w.id('parent');
   const sb = w.id('test-sandbox');
@@ -1336,7 +1324,7 @@ test('@S38', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And the "Merge" button is disabled with "No workflows selected"
 //   When I click it again
 //   Then I see "2 of 2 selected"
-test('@S39', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S39', async ({ page }) => {
   const w = given({
     name: 'parent',
     members: { [ME]: 'owner' },
@@ -1372,7 +1360,7 @@ test('@S39', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I choose "sibling" as the target
 //   Then the "Diverged", "New" and "Deleted in sandbox" labels reflect "sibling"
 //   And workflows I had unchecked stay unchecked
-test('@S40', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S40', async ({ page }) => {
   const w = given({
     name: 'parent',
     members: { [ME]: 'owner' },
@@ -1404,7 +1392,7 @@ test('@S40', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Credentials to add" with "sandbox-only-cred" checked
 //   When I uncheck it, change the target back to "parent" and merge
 //   Then "parent" does not have "sandbox-only-cred"
-test('@S41', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S41', async ({ page }) => {
   const w = given({
     name: 'parent',
     members: { [ME]: 'owner' },
@@ -1446,7 +1434,7 @@ test('@S41', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Collections to add" with "2 of 2 selected" and no mention of "parent-only"
 //   When I uncheck "col-b" and merge
 //   Then "parent" has "col-a" and "parent-only" and not "col-b"
-test('@S42', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S42', async ({ page }) => {
   const w = parentAndSandbox({ collections: ['col-a', 'col-b'] });
   const parent = w.id('parent');
   addCollectionOnNode(parent, 'parent-only');
@@ -1472,7 +1460,7 @@ test('@S42', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the merge modal for "child1"
 //   Then I see "This sandbox will be deleted after merging"
 //   And I see "Its child sandbox will also be deleted."
-test('@S43', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S43', async ({ page }) => {
   const w = given({
     name: 'root',
     members: { [ME]: 'owner' },
@@ -1496,7 +1484,7 @@ test('@S43', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And nothing in "root" has changed
 // The merge is made to fail validation by a job in the sandbox that has lost
 // its name, which the target can't accept.
-test('@S44', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S44', async ({ page }) => {
   const w = given({
     name: 'root',
     members: { [ME]: 'owner' },
@@ -1523,7 +1511,7 @@ test('@S44', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given the usage limiter refuses the merge with "Custom import error message"
 //   When I merge "child1" into "root"
 //   Then I see "Custom import error message"
-test('@S45', { tag: '@pending' }, () => {
+test('@S45', () => {
   test.skip(
     true,
     "not reachable here: the merge's only limiter refusal with its own message is the GitHub sync limit, which needs a GitHub-connected target; workflow and collection limits come back as validation errors (S44)"
@@ -1538,7 +1526,7 @@ test('@S45', { tag: '@pending' }, () => {
 //   And I see "Successfully merged child1 into root, but could not schedule the sandbox for deletion."
 // Scheduling fails because another session scheduled it first, while the
 // merge modal was open.
-test('@S46', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S46', async ({ page }) => {
   const w = given({
     name: 'root',
     members: { [ME]: 'owner' },
@@ -1568,7 +1556,7 @@ test('@S46', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I merge "test-sandbox" into "parent"
 //   Then the flow "flow-github-sync-actions" has started for "parent" with commit message "pre-merge commit"
 //   And it has started again with commit message "Merged sandbox test-sandbox"
-test('@S47', { tag: '@pending' }, () => {
+test('@S47', () => {
   test.skip(
     true,
     'variant github-sync: needs a GitHub app and repository the e2e Lightning does not have'
@@ -1583,7 +1571,7 @@ test('@S47', { tag: '@pending' }, () => {
 //   Then the merge target shows "Select a project"
 //   And the "Merge" button is disabled
 //   And nothing is merged
-test('@S48', { tag: '@passing-new' }, async ({ page }) => {
+test('@S48', async ({ page }) => {
   const w = given(
     {
       name: 'Hidden root',
@@ -1612,7 +1600,6 @@ test('@S48', { tag: '@passing-new' }, async ({ page }) => {
 });
 
 // Inherited shared annotations, run on the sandboxes page
-const PENDING = { tag: '@pending' };
 
 // Given project "Malawi HIV" (or <name>) has sandbox "sb-1", with these members
 function givenSandboxesPage(
@@ -1644,50 +1631,44 @@ test.describe('shared-authenticated-session', () => {
     cleanups.push(keepAccount(ME));
   });
 
-  test(
-    'shared-authenticated-session@S01 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, givenSandboxesPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on sandboxes-index', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, givenSandboxesPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(
-        page,
-        browser,
-        givenSandboxesPage().path,
-        ME
-      );
-    }
-  );
+  test('shared-authenticated-session@S02 on sandboxes-index', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(
+      page,
+      browser,
+      givenSandboxesPage().path,
+      ME
+    );
+  });
 
-  test(
-    'shared-authenticated-session@S03 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, givenSandboxesPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on sandboxes-index', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, givenSandboxesPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      const h = givenSandboxesPage();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        `/projects/${h.root}/history`,
-        ME,
-        'History'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on sandboxes-index', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenSandboxesPage();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      `/projects/${h.root}/history`,
+      ME,
+      'History'
+    );
+  });
 
   // These variants are not configured on this instance
   for (const [id, variant] of [
@@ -1699,16 +1680,9 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on sandboxes-index`,
-      PENDING,
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on sandboxes-index`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 test.describe('shared-project-scope', () => {
@@ -1717,66 +1691,46 @@ test.describe('shared-project-scope', () => {
     cleanups.push(keepAccount(ME));
   });
 
-  test(
-    'shared-project-scope@S01 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectScope.S01(page, givenSandboxesPage().path);
-    }
-  );
+  test('shared-project-scope@S01 on sandboxes-index', async ({ page }) => {
+    await projectScope.S01(page, givenSandboxesPage().path);
+  });
 
-  test(
-    'shared-project-scope@S02 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectScope.S02(
-        page,
-        givenSandboxesPage().path,
-        ME,
-        sandboxesHeading(page)
-      );
-    }
-  );
+  test('shared-project-scope@S02 on sandboxes-index', async ({ page }) => {
+    await projectScope.S02(
+      page,
+      givenSandboxesPage().path,
+      ME,
+      sandboxesHeading(page)
+    );
+  });
 
-  test(
-    'shared-project-scope@S03 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectScope.S03(
-        page,
-        givenSandboxesPage({ [OTHER]: 'owner' }).path,
-        ME
-      );
-    }
-  );
+  test('shared-project-scope@S03 on sandboxes-index', async ({ page }) => {
+    await projectScope.S03(
+      page,
+      givenSandboxesPage({ [OTHER]: 'owner' }).path,
+      ME
+    );
+  });
 
-  test(
-    'shared-project-scope@S04 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [OTHER]: 'owner' });
-      exec(
-        `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.root}'`
-      );
-      await projectScope.S04(page, h.path, OTHER);
-    }
-  );
+  test('shared-project-scope@S04 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [OTHER]: 'owner' });
+    exec(
+      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.root}'`
+    );
+    await projectScope.S04(page, h.path, OTHER);
+  });
 
-  test(
-    'shared-project-scope@S05 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage();
-      exec(`update projects set requires_mfa = true where id = '${h.root}'`);
-      removeMfaOf(ME);
-      await projectScope.S05(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S05 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage();
+    exec(`update projects set requires_mfa = true where id = '${h.root}'`);
+    removeMfaOf(ME);
+    await projectScope.S05(page, h.path, ME);
+  });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-scope@S06 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenSandboxesPage({ [OTHER]: 'owner' });
       exec(
@@ -1787,35 +1741,27 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S07 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'editor', [OTHER]: 'owner' });
-      await projectScope.S07(page, h.path, ME, () =>
-        removeMemberOnNode(h.root, ME, OTHER)
-      );
-    }
-  );
+  test('shared-project-scope@S07 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'editor', [OTHER]: 'owner' });
+    await projectScope.S07(page, h.path, ME, () =>
+      removeMemberOnNode(h.root, ME, OTHER)
+    );
+  });
 
-  test(
-    'shared-project-scope@S08 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'admin', [OTHER]: 'owner' });
-      await projectScope.S08(
-        page,
-        `${h.path}?x=1`,
-        ME,
-        () => changeRoleOnNode(h.root, ME, 'viewer'),
-        sandboxesHeading(page)
-      );
-    }
-  );
+  test('shared-project-scope@S08 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'admin', [OTHER]: 'owner' });
+    await projectScope.S08(
+      page,
+      `${h.path}?x=1`,
+      ME,
+      () => changeRoleOnNode(h.root, ME, 'viewer'),
+      sandboxesHeading(page)
+    );
+  });
 
   test(
     'shared-project-scope@S09 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenSandboxesPage({ [OTHER]: 'owner' });
       exec(
@@ -1828,16 +1774,12 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S10 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'editor', [OTHER]: 'owner' });
-      await projectScope.S10(page, h.path, ME, () =>
-        scheduleDeletionOnNode(h.root)
-      );
-    }
-  );
+  test('shared-project-scope@S10 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'editor', [OTHER]: 'owner' });
+    await projectScope.S10(page, h.path, ME, () =>
+      scheduleDeletionOnNode(h.root)
+    );
+  });
 
   // shared-project-scope S11 and S12 are not run on this page: they are about
   // an open workflow editor (archived sandbox, deleted workflow), and this
@@ -1845,22 +1787,20 @@ test.describe('shared-project-scope', () => {
 });
 
 test.describe('shared-usage-limits-banner', () => {
-  test('shared-usage-limits-banner@S01 on sandboxes-index', PENDING, () => {
+  test('shared-usage-limits-banner@S01 on sandboxes-index', () => {
     test.skip(true, 'variant usage-limited is not configured on this instance');
   });
 
-  test(
-    'shared-usage-limits-banner@S02 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await usageLimitsBanner.S02(
-        page,
-        givenSandboxesPage().path,
-        ME,
-        sandboxesHeading(page)
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S02 on sandboxes-index', async ({
+    page,
+  }) => {
+    await usageLimitsBanner.S02(
+      page,
+      givenSandboxesPage().path,
+      ME,
+      sandboxesHeading(page)
+    );
+  });
 });
 
 // The picker scenarios seed their own "Malawi HIV", so this page's project
@@ -1873,59 +1813,43 @@ test.describe('shared-project-header', () => {
 
   const HOST = 'Sandboxes host';
 
-  test(
-    'shared-project-header@S01 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S01(page, h.path, ME, HOST, [{ name: 'Sandboxes' }]);
-    }
-  );
+  test('shared-project-header@S01 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S01(page, h.path, ME, HOST, [{ name: 'Sandboxes' }]);
+  });
 
-  test(
-    'shared-project-header@S02 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S02(page, ME, { path: h.path, project: HOST });
-    }
-  );
+  test('shared-project-header@S02 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S02(page, ME, { path: h.path, project: HOST });
+  });
 
-  test(
-    'shared-project-header@S03 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const w = given(
-        {
-          name: HOST,
-          members: { [ME]: 'editor', [OTHER]: 'owner' },
-          sandboxes: [
-            { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
-          ],
-        },
-        OTHER
-      );
-      await projectHeader.S03(page, ME, {
-        path: sandboxesPath(w.id('dev')),
-        label: `${HOST}:dev`,
-      });
-    }
-  );
+  test('shared-project-header@S03 on sandboxes-index', async ({ page }) => {
+    const w = given(
+      {
+        name: HOST,
+        members: { [ME]: 'editor', [OTHER]: 'owner' },
+        sandboxes: [
+          { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
+        ],
+      },
+      OTHER
+    );
+    await projectHeader.S03(page, ME, {
+      path: sandboxesPath(w.id('dev')),
+      label: `${HOST}:dev`,
+    });
+  });
 
   for (const id of ['S04', 'S05', 'S06', 'S08'] as const)
-    test(
-      `shared-project-header@${id} on sandboxes-index`,
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on sandboxes-index`, async ({ page }) => {
+      const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-header@S07 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
       await projectHeader.S07(page, h.path, ME);
@@ -1933,36 +1857,24 @@ test.describe('shared-project-header', () => {
   );
 
   // S09 starts on a project settings page, whatever page hosts the header
-  test(
-    'shared-project-header@S09 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
+  test('shared-project-header@S09 on sandboxes-index', async ({ page }) => {
+    await projectHeader.S09(page, ME);
+  });
 
   // This page is the sandboxes page, and the picker lands on the other
   // project's
-  test(
-    'shared-project-header@S10 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S10(page, h.path, ME, '/sandboxes');
-    }
-  );
+  test('shared-project-header@S10 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S10(page, h.path, ME, '/sandboxes');
+  });
 
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on sandboxes-index`,
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on sandboxes-index`, async ({ page }) => {
+      const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
-  test('shared-project-header@S14 on sandboxes-index', PENDING, () => {
+  test('shared-project-header@S14 on sandboxes-index', () => {
     test.skip(
       true,
       'variant require-email-verification is not configured on this instance'
@@ -1970,33 +1882,21 @@ test.describe('shared-project-header', () => {
   });
 
   // This page highlights "Sandboxes" in the side menu
-  test(
-    'shared-project-header@S15 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S15(page, h.path, ME, h.root, 'Sandboxes');
-    }
-  );
+  test('shared-project-header@S15 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S15(page, h.path, ME, h.root, 'Sandboxes');
+  });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test(
-    'shared-project-header@S16 on sandboxes-index',
-    { tag: '@passing-new' },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S16(page, h.path, ME, { channels: true });
-    }
-  );
+  test('shared-project-header@S16 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S16(page, h.path, ME, { channels: true });
+  });
 
-  test(
-    'shared-project-header@S17 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
-      await projectHeader.S17(page, h.path);
-    }
-  );
+  test('shared-project-header@S17 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
+    await projectHeader.S17(page, h.path);
+  });
 });
 
 // This page puts the info flash "Sandbox <name> scheduled for deletion." and
@@ -2021,80 +1921,56 @@ test.describe('shared-flash-messages', () => {
     return () => open(page, `${h.path}/new`);
   }
 
-  test(
-    'shared-flash-messages@S01 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const { remove } = await givenDeletable(page);
-      await flashMessages.S01(page, INFO, remove);
-    }
-  );
+  test('shared-flash-messages@S01 on sandboxes-index', async ({ page }) => {
+    const { remove } = await givenDeletable(page);
+    await flashMessages.S01(page, INFO, remove);
+  });
 
-  test(
-    'shared-flash-messages@S02 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await flashMessages.S02(page, DENIED, await givenViewer(page));
-    }
-  );
+  test('shared-flash-messages@S02 on sandboxes-index', async ({ page }) => {
+    await flashMessages.S02(page, DENIED, await givenViewer(page));
+  });
 
-  test(
-    'shared-flash-messages@S03 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const { remove } = await givenDeletable(page);
-      await flashMessages.S03(page, INFO, remove);
-    }
-  );
+  test('shared-flash-messages@S03 on sandboxes-index', async ({ page }) => {
+    const { remove } = await givenDeletable(page);
+    await flashMessages.S03(page, INFO, remove);
+  });
 
-  test(
-    'shared-flash-messages@S04 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const { remove } = await givenDeletable(page);
-      await flashMessages.S04(page, INFO, remove, async () => {
-        // Opening the create form makes the page render again
-        await createButton(page).click();
-        await dialog(page, CREATE);
-      });
-    }
-  );
+  test('shared-flash-messages@S04 on sandboxes-index', async ({ page }) => {
+    const { remove } = await givenDeletable(page);
+    await flashMessages.S04(page, INFO, remove, async () => {
+      // Opening the create form makes the page render again
+      await createButton(page).click();
+      await dialog(page, CREATE);
+    });
+  });
 
   // Deleting the sandbox I am in redirects me to its parent's sandboxes page
-  test(
-    'shared-flash-messages@S05 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage();
-      await onSandboxes(page, h.w.id('sb-1'));
-      await flashMessages.S05(
-        page,
-        INFO,
-        () => deleteByName(page, h.w.id('sb-1'), 'sb-1'),
-        h.path
-      );
-    }
-  );
+  test('shared-flash-messages@S05 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage();
+    await onSandboxes(page, h.w.id('sb-1'));
+    await flashMessages.S05(
+      page,
+      INFO,
+      () => deleteByName(page, h.w.id('sb-1'), 'sb-1'),
+      h.path
+    );
+  });
 
-  test(
-    'shared-flash-messages@S06 on sandboxes-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const h = givenSandboxesPage();
-      const notMine = givenSandboxesPage({ [OTHER]: 'owner' }, 'Kenya TB');
-      await onSandboxes(page, h.root);
+  test('shared-flash-messages@S06 on sandboxes-index', async ({ page }) => {
+    const h = givenSandboxesPage();
+    const notMine = givenSandboxesPage({ [OTHER]: 'owner' }, 'Kenya TB');
+    await onSandboxes(page, h.root);
 
-      await flashMessages.S06(
-        page,
-        () => open(page, notMine.path),
-        '/projects',
-        page.getByRole('cell', {
-          name: manifest().projects[0].name,
-          exact: true,
-        })
-      );
-    }
-  );
+    await flashMessages.S06(
+      page,
+      () => open(page, notMine.path),
+      '/projects',
+      page.getByRole('cell', {
+        name: manifest().projects[0].name,
+        exact: true,
+      })
+    );
+  });
 
   // shared-flash-messages S07 and S08 are not run on this page: S07 is on
   // admin pages (settings layout) and S08 on the sign-in and account forms.

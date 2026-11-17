@@ -1,11 +1,14 @@
 #!/bin/sh
 # Runs the annotation scenarios: the parallel group first, then the tests that
 # need the instance to themselves, one at a time. Arguments (spec files,
-# file:line, --grep) go to both runs.
+# file:line, --grep) go to both runs. Afterwards it writes STATUS.md.
 cd "$(dirname "$0")/../.." || exit 1
 config=test/scenarios/playwright.config.ts
-npx playwright test -c $config --project=parallel --pass-with-no-tests "$@"
+reports=scenario-reports
+rm -rf $reports && mkdir -p $reports
+SCENARIO_REPORT=$reports/parallel.json npx playwright test -c $config --project=parallel --pass-with-no-tests "$@"
 parallel=$?
-npx playwright test -c $config --project=serial --project=admin --workers=1 --pass-with-no-tests "$@"
+SCENARIO_REPORT=$reports/serial.json npx playwright test -c $config --project=serial --project=admin --workers=1 --pass-with-no-tests "$@"
 serial=$?
+node test/scenarios/status.mjs
 [ $parallel -eq 0 ] && [ $serial -eq 0 ]

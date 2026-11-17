@@ -37,7 +37,6 @@ import {
   sql,
   submit,
   submitButton,
-  tagFor,
   withCollectionLimit,
 } from './steps';
 
@@ -184,35 +183,29 @@ const ALREADY_EXISTS = 'A collection with this name already exists';
 //   And I see a row "visits" with project "Kenya TB" and "100 B"
 // The count covers every collection on the instance, so this runs alone and
 // expects whatever else the instance already holds on top of these two.
-test(
-  '@S01',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const malawi = project('malawi-hiv');
-    const kenya = project('kenya-tb');
-    const patients = `patients-${hex()}`;
-    const visits = `visits-${hex()}`;
-    seedCollection(malawi.id, patients, { bytes: 2500000 });
-    seedCollection(kenya.id, visits, { bytes: 100 });
-    const total = collectionsOnInstance();
+test('@S01', { tag: ['@serial'] }, async ({ page }) => {
+  const malawi = project('malawi-hiv');
+  const kenya = project('kenya-tb');
+  const patients = `patients-${hex()}`;
+  const visits = `visits-${hex()}`;
+  seedCollection(malawi.id, patients, { bytes: 2500000 });
+  seedCollection(kenya.id, visits, { bytes: 100 });
+  const total = collectionsOnInstance();
 
-    await signedIn(page);
+  await signedIn(page);
 
-    await expect(
-      page.getByRole('heading', {
-        name: new RegExp(`Collections\\s*\\(${total}\\)`),
-      })
-    ).toBeVisible();
-    await expect(await cells(page, patients, 'Project')).toHaveText(
-      malawi.name
-    );
-    await expect(await cells(page, patients, 'Used storage')).toHaveText(
-      '2.5 MB'
-    );
-    await expect(await cells(page, visits, 'Project')).toHaveText(kenya.name);
-    await expect(await cells(page, visits, 'Used storage')).toHaveText('100 B');
-  }
-);
+  await expect(
+    page.getByRole('heading', {
+      name: new RegExp(`Collections\\s*\\(${total}\\)`),
+    })
+  ).toBeVisible();
+  await expect(await cells(page, patients, 'Project')).toHaveText(malawi.name);
+  await expect(await cells(page, patients, 'Used storage')).toHaveText(
+    '2.5 MB'
+  );
+  await expect(await cells(page, visits, 'Project')).toHaveText(kenya.name);
+  await expect(await cells(page, visits, 'Used storage')).toHaveText('100 B');
+});
 
 // @S02
 // Scenario: An instance with no collections offers to create one
@@ -224,23 +217,19 @@ test(
 //   When I click "Create a new one."
 //   Then I see the "Create Collection" form
 // Needs an instance with no collections at all, so it runs alone.
-test(
-  '@S02',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    expect(collectionsOnInstance(), 'no collection on the instance').toBe(0);
+test('@S02', { tag: ['@serial'] }, async ({ page }) => {
+  expect(collectionsOnInstance(), 'no collection on the instance').toBe(0);
 
-    await signedIn(page);
+  await signedIn(page);
 
-    await expect(page.getByText('No collection found.')).toBeVisible();
-    await expect(page.getByRole('table')).toHaveCount(0);
+  await expect(page.getByText('No collection found.')).toBeVisible();
+  await expect(page.getByRole('table')).toHaveCount(0);
 
-    await createFirstButton(page).click();
+  await createFirstButton(page).click();
 
-    await expect(modalTitle(page, 'Create Collection')).toBeVisible();
-    await expect(field(createDialog(page), 'Name')).toBeVisible();
-  }
-);
+  await expect(modalTitle(page, 'Create Collection')).toBeVisible();
+  await expect(field(createDialog(page), 'Name')).toBeVisible();
+});
 
 // @S03
 // Scenario: Superuser creates a collection in a project they are not a member of
@@ -255,7 +244,7 @@ test(
 //   And the flow "flow-admin-collection-reaches-project" has started for "new-collection"
 // The flow has started when the collection belongs to the project: that is
 // what the project's collections tab reads.
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const h = hex();
   const slug = `new-collection-${h}`;
@@ -287,7 +276,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And the "Save" button is disabled
 // One version turns "Save" off, the other refuses on save: submit() covers
 // both, and the Then checks the message and that nothing was created.
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const malawi = project('malawi-hiv');
 
   await signedIn(page);
@@ -307,7 +296,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I create a collection named "patients" in "Malawi HIV"
 //   Then I see "A collection with this name already exists" under the name
 //   And "Malawi HIV" still has one collection named "patients"
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const patients = `patients-${hex()}`;
   seedCollection(malawi.id, patients);
@@ -328,7 +317,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I create a collection named "patients" in "Malawi HIV"
 //   Then I see "Collection created successfully"
 //   And I see two rows "patients", one for "Malawi HIV" and one for "Kenya TB"
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const kenya = project('kenya-tb');
   const patients = `patients-${hex()}`;
@@ -354,7 +343,7 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And no collection "some-name" exists
 // The limit is set for this test's project only, so other tests are not
 // refused.
-test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const name = `some-name-${hex()}`;
   cleanups.push(withCollectionLimit(malawi.id, 'Some error message'));
@@ -379,7 +368,7 @@ test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Collection updated successfully"
 //   And I see a row "updated-collection" with project "Malawi HIV"
 //   And "updated-collection" still has its 3 records
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const h = hex();
   const id = seedCollection(malawi.id, `old-collection-${h}`, { records: 3 });
@@ -416,7 +405,7 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And I see a row "patients" with project "Kenya TB"
 //   And "patients" still has its 3 records
 //   And the flow "flow-admin-collection-reaches-project" has started for "patients"
-test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const kenya = project('kenya-tb');
   const patients = `patients-${hex()}`;
@@ -448,7 +437,7 @@ test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I move the "Malawi HIV" collection "patients" to "Kenya TB"
 //   Then I see "A collection with this name already exists" under the name
 //   And each project still has its own "patients"
-test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const kenya = project('kenya-tb');
   const patients = `patients-${hex()}`;
@@ -477,7 +466,7 @@ test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And none of its records remain
 //   And the flow "flow-admin-collection-reaches-project" has started for "patients"
 // The flow has started when the collection is gone from the project.
-test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const patients = `patients-${hex()}`;
   const id = seedCollection(malawi.id, patients, { records: 3 });
@@ -513,7 +502,7 @@ test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //     | Create collection    |
 //     | Edit on "patients"   |
 //     | Delete on "patients" |
-test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const malawi = project('malawi-hiv');
   const patients = `patients-${hex()}`;
   const id = seedCollection(malawi.id, patients);
@@ -565,7 +554,7 @@ test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the rows read "huge", "medium", "tiny"
 // Only these three rows' order is checked: other tests' collections share
 // the list.
-test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const p = project('project');
   const h = hex();
   const [tiny, huge, medium] = ['tiny', 'huge', 'medium'].map(n => `${n}-${h}`);
@@ -588,163 +577,118 @@ test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 // Inherited from shared-admin-space: the gate, and the settings layout and
 // side menu with "Collections" current.
 test.describe('shared-admin-space', () => {
-  test(
-    'shared-admin-space@S01 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S01(page, PAGE, ME, 'Collections');
-    }
-  );
+  test('shared-admin-space@S01 on admin-collections', async ({ page }) => {
+    await adminSpace.S01(page, PAGE, ME, 'Collections');
+  });
 
-  test(
-    'shared-admin-space@S02 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S02(page, PAGE, REGULAR);
-    }
-  );
+  test('shared-admin-space@S02 on admin-collections', async ({ page }) => {
+    await adminSpace.S02(page, PAGE, REGULAR);
+  });
 
-  test(
-    'shared-admin-space@S03 on admin-collections',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'needs a socket-only mount that skips the HTTP check, which no browser action produces'
-      );
-    }
-  );
+  test('shared-admin-space@S03 on admin-collections', () => {
+    test.skip(
+      true,
+      'needs a socket-only mount that skips the HTTP check, which no browser action produces'
+    );
+  });
 
   for (const id of ['S04', 'S05'])
-    test(
-      `shared-admin-space@${id} on admin-collections`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
-        );
-      }
-    );
-
-  test(
-    'shared-admin-space@S06 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await adminSpace.S06(page, browser, PAGE, ME);
-    }
-  );
-
-  test(
-    'shared-admin-space@S07 on admin-collections',
-    { tag: '@pending' },
-    () => {
+    test(`shared-admin-space@${id} on admin-collections`, () => {
       test.skip(
         true,
-        'variant settings-menu-extension is not configured on this instance'
+        'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
       );
-    }
-  );
+    });
+
+  test('shared-admin-space@S06 on admin-collections', async ({
+    page,
+    browser,
+  }) => {
+    await adminSpace.S06(page, browser, PAGE, ME);
+  });
+
+  test('shared-admin-space@S07 on admin-collections', () => {
+    test.skip(
+      true,
+      'variant settings-menu-extension is not configured on this instance'
+    );
+  });
 });
 
 // Inherited from shared-authenticated-session, on "/settings/collections".
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on admin-collections', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on admin-collections', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on admin-collections', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      // The admin menu has no "Credentials"; "Audit" is a label it does have
-      await authenticatedSession.S07(
-        page,
-        browser,
-        PAGE,
-        '/settings/audit',
-        ME,
-        'Audit'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on admin-collections', async ({
+    page,
+    browser,
+  }) => {
+    // The admin menu has no "Credentials"; "Audit" is a label it does have
+    await authenticatedSession.S07(
+      page,
+      browser,
+      PAGE,
+      '/settings/audit',
+      ME,
+      'Audit'
+    );
+  });
 
   for (const id of ['S04', 'S05', 'S06'])
-    test(
-      `shared-authenticated-session@${id} on admin-collections`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'variant require-email-verification is not configured on this instance'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-collections`, () => {
+      test.skip(
+        true,
+        'variant require-email-verification is not configured on this instance'
+      );
+    });
 
   for (const id of ['S08', 'S09', 'S10', 'S11'])
-    test(
-      `shared-authenticated-session@${id} on admin-collections`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line says S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-collections`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line says S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
+      );
+    });
 });
 
 // Inherited from shared-project-header: the global picker, the confirmation
 // banner and the account menu (no-project parts).
 test.describe('shared-project-header', () => {
   for (const id of ['S04', 'S06', 'S08', 'S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on admin-collections`,
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        await projectHeader[id](page, PAGE, ME);
-      }
-    );
+    test(`shared-project-header@${id} on admin-collections`, async ({
+      page,
+    }) => {
+      await projectHeader[id](page, PAGE, ME);
+    });
 
   // The Examples row "the projects list or my profile | the workflows page"
-  test(
-    'shared-project-header@S10 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S10(page, PAGE, ME, '/w');
-    }
-  );
+  test('shared-project-header@S10 on admin-collections', async ({ page }) => {
+    await projectHeader.S10(page, PAGE, ME, '/w');
+  });
 
-  test(
-    'shared-project-header@S14 on admin-collections',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'variant require-email-verification is not configured on this instance'
-      );
-    }
-  );
+  test('shared-project-header@S14 on admin-collections', () => {
+    test.skip(
+      true,
+      'variant require-email-verification is not configured on this instance'
+    );
+  });
 
   for (const id of [
     'S01',
@@ -757,54 +701,42 @@ test.describe('shared-project-header', () => {
     'S16',
     'S17',
   ])
-    test(
-      `shared-project-header@${id} on admin-collections`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
-        );
-      }
-    );
+    test(`shared-project-header@${id} on admin-collections`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
+      );
+    });
 });
 
 // Inherited from shared-flash-messages. This page is on the settings layout,
 // whose toast is S07; saving a collection carries a flash back to the list
 // (S05).
 test.describe('shared-flash-messages', () => {
-  test(
-    'shared-flash-messages@S05 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const malawi = project('malawi-hiv');
-      await signedIn(page);
-      await flashMessages.S05(
-        page,
-        'Collection created successfully',
-        async () => {
-          await createIn(page, `patients-${hex()}`, malawi.name);
-        },
-        PAGE
-      );
-    }
-  );
+  test('shared-flash-messages@S05 on admin-collections', async ({ page }) => {
+    const malawi = project('malawi-hiv');
+    await signedIn(page);
+    await flashMessages.S05(
+      page,
+      'Collection created successfully',
+      async () => {
+        await createIn(page, `patients-${hex()}`, malawi.name);
+      },
+      PAGE
+    );
+  });
 
-  test(
-    'shared-flash-messages@S07 on admin-collections',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const malawi = project('malawi-hiv');
-      await flashMessages.S07(
-        page,
-        'Collection created successfully',
-        async () => {
-          await signedIn(page);
-          await createIn(page, `patients-${hex()}`, malawi.name);
-        }
-      );
-    }
-  );
+  test('shared-flash-messages@S07 on admin-collections', async ({ page }) => {
+    const malawi = project('malawi-hiv');
+    await flashMessages.S07(
+      page,
+      'Collection created successfully',
+      async () => {
+        await signedIn(page);
+        await createIn(page, `patients-${hex()}`, malawi.name);
+      }
+    );
+  });
 
   for (const [id, why] of [
     ['S01', 'it is about the live layout; the settings layout toast is S07'],
@@ -817,11 +749,7 @@ test.describe('shared-flash-messages', () => {
     ],
     ['S08', 'it is about the sign-in and account forms'],
   ])
-    test(
-      `shared-flash-messages@${id} on admin-collections`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(true, `not reachable here: ${why}`);
-      }
-    );
+    test(`shared-flash-messages@${id} on admin-collections`, () => {
+      test.skip(true, `not reachable here: ${why}`);
+    });
 });

@@ -45,9 +45,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const PROJECT = 'Malawi HIV';
 
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new'] };
-
 let cleanups: (() => unknown)[] = [];
 test.beforeEach(() => {
   cleanups = [];
@@ -148,7 +145,7 @@ async function create(page: Page, name: string) {
 //   And the project has collections "alpha" using 5000000000 bytes, "bravo" using 2500000 bytes and "charlie" using 100 bytes
 //   When I open the project's settings on the "Collections" tab
 //   Then I see the rows "alpha" with "5 GB", "bravo" with "2.5 MB" and "charlie" with "100 B", in that order
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const id = givenProject('viewer');
   collection(id, 'charlie', { bytes: 100 });
   collection(id, 'alpha', { bytes: 5_000_000_000 });
@@ -170,7 +167,7 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 //   And I see an enabled "Create a new collection" button
 //   When I click "Create a new collection"
 //   Then I see the "Create Collection" form
-test('@S02', PASSING_BOTH, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const id = givenProject('admin');
   await onCollections(page, id);
 
@@ -193,7 +190,7 @@ test('@S02', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Collection created"
 //   And I am on the "Collections" tab of the project's settings
 //   And "test-collection-0" is in the list
-test('@S03', PASSING_BOTH, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const id = givenProject('admin');
   await onCollections(page, id);
 
@@ -218,7 +215,7 @@ test('@S03', PASSING_BOTH, async ({ page }) => {
 //   And the "Save" button is disabled
 // Checks that nothing is saved rather than the button: one version turns
 // Save off, another refuses on save.
-test('@S04', PASSING_BOTH, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const id = givenProject('admin');
   await onCollections(page, id);
 
@@ -238,7 +235,7 @@ test('@S04', PASSING_BOTH, async ({ page }) => {
 //   When I create a collection named "patients"
 //   Then I see "A collection with this name already exists"
 //   And the project still has one collection named "patients"
-test('@S05', PASSING_BOTH, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const id = givenProject('owner');
   collection(id, 'patients');
   await onCollections(page, id);
@@ -258,7 +255,7 @@ test('@S05', PASSING_BOTH, async ({ page }) => {
 //   When I create a collection named "patients"
 //   Then I see "Collection created"
 //   And "patients" is in the list
-test('@S06', PASSING_BOTH, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const id = givenProject('admin');
   const kenya = givenProject(null, 'Kenya TB');
   collection(kenya, 'patients');
@@ -281,20 +278,16 @@ test('@S06', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Some error message"
 //   And no collection "some-name" exists
 // Serial: it swaps the instance's collection hook.
-test(
-  '@S07',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const id = givenProject('owner');
-    cleanups.push(withCollectionLimit(id, 'Some error message'));
-    await onCollections(page, id);
+test('@S07', { tag: ['@serial'] }, async ({ page }) => {
+  const id = givenProject('owner');
+  cleanups.push(withCollectionLimit(id, 'Some error message'));
+  await onCollections(page, id);
 
-    await create(page, 'some-name');
+  await create(page, 'some-name');
 
-    await expect(page.getByText('Some error message').first()).toBeVisible();
-    expect(collectionNamesIn(id)).toEqual([]);
-  }
-);
+  await expect(page.getByText('Some error message').first()).toBeVisible();
+  expect(collectionNamesIn(id)).toEqual([]);
+});
 
 // @S08
 // Scenario Outline: Members who can't manage collections see the controls disabled
@@ -306,7 +299,7 @@ test(
 //   And the "Preview collection" button and the "Download" link on "patients" are enabled
 //   Examples: viewer, editor
 for (const role of ['viewer', 'editor'] as const)
-  test(`@S08 ${role}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S08 ${role}`, async ({ page }) => {
     const id = givenProject(role);
     collection(id, 'patients');
     await onCollections(page, id);
@@ -332,7 +325,7 @@ for (const role of ['viewer', 'editor'] as const)
 // Checked by what is stored and that the page didn't crash: one version
 // flashes the refusal, another answers the request.
 for (const action of ['new', 'edit', 'delete'] as const)
-  test(`@S09 ${action}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S09 ${action}`, async ({ page }) => {
     const id = givenProject('editor');
     const cid = collection(id, 'patients', { records: 1 });
     const lv = watchLiveView(page);
@@ -362,7 +355,7 @@ for (const action of ['new', 'edit', 'delete'] as const)
 //   Then I see "Collection updated"
 //   And "patients-2024" is in the list with its 3 records
 //   And "patients" is not in the list
-test('@S10', PASSING_BOTH, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const id = givenProject('admin');
   const cid = collection(id, 'patients', { records: 3 });
   await onCollections(page, id);
@@ -396,7 +389,7 @@ test('@S10', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Collection deleted"
 //   And "patients" is not in the list
 //   And none of its records remain
-test('@S11', PASSING_BOTH, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const id = givenProject('owner');
   const cid = collection(id, 'patients', { records: 3 });
   await onCollections(page, id);
@@ -429,7 +422,7 @@ const S12_ROWS = [
   ['Delete', 'Delete collection'],
 ] as const;
 for (const [open, title] of S12_ROWS)
-  test(`@S12 ${open}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S12 ${open}`, async ({ page }) => {
     const id = givenProject('admin');
     const cid = collection(id, 'patients', { records: 1 });
     await onCollections(page, id);
@@ -467,7 +460,7 @@ async function preview(page: Page, name: string) {
 //   And I see "my-key" and "my-value"
 //   Examples: viewer, editor, admin, owner
 for (const role of ['viewer', 'editor', 'admin', 'owner'] as const)
-  test(`@S13 ${role}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S13 ${role}`, async ({ page }) => {
     const id = givenProject(role);
     collection(id, 'patients', { items: [['my-key', 'my-value']] });
     await onCollections(page, id);
@@ -485,7 +478,7 @@ for (const role of ['viewer', 'editor', 'admin', 'owner'] as const)
 //   And collection "patients" has no records
 //   When I click "Preview collection" on "patients"
 //   Then I see "This collection is empty."
-test('@S14', PASSING_BOTH, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const id = givenProject('owner');
   collection(id, 'patients');
   await onCollections(page, id);
@@ -504,9 +497,7 @@ test('@S14', PASSING_BOTH, async ({ page }) => {
 //   And the long string is cut to 140 characters followed by "…"
 //   When I click the copy button
 //   Then the clipboard holds the full record, including all 300 characters
-// Old only: the design-system preview shows the record as stored, with no
-// copy button.
-test('@S15', PASSING_OLD, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const long = 'x'.repeat(300);
   const id = givenProject('owner');
   collection(id, 'patients', {
@@ -551,7 +542,7 @@ const S16_ROWS: [string, CollectionRequest][] = [
   ['toggle_action with "delete"', 'delete'],
 ];
 for (const [event, kind] of S16_ROWS)
-  test(`@S16 ${event}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S16 ${event}`, async ({ page }) => {
     const id = givenProject('owner');
     const kenya = givenProject(null, 'Kenya TB');
     const cid = collection(kenya, 'secret', {
@@ -581,7 +572,7 @@ for (const [event, kind] of S16_ROWS)
 //   When I click "Edit" on "patients"
 //   Then I see "Collection not found"
 //   And "patients" is no longer in the list
-test('@S17', PASSING_BOTH, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const id = givenProject('admin');
   const cid = collection(id, 'patients');
   await onCollections(page, id);
@@ -604,7 +595,7 @@ test('@S17', PASSING_BOTH, async ({ page }) => {
 //   Then the rows read "charlie", "bravo", "alpha"
 //   When I click the "Used storage" header again
 //   Then the rows read "alpha", "bravo", "charlie"
-test('@S18', PASSING_BOTH, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const id = givenProject('owner');
   collection(id, 'alpha', { bytes: 5_000_000_000 });
   collection(id, 'bravo', { bytes: 2_500_000 });
@@ -631,7 +622,7 @@ test('@S18', PASSING_BOTH, async ({ page }) => {
 //   And following it starts the flow "flow-download-collection"
 // The flow is the download's; here only that the link answers with the
 // collection's records.
-test('@S19', PASSING_BOTH, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const id = givenProject('viewer');
   collection(id, 'patients', { items: [['my-key', 'my-value']] });
   await onCollections(page, id);

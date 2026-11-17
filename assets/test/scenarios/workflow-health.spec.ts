@@ -49,14 +49,10 @@ import {
   setPreferences,
   setSupportAccessOnNode,
   signInAs,
-  tagFor,
   user,
   type SeededWorkflow,
 } from './steps';
 
-const PASSING = { tag: ['@passing-old', '@passing-new'] };
-// History opens in this tab on the port; Lightning opens a new one
-const NEW_ONLY = { tag: '@passing-new' };
 const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 
@@ -166,7 +162,7 @@ async function opensHistory(page: Page, click: () => Promise<void>) {
 //   And "Last 7 days" is selected
 //   And the "Work orders" tab is selected, showing "Outcomes", "Failure breakdown" and "Steps with failures"
 //   And I see "Triage - grouped by failure type"
-test('@S01', PASSING, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const h = givenHealth();
   await signInAs(page, ME);
   await open(page, `/projects/${h.project.id}/w`);
@@ -204,7 +200,7 @@ test('@S01', PASSING, async ({ page }) => {
 //   Given I am on the health page of "Daily sync"
 //   When I click "Daily sync" in the breadcrumbs
 //   Then I am in the editor for "Daily sync"
-test('@S02', PASSING, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const h = givenHealth();
   await openHealth(page, h);
 
@@ -228,7 +224,7 @@ test('@S02', PASSING, async ({ page }) => {
 //   Examples:
 //     | workflow "Kenya sync" belongs to project "Kenya TB"   |
 //     | workflow "Old intake" in "Malawi HIV" has been deleted |
-test('@S03', PASSING, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const h = givenHealth();
   const kenya = given('Kenya TB', { [ME]: 'viewer' });
   const kenyaSync = seedWorkflow(kenya.id, 'Kenya sync');
@@ -257,7 +253,7 @@ test('@S03', PASSING, async ({ page }) => {
 //   Then the "Outcomes" card meta reads "13 work orders"
 //   And the legend reads "Success 9", "Failed 2", "Cancelled 2"
 //   And the middle of the ring reads "81.8%" and "success"
-test('@S04', PASSING, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 9);
   seedWorkOrders(h.wf, 'failed', 1);
@@ -283,7 +279,7 @@ test('@S04', PASSING, async ({ page }) => {
 //   When I open its health page
 //   Then "Outcomes" shows "Success 1" and "Failed 0"
 //   And the triage table shows "No failures in the last 7 days"
-test('@S05', PASSING, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrder(h.wf, {
     state: 'success',
@@ -310,7 +306,7 @@ test('@S05', PASSING, async ({ page }) => {
 //   Given in the last 7 days "Daily sync" had 2,500 successful and 1 failed work order
 //   When I open its health page
 //   Then the middle of the ring reads "<100%"
-test('@S06', PASSING, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 2500);
   seedWorkOrders(h.wf, 'failed', 1);
@@ -330,7 +326,7 @@ test('@S06', PASSING, async ({ page }) => {
 //   Then "Failure breakdown" lists "failed 3", "lost 1" and "rejected 2" and no other state
 //   And the middle of its ring reads "6" and "failures"
 //   And the "Failed" wedge of "Outcomes" also reads 6
-test('@S07', PASSING, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'failed', 3);
   seedWorkOrders(h.wf, 'lost', 1);
@@ -357,7 +353,7 @@ test('@S07', PASSING, async ({ page }) => {
 //   When I open its health page
 //   Then "Steps with failures" lists "Load 5", then "Fetch 2", then "No failing step 1"
 //   And each named step shows its adaptor below it
-test('@S08', PASSING, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const h = givenHealth();
   failures(h.wf, 'Load', 'RuntimeError', 3);
   failures(h.wf, 'Load', 'AdaptorError', 2);
@@ -392,7 +388,7 @@ test('@S08', PASSING, async ({ page }) => {
 //   When I open its health page
 //   Then the first triage row reads "4", "Failed", "fail:RuntimeError @ Load" and "Job code hit a value it didn't expect, often a missing input field."
 //   And the second row reads "1", "crash:CompileError" with no step and "Job code couldn't be compiled, so no step ever ran."
-test('@S09', PASSING, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const h = givenHealth();
   failures(h.wf, 'Load', 'RuntimeError', 4);
   seedWorkOrder(h.wf, {
@@ -431,7 +427,7 @@ test('@S09', PASSING, async ({ page }) => {
 //   Given in the last 7 days 2 webhook requests to "Daily sync" were rejected over the run limit
 //   When I open its health page
 //   Then a triage row reads "2", "rejected:RunLimitExceeded" and "The project was over its run limit, so no run was created for this request."
-test('@S10', PASSING, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'rejected', 2);
 
@@ -448,7 +444,7 @@ test('@S10', PASSING, async ({ page }) => {
 //   Given a "Daily sync" work order failed with "FirstAttempt" at "Fetch", then its retry failed with "Retry" at "Load"
 //   When I open its health page
 //   Then the triage table has one row, "fail:Retry @ Load", with count 1
-test('@S11', PASSING, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrder(h.wf, {
     state: 'failed',
@@ -473,7 +469,7 @@ test('@S11', PASSING, async ({ page }) => {
 //   When I open its health page
 //   Then the triage table has a row for "Fetch" and a row for "Load", each with count 1
 //   And "Outcomes" counts the work order once
-test('@S12', PASSING, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrder(h.wf, {
     state: 'failed',
@@ -509,7 +505,7 @@ test('@S12', PASSING, async ({ page }) => {
 //   Then the triage row names the step "Load"
 //   When "Load to DHIS2" then fails with the same error
 //   Then the two failures are one row, named "Load to DHIS2"
-test('@S13', PASSING, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const h = givenHealth();
   failures(h.wf, 'Load', 'RuntimeError', 1, 120);
   h.wf.rename('Load', 'Load to DHIS2');
@@ -537,7 +533,7 @@ test('@S13', PASSING, async ({ page }) => {
 //   When I click "View history" on that row
 //   Then the flow "flow-workflow-health-drilldown" has started (its S01)
 //   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
-test('@S14', NEW_ONLY, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const h = givenHealth();
   const loads = failures(h.wf, 'Load', 'RuntimeError', 2);
   const fetches = failures(h.wf, 'Fetch', 'AdaptorError', 1);
@@ -559,7 +555,7 @@ test('@S14', NEW_ONLY, async ({ page }) => {
 //   When I click "Failed" in the "Outcomes" legend
 //   Then the flow "flow-workflow-health-drilldown" has started
 //   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
-test('@S15', NEW_ONLY, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, n: number) =>
     Array.from({ length: n }, () =>
@@ -585,7 +581,7 @@ test('@S15', NEW_ONLY, async ({ page }) => {
 //   Then I see "Runs over time" with the meta "2-hour buckets · Africa/Nairobi"
 //   And the failed run is in the bar starting 14:00
 //   And hovering that bar shows "<today>, 14:00 – 16:00"
-test('@S16', PASSING, async ({ browser }) => {
+test('@S16', async ({ browser }) => {
   const h = givenHealth();
   // The latest 11:30 UTC that has passed, so it is always inside 24 hours
   const now = new Date();
@@ -645,7 +641,7 @@ test('@S16', PASSING, async ({ browser }) => {
 //   Given my browser reports its timezone as "Etc/Unknown"
 //   When I open the "Runs" tab of the health page
 //   Then the meta ends "Etc/UTC"
-test('@S17', PASSING, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const h = givenHealth();
   await browserReportsTimezone(page, 'Etc/Unknown');
   await openHealth(page, h);
@@ -661,7 +657,7 @@ test('@S17', PASSING, async ({ page }) => {
 //   When I choose "Last 30 days"
 //   Then every panel shows a loading placeholder until its new numbers arrive
 //   And no panel shows numbers or an empty message for the 7-day window
-test('@S18', PASSING, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const h = givenHealth();
   // 3 successes and a failure in the last 7 days; 2 more successes 20 days ago
   seedWorkOrders(h.wf, 'success', 3);
@@ -714,7 +710,7 @@ test('@S18', PASSING, async ({ page }) => {
 //   Then "Last 30 days" is disabled
 //   And hovering it shows "Only 14 days of history are kept for this project."
 //   And "Last 24 hours" and "Last 7 days" are enabled
-test('@S19', PASSING, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const h = givenHealth();
   exec(
     `update projects set history_retention_period = 14 where id = '${h.project.id}'`
@@ -735,7 +731,7 @@ test('@S19', PASSING, async ({ page }) => {
 //   When I open its health page with "Last 24 hours"
 //   Then "Outcomes" reads "No finished work orders in the last 24 hours"
 //   And "Failure breakdown", "Steps with failures" and the triage table read "No failures in the last 24 hours"
-test('@S20', PASSING, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const h = givenHealth();
   // Work from three days ago, so the 7-day window has numbers and 24 hours has none
   seedWorkOrders(h.wf, 'success', 2, 3 * 24 * 60);
@@ -765,7 +761,7 @@ test('@S20', PASSING, async ({ page }) => {
 //   When a work order of "Daily sync" settles as failed
 //   Then within a few minutes "Outcomes" counts it without a reload
 //   And when I switch to another browser tab and back, the page asks for fresh numbers at once
-test('@S21', PASSING, async ({ page }) => {
+test('@S21', async ({ page }) => {
   test.setTimeout(150_000);
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 1);
@@ -791,7 +787,7 @@ test('@S21', PASSING, async ({ page }) => {
 //   Then "Steps with failures" and the triage table show "Could not load workflow stats. Refresh to try again."
 //   And "Outcomes" and "Failure breakdown" show their numbers
 //   And no server error text is shown
-test('@S22', PASSING, async ({ page }) => {
+test('@S22', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 2);
   seedWorkOrders(h.wf, 'failed', 1);
@@ -818,7 +814,7 @@ test('@S22', PASSING, async ({ page }) => {
 //   When one automatic refresh fails
 //   Then the previous numbers stay and no error is shown
 //   And the next successful refresh replaces them
-test('@S23', PASSING, async ({ page }) => {
+test('@S23', async ({ page }) => {
   const h = givenHealth();
   seedWorkOrders(h.wf, 'success', 2);
   await openHealth(page, h);
@@ -864,105 +860,100 @@ test('@S23', PASSING, async ({ page }) => {
 //     | "Malawi HIV" is scheduled for deletion                                      | 404 |
 //     | "Daily sync" has been deleted                                               | 404 |
 //     | the request names "Daily sync" under project "Kenya TB", which I am not on  | 404 |
-test(
-  '@S24',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page, request }) => {
-    removeMfaOf(ME);
-    const asked = async (
-      api: APIRequestContext,
-      projectId: string,
-      workflowId: string
-    ) => {
-      const statuses: Record<string, number> = {};
-      for (const slice of ['outcomes', 'failures', 'runs'])
-        statuses[slice] = (
-          await api.get(
-            `/api/projects/${projectId}/workflows/${workflowId}/health/${slice}?days=7`,
-            { maxRedirects: 0 }
-          )
-        ).status();
-      return statuses;
-    };
-    const all = (status: number) => ({
-      outcomes: status,
-      failures: status,
-      runs: status,
-    });
+test('@S24', { tag: ['@serial'] }, async ({ page, request }) => {
+  removeMfaOf(ME);
+  const asked = async (
+    api: APIRequestContext,
+    projectId: string,
+    workflowId: string
+  ) => {
+    const statuses: Record<string, number> = {};
+    for (const slice of ['outcomes', 'failures', 'runs'])
+      statuses[slice] = (
+        await api.get(
+          `/api/projects/${projectId}/workflows/${workflowId}/health/${slice}?days=7`,
+          { maxRedirects: 0 }
+        )
+      ).status();
+    return statuses;
+  };
+  const all = (status: number) => ({
+    outcomes: status,
+    failures: status,
+    runs: status,
+  });
 
-    const viewer = givenHealth();
-    const others = givenHealth('Kenya TB', { [OTHER]: 'owner' });
-    // A project I am a member of, asked for a workflow that belongs to another
-    const mine = givenHealth('Kenya TB member', { [ME]: 'viewer' });
-    const mfa = givenHealth('Requires MFA');
-    exec(
-      `update projects set requires_mfa = true where id = '${mfa.project.id}'`
-    );
-    const wound = givenHealth('Wound down');
-    exec(
-      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${wound.project.id}'`
-    );
-    const gone = givenHealth('Gone workflow');
-    exec(
-      `update workflows set deleted_at = now() at time zone 'utc' where id = '${gone.wf.id}'`
-    );
-    const supported = givenHealth('Supported', { [OTHER]: 'owner' });
-    exec(
-      `update projects set allow_support_access = true where id = '${supported.project.id}'`
-    );
-    const unsupported = givenHealth('Unsupported', { [OTHER]: 'owner' });
+  const viewer = givenHealth();
+  const others = givenHealth('Kenya TB', { [OTHER]: 'owner' });
+  // A project I am a member of, asked for a workflow that belongs to another
+  const mine = givenHealth('Kenya TB member', { [ME]: 'viewer' });
+  const mfa = givenHealth('Requires MFA');
+  exec(
+    `update projects set requires_mfa = true where id = '${mfa.project.id}'`
+  );
+  const wound = givenHealth('Wound down');
+  exec(
+    `update projects set scheduled_deletion = now() + interval '7 days' where id = '${wound.project.id}'`
+  );
+  const gone = givenHealth('Gone workflow');
+  exec(
+    `update workflows set deleted_at = now() at time zone 'utc' where id = '${gone.wf.id}'`
+  );
+  const supported = givenHealth('Supported', { [OTHER]: 'owner' });
+  exec(
+    `update projects set allow_support_access = true where id = '${supported.project.id}'`
+  );
+  const unsupported = givenHealth('Unsupported', { [OTHER]: 'owner' });
 
-    expect(
-      await asked(request, viewer.project.id, viewer.wf.id),
-      'not signed in'
-    ).toEqual(all(401));
+  expect(
+    await asked(request, viewer.project.id, viewer.wf.id),
+    'not signed in'
+  ).toEqual(all(401));
 
-    await signInAs(page, ME);
-    const api = page.request;
-    expect(
-      await asked(api, viewer.project.id, viewer.wf.id),
-      'a viewer'
-    ).toEqual(all(200));
-    expect(
-      await asked(api, others.project.id, others.wf.id),
-      'not on the project'
-    ).toEqual(all(404));
-    expect(
-      await asked(api, mfa.project.id, mfa.wf.id),
-      'MFA required, not enrolled'
-    ).toEqual(all(404));
-    expect(
-      await asked(api, wound.project.id, wound.wf.id),
-      'project scheduled for deletion'
-    ).toEqual(all(404));
-    expect(
-      await asked(api, gone.project.id, gone.wf.id),
-      'workflow deleted'
-    ).toEqual(all(404));
-    expect(
-      await asked(api, others.project.id, viewer.wf.id),
-      "the workflow under a project I'm not on"
-    ).toEqual(all(404));
-    expect(
-      await asked(api, mine.project.id, mine.wf.id),
-      'a viewer on the other project'
-    ).toEqual(all(200));
-    expect(
-      await asked(api, mine.project.id, viewer.wf.id),
-      "the workflow under another project I'm on"
-    ).toEqual(all(404));
+  await signInAs(page, ME);
+  const api = page.request;
+  expect(await asked(api, viewer.project.id, viewer.wf.id), 'a viewer').toEqual(
+    all(200)
+  );
+  expect(
+    await asked(api, others.project.id, others.wf.id),
+    'not on the project'
+  ).toEqual(all(404));
+  expect(
+    await asked(api, mfa.project.id, mfa.wf.id),
+    'MFA required, not enrolled'
+  ).toEqual(all(404));
+  expect(
+    await asked(api, wound.project.id, wound.wf.id),
+    'project scheduled for deletion'
+  ).toEqual(all(404));
+  expect(
+    await asked(api, gone.project.id, gone.wf.id),
+    'workflow deleted'
+  ).toEqual(all(404));
+  expect(
+    await asked(api, others.project.id, viewer.wf.id),
+    "the workflow under a project I'm not on"
+  ).toEqual(all(404));
+  expect(
+    await asked(api, mine.project.id, mine.wf.id),
+    'a viewer on the other project'
+  ).toEqual(all(200));
+  expect(
+    await asked(api, mine.project.id, viewer.wf.id),
+    "the workflow under another project I'm on"
+  ).toEqual(all(404));
 
-    cleanups.push(makeSupportUser(ME));
-    expect(
-      await asked(api, supported.project.id, supported.wf.id),
-      'support user, support access on'
-    ).toEqual(all(200));
-    expect(
-      await asked(api, unsupported.project.id, unsupported.wf.id),
-      'support user, support access off'
-    ).toEqual(all(404));
-  }
-);
+  cleanups.push(makeSupportUser(ME));
+  expect(
+    await asked(api, supported.project.id, supported.wf.id),
+    'support user, support access on'
+  ).toEqual(all(200));
+  expect(
+    await asked(api, unsupported.project.id, unsupported.wf.id),
+    'support user, support access off'
+  ).toEqual(all(404));
+});
 
 // @S25
 // Scenario: A failure alert's health link lands on this page
@@ -971,26 +962,22 @@ test(
 //   Then I am on the health page of "Daily sync"
 //   And the flow "flow-failure-alert-email" ends on this page
 //   And if I was signed out, the flow "flow-login-return-to" starts for that URL
-test(
-  '@S25',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page, request }) => {
-    const h = givenHealth();
-    sendFailureAlertOnNode(h.project.id, h.wf, ME);
-    const link = await mailedLinkTo(request, user(ME).email, h.path);
+test('@S25', { tag: ['@serial'] }, async ({ page, request }) => {
+  const h = givenHealth();
+  sendFailureAlertOnNode(h.project.id, h.wf, ME);
+  const link = await mailedLinkTo(request, user(ME).email, h.path);
 
-    await signInAs(page, ME);
-    await page.goto(link);
-    await expectAt(page, h.path);
-    await expect(heading(page, 'Outcomes')).toBeVisible();
+  await signInAs(page, ME);
+  await page.goto(link);
+  await expectAt(page, h.path);
+  await expect(heading(page, 'Outcomes')).toBeVisible();
 
-    await page.context().clearCookies();
-    await page.goto(link);
-    await expectAt(page, '/users/log_in');
-    await signInAs(page, ME);
-    await expectAt(page, h.path);
-  }
-);
+  await page.context().clearCookies();
+  await page.goto(link);
+  await expectAt(page, '/users/log_in');
+  await signInAs(page, ME);
+  await expectAt(page, h.path);
+});
 
 // @S26
 // Scenario: A digest's health link lands on this page
@@ -998,21 +985,17 @@ test(
 //   When I follow "See this workflow's failures grouped by error"
 //   Then I am on the health page of "Daily sync"
 //   And the flow "flow-digest-email" ends on this page (its S06)
-test(
-  '@S26',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page, request }) => {
-    const h = givenHealth();
-    sendDigestOnNode(h.project.id, h.wf, ME);
-    const link = await mailedLinkTo(request, user(ME).email, h.path);
+test('@S26', { tag: ['@serial'] }, async ({ page, request }) => {
+  const h = givenHealth();
+  sendDigestOnNode(h.project.id, h.wf, ME);
+  const link = await mailedLinkTo(request, user(ME).email, h.path);
 
-    await signInAs(page, ME);
-    await page.goto(link);
+  await signInAs(page, ME);
+  await page.goto(link);
 
-    await expectAt(page, h.path);
-    await expect(heading(page, 'Outcomes')).toBeVisible();
-  }
-);
+  await expectAt(page, h.path);
+  await expect(heading(page, 'Outcomes')).toBeVisible();
+});
 
 // @S27
 // Scenario: Deleting the workflow sends this page to the workflow list
@@ -1020,7 +1003,7 @@ test(
 //   When an editor deletes "Daily sync" in another session
 //   Then shared-project-scope S12 applies to this page
 //   And the flow "flow-delete-open-workflow" ends here (its S01, "the health page" row)
-test('@S27', PASSING, async ({ page }) => {
+test('@S27', async ({ page }) => {
   const h = givenHealth();
 
   await projectScope.S12(
@@ -1039,7 +1022,7 @@ test('@S27', PASSING, async ({ page }) => {
 //   When I click the "Failed" band of the bar with 2
 //   Then History opens in this tab with the 2 work orders whose runs failed in that bar's slot
 //   And not the earlier failure, nor the successes in the same bar
-test('@S28', NEW_ONLY, async ({ page }) => {
+test('@S28', async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, minutesAgo: number) =>
     seedWorkOrder(h.wf, { state, minutesAgo, runs: [{ state }] });
@@ -1062,45 +1045,39 @@ test('@S28', NEW_ONLY, async ({ page }) => {
 
 // Inherited from shared-authenticated-session, on the health page.
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on workflow-health',
-    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S07'], true) },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, givenHealth().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on workflow-health', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, givenHealth().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on workflow-health',
-    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S07'], true) },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, givenHealth().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on workflow-health', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, givenHealth().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on workflow-health',
-    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S07'], true) },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, givenHealth().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on workflow-health', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, givenHealth().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on workflow-health',
-    { tag: tagFor('S07', ['S01', 'S02', 'S03', 'S07'], true) },
-    async ({ page, browser }) => {
-      const h = givenHealth();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        `/projects/${h.project.id}/w`,
-        ME,
-        'History'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on workflow-health', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenHealth();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      `/projects/${h.project.id}/w`,
+      ME,
+      'History'
+    );
+  });
 
   for (const [id, variant] of [
     ['S04', 'require-email-verification'],
@@ -1111,196 +1088,52 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on workflow-health`,
-      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07'], true) },
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on workflow-health`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 // Inherited from shared-project-scope, on the health page.
 test.describe('shared-project-scope', () => {
-  test(
-    'shared-project-scope@S01 on workflow-health',
-    {
-      tag: tagFor(
-        'S01',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      await projectScope.S01(page, givenHealth().path);
-    }
-  );
+  test('shared-project-scope@S01 on workflow-health', async ({ page }) => {
+    await projectScope.S01(page, givenHealth().path);
+  });
 
-  test(
-    'shared-project-scope@S02 on workflow-health',
-    {
-      tag: tagFor(
-        'S02',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth();
-      await projectScope.S02(
-        page,
-        h.path,
-        ME,
-        page.getByRole('heading', { name: 'Daily sync', level: 1 })
-      );
-    }
-  );
+  test('shared-project-scope@S02 on workflow-health', async ({ page }) => {
+    const h = givenHealth();
+    await projectScope.S02(
+      page,
+      h.path,
+      ME,
+      page.getByRole('heading', { name: 'Daily sync', level: 1 })
+    );
+  });
 
-  test(
-    'shared-project-scope@S03 on workflow-health',
-    {
-      tag: tagFor(
-        'S03',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
-      await projectScope.S03(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S03 on workflow-health', async ({ page }) => {
+    const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
+    await projectScope.S03(page, h.path, ME);
+  });
 
-  test(
-    'shared-project-scope@S04 on workflow-health',
-    {
-      tag: tagFor(
-        'S04',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
-      exec(
-        `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.project.id}'`
-      );
-      await projectScope.S04(page, h.path, OTHER);
-    }
-  );
+  test('shared-project-scope@S04 on workflow-health', async ({ page }) => {
+    const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
+    exec(
+      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.project.id}'`
+    );
+    await projectScope.S04(page, h.path, OTHER);
+  });
 
-  test(
-    'shared-project-scope@S05 on workflow-health',
-    {
-      tag: tagFor(
-        'S05',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth();
-      exec(
-        `update projects set requires_mfa = true where id = '${h.project.id}'`
-      );
-      removeMfaOf(ME);
-      await projectScope.S05(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S05 on workflow-health', async ({ page }) => {
+    const h = givenHealth();
+    exec(
+      `update projects set requires_mfa = true where id = '${h.project.id}'`
+    );
+    removeMfaOf(ME);
+    await projectScope.S05(page, h.path, ME);
+  });
 
   test(
     'shared-project-scope@S06 on workflow-health',
-    {
-      tag: [
-        tagFor(
-          'S06',
-          [
-            'S01',
-            'S02',
-            'S03',
-            'S04',
-            'S05',
-            'S06',
-            'S07',
-            'S08',
-            'S09',
-            'S10',
-            'S11',
-            'S12',
-          ],
-          true
-        ),
-        '@serial',
-      ].flat(),
-    },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
       exec(
@@ -1316,95 +1149,27 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S07 on workflow-health',
-    {
-      tag: tagFor(
-        'S07',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth('Malawi HIV', { [ME]: 'editor', [OTHER]: 'owner' });
-      await projectScope.S07(page, h.path, ME, () =>
-        removeMemberOnNode(h.project.id, ME, OTHER)
-      );
-    }
-  );
+  test('shared-project-scope@S07 on workflow-health', async ({ page }) => {
+    const h = givenHealth('Malawi HIV', { [ME]: 'editor', [OTHER]: 'owner' });
+    await projectScope.S07(page, h.path, ME, () =>
+      removeMemberOnNode(h.project.id, ME, OTHER)
+    );
+  });
 
-  test(
-    'shared-project-scope@S08 on workflow-health',
-    {
-      tag: tagFor(
-        'S08',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth('Malawi HIV', { [ME]: 'admin', [OTHER]: 'owner' });
-      await projectScope.S08(
-        page,
-        `${h.path}?x=1`,
-        ME,
-        () => changeRoleOnNode(h.project.id, ME, 'viewer'),
-        healthRoot(page)
-      );
-    }
-  );
+  test('shared-project-scope@S08 on workflow-health', async ({ page }) => {
+    const h = givenHealth('Malawi HIV', { [ME]: 'admin', [OTHER]: 'owner' });
+    await projectScope.S08(
+      page,
+      `${h.path}?x=1`,
+      ME,
+      () => changeRoleOnNode(h.project.id, ME, 'viewer'),
+      healthRoot(page)
+    );
+  });
 
   test(
     'shared-project-scope@S09 on workflow-health',
-    {
-      tag: [
-        tagFor(
-          'S09',
-          [
-            'S01',
-            'S02',
-            'S03',
-            'S04',
-            'S05',
-            'S06',
-            'S07',
-            'S08',
-            'S09',
-            'S10',
-            'S11',
-            'S12',
-          ],
-          true
-        ),
-        '@serial',
-      ].flat(),
-    },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenHealth('Malawi HIV', { [OTHER]: 'owner' });
       exec(
@@ -1417,112 +1182,43 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S10 on workflow-health',
-    {
-      tag: tagFor(
-        'S10',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth('Malawi HIV', { [ME]: 'editor', [OTHER]: 'owner' });
-      await projectScope.S10(page, h.path, ME, () =>
-        scheduleDeletionOnNode(h.project.id)
-      );
-    }
-  );
+  test('shared-project-scope@S10 on workflow-health', async ({ page }) => {
+    const h = givenHealth('Malawi HIV', { [ME]: 'editor', [OTHER]: 'owner' });
+    await projectScope.S10(page, h.path, ME, () =>
+      scheduleDeletionOnNode(h.project.id)
+    );
+  });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test(
-    'shared-project-scope@S11 on workflow-health',
-    {
-      tag: tagFor(
-        'S11',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const parent = given('Malawi HIV', { [ME]: 'editor' });
-      const parentWorkflow = seedWorkflow(parent.id);
-      const sandbox = given('dev', { [ME]: 'editor' });
-      exec(
-        `update projects set parent_id = '${parent.id}' where id = '${sandbox.id}'`
-      );
-      const sandboxWorkflow = seedWorkflow(sandbox.id);
-      setPreferences(ME, { experimental_features: true });
+  test('shared-project-scope@S11 on workflow-health', async ({ page }) => {
+    const parent = given('Malawi HIV', { [ME]: 'editor' });
+    const parentWorkflow = seedWorkflow(parent.id);
+    const sandbox = given('dev', { [ME]: 'editor' });
+    exec(
+      `update projects set parent_id = '${parent.id}' where id = '${sandbox.id}'`
+    );
+    const sandboxWorkflow = seedWorkflow(sandbox.id);
+    setPreferences(ME, { experimental_features: true });
 
-      await projectScope.S11(
-        page,
-        healthPath(sandbox.id, sandboxWorkflow.id),
-        ME,
-        () => scheduleDeletionOnNode(sandbox.id),
-        `/projects/${parent.id}/w/${parentWorkflow.id}`
-      );
-    }
-  );
+    await projectScope.S11(
+      page,
+      healthPath(sandbox.id, sandboxWorkflow.id),
+      ME,
+      () => scheduleDeletionOnNode(sandbox.id),
+      `/projects/${parent.id}/w/${parentWorkflow.id}`
+    );
+  });
 
-  test(
-    'shared-project-scope@S12 on workflow-health',
-    {
-      tag: tagFor(
-        'S12',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth();
-      await projectScope.S12(
-        page,
-        h.path,
-        ME,
-        () => deleteWorkflowOnNode(h.wf.id, OTHER),
-        `/projects/${h.project.id}/w`
-      );
-    }
-  );
+  test('shared-project-scope@S12 on workflow-health', async ({ page }) => {
+    const h = givenHealth();
+    await projectScope.S12(
+      page,
+      h.path,
+      ME,
+      () => deleteWorkflowOnNode(h.wf.id, OTHER),
+      `/projects/${h.project.id}/w`
+    );
+  });
 });
 
 // Inherited from shared-project-header: the breadcrumbs, picker and side menu
@@ -1533,184 +1229,45 @@ test.describe('shared-project-header', () => {
 
   // shared-project-header S01 opens a run's page; the same breadcrumb
   // contract on this page ends in "Health", which is no link
-  test(
-    'shared-project-header@S01 on workflow-health',
-    {
-      tag: tagFor(
-        'S01',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth(HOST);
-      await projectHeader.S01(page, h.path, ME, HOST, [
-        { name: 'Workflows', href: `/projects/${h.project.id}/w` },
-        {
-          name: 'Daily sync',
-          href: `/projects/${h.project.id}/w/${h.wf.id}`,
-        },
-        { name: 'Health' },
-      ]);
-    }
-  );
+  test('shared-project-header@S01 on workflow-health', async ({ page }) => {
+    const h = givenHealth(HOST);
+    await projectHeader.S01(page, h.path, ME, HOST, [
+      { name: 'Workflows', href: `/projects/${h.project.id}/w` },
+      {
+        name: 'Daily sync',
+        href: `/projects/${h.project.id}/w/${h.wf.id}`,
+      },
+      { name: 'Health' },
+    ]);
+  });
 
-  test(
-    'shared-project-header@S02 on workflow-health',
-    {
-      tag: tagFor(
-        'S02',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth(HOST);
-      await projectHeader.S02(page, ME, { path: h.path, project: HOST });
-    }
-  );
+  test('shared-project-header@S02 on workflow-health', async ({ page }) => {
+    const h = givenHealth(HOST);
+    await projectHeader.S02(page, ME, { path: h.path, project: HOST });
+  });
 
-  test(
-    'shared-project-header@S03 on workflow-health',
-    {
-      tag: tagFor(
-        'S03',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const parent = given(HOST, { [ME]: 'editor' });
-      const sandbox = given('dev', { [ME]: 'editor' });
-      exec(`update projects set parent_id = '${parent.id}', color = '#E33D63'
+  test('shared-project-header@S03 on workflow-health', async ({ page }) => {
+    const parent = given(HOST, { [ME]: 'editor' });
+    const sandbox = given('dev', { [ME]: 'editor' });
+    exec(`update projects set parent_id = '${parent.id}', color = '#E33D63'
             where id = '${sandbox.id}'`);
-      const wf = seedWorkflow(sandbox.id);
-      await projectHeader.S03(page, ME, {
-        path: healthPath(sandbox.id, wf.id),
-        label: `${HOST}:dev`,
-      });
-    }
-  );
+    const wf = seedWorkflow(sandbox.id);
+    await projectHeader.S03(page, ME, {
+      path: healthPath(sandbox.id, wf.id),
+      label: `${HOST}:dev`,
+    });
+  });
 
   for (const id of ['S04', 'S05', 'S06', 'S08'] as const)
-    test(
-      `shared-project-header@${id} on workflow-health`,
-      {
-        tag: tagFor(
-          id,
-          [
-            'S01',
-            'S02',
-            'S03',
-            'S04',
-            'S05',
-            'S06',
-            'S07',
-            'S08',
-            'S09',
-            'S10',
-            'S11',
-            'S12',
-            'S13',
-            'S15',
-            'S16',
-            'S17',
-            'S18',
-          ],
-          true
-        ),
-      },
-      async ({ page }) => {
-        const h = givenHealth(HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on workflow-health`, async ({ page }) => {
+      const h = givenHealth(HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-header@S07 on workflow-health',
-    {
-      tag: [
-        tagFor(
-          'S07',
-          [
-            'S01',
-            'S02',
-            'S03',
-            'S04',
-            'S05',
-            'S06',
-            'S07',
-            'S08',
-            'S09',
-            'S10',
-            'S11',
-            'S12',
-            'S13',
-            'S15',
-            'S16',
-            'S17',
-            'S18',
-          ],
-          true
-        ),
-        '@serial',
-      ].flat(),
-    },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenHealth(HOST);
       await projectHeader.S07(page, h.path, ME);
@@ -1719,246 +1276,50 @@ test.describe('shared-project-header', () => {
 
   // shared-project-header S09 starts on a project settings page, whatever
   // page hosts the header (see the shared step)
-  test(
-    'shared-project-header@S09 on workflow-health',
-    {
-      tag: tagFor(
-        'S09',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
+  test('shared-project-header@S09 on workflow-health', async ({ page }) => {
+    await projectHeader.S09(page, ME);
+  });
 
   // The Examples row "a workflow's editor | the workflows page": like the
   // editor, this page belongs to one workflow of the project
-  test(
-    'shared-project-header@S10 on workflow-health',
-    {
-      tag: tagFor(
-        'S10',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth(HOST);
-      await projectHeader.S10(page, h.path, ME, '/w');
-    }
-  );
+  test('shared-project-header@S10 on workflow-health', async ({ page }) => {
+    const h = givenHealth(HOST);
+    await projectHeader.S10(page, h.path, ME, '/w');
+  });
 
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on workflow-health`,
-      {
-        tag: tagFor(
-          id,
-          [
-            'S01',
-            'S02',
-            'S03',
-            'S04',
-            'S05',
-            'S06',
-            'S07',
-            'S08',
-            'S09',
-            'S10',
-            'S11',
-            'S12',
-            'S13',
-            'S15',
-            'S16',
-            'S17',
-            'S18',
-          ],
-          true
-        ),
-      },
-      async ({ page }) => {
-        const h = givenHealth(HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on workflow-health`, async ({ page }) => {
+      const h = givenHealth(HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
-  test(
-    'shared-project-header@S14 on workflow-health',
-    {
-      tag: tagFor(
-        'S14',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    () => {
-      test.skip(
-        true,
-        'variant require-email-verification is not configured on this instance'
-      );
-    }
-  );
+  test('shared-project-header@S14 on workflow-health', () => {
+    test.skip(
+      true,
+      'variant require-email-verification is not configured on this instance'
+    );
+  });
 
   // This page highlights "Workflows" in the side menu
-  test(
-    'shared-project-header@S15 on workflow-health',
-    {
-      tag: tagFor(
-        'S15',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth(HOST);
-      await projectHeader.S15(page, h.path, ME, h.project.id, 'Workflows');
-    }
-  );
+  test('shared-project-header@S15 on workflow-health', async ({ page }) => {
+    const h = givenHealth(HOST);
+    await projectHeader.S15(page, h.path, ME, h.project.id, 'Workflows');
+  });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test(
-    'shared-project-header@S16 on workflow-health',
-    {
-      tag: tagFor(
-        'S16',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth(HOST);
-      await projectHeader.S16(page, h.path, ME, { channels: true });
-    }
-  );
+  test('shared-project-header@S16 on workflow-health', async ({ page }) => {
+    const h = givenHealth(HOST);
+    await projectHeader.S16(page, h.path, ME, { channels: true });
+  });
 
   // A superuser needs a role on the project to open this page at all
-  test(
-    'shared-project-header@S17 on workflow-health',
-    {
-      tag: tagFor(
-        'S17',
-        [
-          'S01',
-          'S02',
-          'S03',
-          'S04',
-          'S05',
-          'S06',
-          'S07',
-          'S08',
-          'S09',
-          'S10',
-          'S11',
-          'S12',
-          'S13',
-          'S15',
-          'S16',
-          'S17',
-          'S18',
-        ],
-        true
-      ),
-    },
-    async ({ page }) => {
-      const h = givenHealth(HOST, {
-        [ME]: 'viewer',
-        'super@openfn.org': 'viewer',
-      });
-      await projectHeader.S17(page, h.path);
-    }
-  );
+  test('shared-project-header@S17 on workflow-health', async ({ page }) => {
+    const h = givenHealth(HOST, {
+      [ME]: 'viewer',
+      'super@openfn.org': 'viewer',
+    });
+    await projectHeader.S17(page, h.path);
+  });
 });
 
 // Inherited from shared-flash-messages. The page puts no flash of its own;
@@ -1977,87 +1338,63 @@ test.describe('shared-flash-messages', () => {
     return { h, deleteIt };
   }
 
-  test(
-    'shared-flash-messages@S01 on workflow-health',
-    { tag: tagFor('S01', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
-    async ({ page }) => {
-      const { deleteIt } = await withDeletion(page);
-      await flashMessages.S01(page, FLASH, deleteIt);
-    }
-  );
+  test('shared-flash-messages@S01 on workflow-health', async ({ page }) => {
+    const { deleteIt } = await withDeletion(page);
+    await flashMessages.S01(page, FLASH, deleteIt);
+  });
 
   // The error flash this page can end up showing: "Workflow not found"
-  test(
-    'shared-flash-messages@S02 on workflow-health',
-    { tag: tagFor('S02', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
-    async ({ page }) => {
-      const h = givenHealth();
-      const other = givenHealth('Kenya TB', { [ME]: 'viewer' });
-      await signInAs(page, ME);
-      await flashMessages.S02(page, 'Workflow not found', async () => {
-        await page.goto(`/projects/${h.project.id}/w/${other.wf.id}/health`);
-      });
-    }
-  );
+  test('shared-flash-messages@S02 on workflow-health', async ({ page }) => {
+    const h = givenHealth();
+    const other = givenHealth('Kenya TB', { [ME]: 'viewer' });
+    await signInAs(page, ME);
+    await flashMessages.S02(page, 'Workflow not found', async () => {
+      await page.goto(`/projects/${h.project.id}/w/${other.wf.id}/health`);
+    });
+  });
 
-  test(
-    'shared-flash-messages@S03 on workflow-health',
-    { tag: tagFor('S03', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
-    async ({ page }) => {
-      const { deleteIt } = await withDeletion(page);
-      await flashMessages.S03(page, FLASH, deleteIt);
-    }
-  );
+  test('shared-flash-messages@S03 on workflow-health', async ({ page }) => {
+    const { deleteIt } = await withDeletion(page);
+    await flashMessages.S03(page, FLASH, deleteIt);
+  });
 
-  test(
-    'shared-flash-messages@S04 on workflow-health',
-    { tag: tagFor('S04', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
-    async ({ page }) => {
-      const { deleteIt } = await withDeletion(page);
-      await flashMessages.S04(page, FLASH, deleteIt, async () => {
-        // Sorting makes the workflow list render again
-        await page.getByRole('columnheader', { name: 'Name' }).click();
-        await expect(
-          page.getByRole('columnheader', { name: 'Name' })
-        ).toBeVisible();
-      });
-    }
-  );
+  test('shared-flash-messages@S04 on workflow-health', async ({ page }) => {
+    const { deleteIt } = await withDeletion(page);
+    await flashMessages.S04(page, FLASH, deleteIt, async () => {
+      // Sorting makes the workflow list render again
+      await page.getByRole('columnheader', { name: 'Name' }).click();
+      await expect(
+        page.getByRole('columnheader', { name: 'Name' })
+      ).toBeVisible();
+    });
+  });
 
-  test(
-    'shared-flash-messages@S05 on workflow-health',
-    { tag: tagFor('S05', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
-    async ({ page }) => {
-      const { h, deleteIt } = await withDeletion(page);
-      await flashMessages.S05(
-        page,
-        FLASH,
-        deleteIt,
-        `/projects/${h.project.id}/w`
-      );
-    }
-  );
+  test('shared-flash-messages@S05 on workflow-health', async ({ page }) => {
+    const { h, deleteIt } = await withDeletion(page);
+    await flashMessages.S05(
+      page,
+      FLASH,
+      deleteIt,
+      `/projects/${h.project.id}/w`
+    );
+  });
 
-  test(
-    'shared-flash-messages@S06 on workflow-health',
-    { tag: tagFor('S06', ['S01', 'S02', 'S03', 'S04', 'S05', 'S06'], true) },
-    async ({ page }) => {
-      const h = givenHealth();
-      const notMine = givenHealth('Kenya TB', { [OTHER]: 'owner' });
-      await openHealth(page, h);
+  test('shared-flash-messages@S06 on workflow-health', async ({ page }) => {
+    const h = givenHealth();
+    const notMine = givenHealth('Kenya TB', { [OTHER]: 'owner' });
+    await openHealth(page, h);
 
-      await flashMessages.S06(
-        page,
-        () => open(page, notMine.path),
-        '/projects',
-        // the list of my projects
-        page.getByRole('cell', {
-          name: manifest().projects[0].name,
-          exact: true,
-        })
-      );
-    }
-  );
+    await flashMessages.S06(
+      page,
+      () => open(page, notMine.path),
+      '/projects',
+      // the list of my projects
+      page.getByRole('cell', {
+        name: manifest().projects[0].name,
+        exact: true,
+      })
+    );
+  });
 
   // shared-flash-messages S07 and S08 are on admin pages and the sign-in form;
   // not_reachable_here does not exclude them, but this page never shows

@@ -84,10 +84,6 @@ const THIRD = 'super@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-const PENDING = { tag: '@pending' };
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING = { tag: ['@passing-old', '@passing-new'] };
-
 let cleanups: (() => void)[] = [];
 test.beforeEach(() => {
   // Some tests change my preferences, disable or MFA me
@@ -156,7 +152,7 @@ const onScreen = (page: Page, text: string | RegExp) =>
 //   And I see "Work Order" with the work order's short id
 //   And I see "Started by" reading "Webhook trigger"
 //   And I see "Started", "Finished", "Duration" and "Status"
-test('@S01', PASSING, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenRun(projectId, { steps: [{ name: 'Fetch' }] });
   await openRun(page, projectId, run.runId);
@@ -183,7 +179,7 @@ test('@S01', PASSING, async ({ page }) => {
 //   Examples: a webhook request "Webhook trigger"; its cron trigger "Cron
 //   trigger"; retried by "amara@example.org" from History, "amara@example.org"
 // Amara's address is new each run, as every worker sees every account.
-test('@S02', PASSING, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const amara = seedUser('amara');
   cleanups.push(amara.remove);
   const { id: projectId } = givenProject();
@@ -217,7 +213,7 @@ test('@S02', PASSING, async ({ page }) => {
 //   And its tooltip says the run is based on a snapshot taken on that snapshot's date and time
 // The current run is of another workflow that has not changed since: each
 // seeded run builds its own workflow.
-test('@S03', PASSING, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const { id: projectId } = givenProject();
   const older = givenRun(projectId, { steps: [{ name: 'Fetch' }] });
   changeWorkflowOnNode(projectId, 'Intake', OWNER);
@@ -249,7 +245,7 @@ test('@S03', PASSING, async ({ page }) => {
 //   When I open the run page
 //   Then "Final Output" shows the output's short id linking to "/projects/<project_id>/dataclips/<dataclip_id>/show"
 //   And when a run finished without a final output, "Final Output" is empty
-test('@S04', PASSING, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const { id: projectId } = givenProject();
   const withOutput = givenRun(projectId, {
     steps: [{ name: 'Fetch' }],
@@ -284,7 +280,7 @@ test('@S04', PASSING, async ({ page }) => {
 //   And history-work-orders S10 holds
 // history-work-orders S10: only "W" is listed, under a chip "Work order:
 // <short id of W>".
-test('@S05', PASSING, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenRun(projectId, { steps: [{ name: 'Fetch' }] });
   givenRun(projectId, { workflow: 'Another', steps: [{ name: 'Fetch' }] });
@@ -313,7 +309,7 @@ test('@S05', PASSING, async ({ page }) => {
 //   And I see "Run not found"
 //   And the same happens for a run id that does not exist
 // I am an editor on "Kenya TB" too, so only the project in the URL refuses.
-test('@S06', PASSING, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const malawi = givenProject({ [ME]: 'editor' });
   const kenya = givenProject({ [ME]: 'editor' }, { name: 'Kenya TB' });
   const r = givenRun(kenya.id, { steps: [{ name: 'Fetch' }] });
@@ -359,7 +355,7 @@ function givenTwoStepRun(projectId: string, seed: RunSeed = {}) {
 //   And the "Output" tab shows "Fetch"'s output
 //   When I select "Transform" and then "Fetch" again
 //   Then the "Output" tab shows "Fetch"'s output again
-test('@S07', PASSING, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenTwoStepRun(projectId);
   await openRun(page, projectId, run.runId);
@@ -390,7 +386,7 @@ test('@S07', PASSING, async ({ page }) => {
 //   Then "Fetch" is marked as selected
 //   And the "Input" and "Output" tabs are enabled
 // Enabled: each opens and shows the step's data.
-test('@S08', PASSING, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenTwoStepRun(projectId);
 
@@ -411,8 +407,7 @@ test('@S08', PASSING, async ({ page }) => {
 //   Then the "Log" tab is shown
 //   And the "Input" tab is disabled with the tooltip "A valid step must be selected to view its input"
 //   And the "Output" tab is disabled with the tooltip "A valid step (with a readable output) must be selected to view its output"
-// Fails on the port: the tabs show no tab panel.
-test('@S09', PASSING_OLD, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenTwoStepRun(projectId);
   await openRun(page, projectId, run.runId);
@@ -445,7 +440,7 @@ const loggedInReverse = () =>
 //   When I open the run page
 //   Then the "Log" tab shows both lines in time order, each prefixed with its source
 // "Posted batch 1" is stored first but logged a second later.
-test('@S10', PASSING, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenRun(projectId, {
     steps: [{ name: 'Fetch', seconds: 3 }],
@@ -485,9 +480,7 @@ function givenLoggedSteps(projectId: string) {
 //   And "Transform"'s lines are marked in the gutter
 //   And "Fetch"'s lines are not marked
 // Clearing the selection is going Back to the run without a step.
-// Pending on old: the highlight starts one line early (annotation 6.1).
-// Passes on the port only: the highlight starts on the step's first line.
-test('@S11', { tag: '@passing-new' }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenLoggedSteps(projectId);
   await openRun(page, projectId, run.runId);
@@ -509,7 +502,7 @@ test('@S11', { tag: '@passing-new' }, async ({ page }) => {
 //   When I choose "debug"
 //   Then both lines are shown
 //   And when I open another run, the filter reads "debug"
-test('@S12', PASSING, async ({ page }) => {
+test('@S12', async ({ page }) => {
   setPreferences(ME, {});
   const { id: projectId } = givenProject();
   const { debug, info } = logViewer.given.S03;
@@ -543,7 +536,7 @@ test('@S12', PASSING, async ({ page }) => {
 //   Given a run that was lost before it logged anything
 //   When I open the run page
 //   Then the "Log" tab says "No logs were received for this run."
-test('@S13', PASSING, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenRun(projectId, { state: 'lost' });
   await openRun(page, projectId, run.runId);
@@ -558,7 +551,7 @@ test('@S13', PASSING, async ({ page }) => {
 //   Then the "Log" tab shows <message>
 //   Examples: available "Waiting for worker"; claimed "Creating runtime &
 //   installing adaptors"; started "Nothing yet"
-test('@S14', PASSING, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const { id: projectId } = givenProject();
   const examples = [
     ['available', 'Waiting for worker'],
@@ -578,7 +571,7 @@ test('@S14', PASSING, async ({ page }) => {
 //   Given a started run whose step "Fetch" has not finished
 //   When I select "Fetch"
 //   Then the "Output" tab shows "Nothing yet"
-test('@S15', PASSING, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenRun(projectId, {
     state: 'started',
@@ -601,7 +594,7 @@ test('@S15', PASSING, async ({ page }) => {
 //   Then I see a "Cancel" action
 //   And shared-run-components S09, S10, S11 and S12 hold on this page
 // S10 to S12 run in the shared block below; S09 is the cancel itself.
-test('@S16', PASSING, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const { id: projectId } = givenProject({ [ME]: 'editor' });
   const run = givenRun(projectId, { state: 'available' });
   await openRun(page, projectId, run.runId);
@@ -634,8 +627,7 @@ function givenOlderAndCurrent(projectId: string) {
 //   Then shared-run-components S07 holds, and S08 under experimental features
 //   And the flow "flow-open-run-in-editor" starts when I follow either
 // S08 (and the flow it starts) runs in the shared block below.
-// Fails on the port: a step's inspect link has no address.
-test('@S17', PASSING_OLD, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const { id: projectId } = givenProject();
   const { older, current } = givenOlderAndCurrent(projectId);
   await openRun(page, projectId, older.runId);
@@ -665,7 +657,7 @@ test('@S17', PASSING_OLD, async ({ page }) => {
 //   Then the flow "flow-run-show-live-updates" ends on this page
 // The flow's S01 to S06 and S08, in one run: claimed, started, a step that
 // starts, logs and completes while selected, and the run's completion.
-test('@S18', PASSING, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const { id: projectId } = givenProject({ [ME]: 'editor' });
   const run = givenRun(projectId, { state: 'available', jobs: ['Fetch'] });
   await openRun(page, projectId, run.runId);
@@ -711,7 +703,7 @@ test('@S18', PASSING, async ({ page }) => {
 //   And the flow "flow-failure-alert-email" ends on this page
 //   And if I was signed out, the flow "flow-login-return-to" starts for that URL
 // Followed signed out: signing in returns me to the run.
-test('@S19', PASSING, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const { id: projectId } = givenProject();
   const run = givenRun(projectId, {
     state: 'failed',
@@ -743,7 +735,7 @@ test('@S19', PASSING, async ({ page }) => {
 // The flow's S01: the webhook body is wiped once the worker has it and the
 // step's output is never stored. Its S04: an admin is pointed to the policy,
 // an editor to the admins.
-test('@S20', PASSING, async ({ page, browser }) => {
+test('@S20', async ({ page, browser }) => {
   const { id: projectId } = givenProject({ [ME]: 'admin', [THIRD]: 'editor' });
   keepNoData(projectId);
   const run = givenRun(projectId, {
@@ -808,45 +800,35 @@ function givenRunPage(
 const summary = (page: Page) => detailLabel(page, 'Work Order');
 
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on run-show',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S01(page, givenRunPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on run-show', async ({ page }) => {
+    await authenticatedSession.S01(page, givenRunPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on run-show',
-    PASSING,
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, givenRunPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on run-show', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, givenRunPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on run-show',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S03(page, givenRunPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on run-show', async ({ page }) => {
+    await authenticatedSession.S03(page, givenRunPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on run-show',
-    PASSING,
-    async ({ page, browser }) => {
-      const h = givenRunPage();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        `/projects/${h.id}/w`,
-        ME,
-        'History'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on run-show', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenRunPage();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      `/projects/${h.id}/w`,
+      ME,
+      'History'
+    );
+  });
 
   // These variants are not configured on this instance
   for (const [id, variant] of [
@@ -858,25 +840,25 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(`shared-authenticated-session@${id} on run-show`, PENDING, () => {
+    test(`shared-authenticated-session@${id} on run-show`, () => {
       test.skip(true, `variant ${variant} is not configured on this instance`);
     });
 });
 
 test.describe('shared-project-scope', () => {
-  test('shared-project-scope@S01 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-scope@S01 on run-show', async ({ page }) => {
     await projectScope.S01(page, givenRunPage().path);
   });
 
-  test('shared-project-scope@S02 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-scope@S02 on run-show', async ({ page }) => {
     await projectScope.S02(page, givenRunPage().path, ME, summary(page));
   });
 
-  test('shared-project-scope@S03 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-scope@S03 on run-show', async ({ page }) => {
     await projectScope.S03(page, givenRunPage({ [OWNER]: 'owner' }).path, ME);
   });
 
-  test('shared-project-scope@S04 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-scope@S04 on run-show', async ({ page }) => {
     const h = givenRunPage({ [OWNER]: 'owner' });
     exec(
       `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
@@ -884,7 +866,7 @@ test.describe('shared-project-scope', () => {
     await projectScope.S04(page, h.path, OWNER);
   });
 
-  test('shared-project-scope@S05 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-scope@S05 on run-show', async ({ page }) => {
     const h = givenRunPage();
     exec(`update projects set requires_mfa = true where id = '${h.id}'`);
     removeMfaOf(ME);
@@ -894,7 +876,7 @@ test.describe('shared-project-scope', () => {
   // A support user sees every project that allows support access
   test(
     'shared-project-scope@S06 on run-show',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenRunPage({ [OWNER]: 'owner' });
       exec(
@@ -905,14 +887,14 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test('shared-project-scope@S07 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-scope@S07 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'editor', [OWNER]: 'owner' });
     await projectScope.S07(page, h.path, ME, () =>
       removeMemberOnNode(h.id, ME, OWNER)
     );
   });
 
-  test('shared-project-scope@S08 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-scope@S08 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'admin', [OWNER]: 'owner' });
     await projectScope.S08(
       page,
@@ -925,7 +907,7 @@ test.describe('shared-project-scope', () => {
 
   test(
     'shared-project-scope@S09 on run-show',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenRunPage({ [OWNER]: 'owner' });
       exec(
@@ -938,7 +920,7 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test('shared-project-scope@S10 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-scope@S10 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'editor', [OWNER]: 'owner' });
     await projectScope.S10(page, h.path, ME, () =>
       scheduleDeletionOnNode(h.id)
@@ -951,17 +933,13 @@ test.describe('shared-project-scope', () => {
 });
 
 test.describe('shared-usage-limits-banner', () => {
-  test('shared-usage-limits-banner@S01 on run-show', PENDING, () => {
+  test('shared-usage-limits-banner@S01 on run-show', () => {
     test.skip(true, 'variant usage-limited is not configured on this instance');
   });
 
-  test(
-    'shared-usage-limits-banner@S02 on run-show',
-    PASSING,
-    async ({ page }) => {
-      await usageLimitsBanner.S02(page, givenRunPage().path, ME, summary(page));
-    }
-  );
+  test('shared-usage-limits-banner@S02 on run-show', async ({ page }) => {
+    await usageLimitsBanner.S02(page, givenRunPage().path, ME, summary(page));
+  });
 });
 
 // The picker scenarios seed their own "Malawi HIV", so this page's project
@@ -970,7 +948,7 @@ test.describe('shared-project-header', () => {
   const HOST = 'Run host';
 
   // The last crumb holds the run's id and its version chip
-  test('shared-project-header@S01 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-header@S01 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'editor' }, HOST);
     await projectHeader.S01(page, h.path, ME, HOST, [
       { name: 'History', href: `/projects/${h.id}/history` },
@@ -978,12 +956,12 @@ test.describe('shared-project-header', () => {
     ]);
   });
 
-  test('shared-project-header@S02 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-header@S02 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'editor' }, HOST);
     await projectHeader.S02(page, ME, { path: h.path, project: HOST });
   });
 
-  test('shared-project-header@S03 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-header@S03 on run-show', async ({ page }) => {
     const w = seedWorkspace(
       {
         name: HOST,
@@ -1005,19 +983,15 @@ test.describe('shared-project-header', () => {
   });
 
   for (const id of ['S04', 'S05', 'S06', 'S08'] as const)
-    test(
-      `shared-project-header@${id} on run-show`,
-      PASSING,
-      async ({ page }) => {
-        const h = givenRunPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on run-show`, async ({ page }) => {
+      const h = givenRunPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-header@S07 on run-show',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenRunPage({ [ME]: 'editor' }, HOST);
       await projectHeader.S07(page, h.path, ME);
@@ -1025,28 +999,24 @@ test.describe('shared-project-header', () => {
   );
 
   // S09 starts on a project settings page, whatever page hosts the header
-  test('shared-project-header@S09 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-header@S09 on run-show', async ({ page }) => {
     await projectHeader.S09(page, ME);
   });
 
   // A run exists only in its own project: the Examples row "a run's page"
   // lands on the history page
-  test('shared-project-header@S10 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-header@S10 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'editor' }, HOST);
     await projectHeader.S10(page, h.path, ME, '/history');
   });
 
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on run-show`,
-      PASSING,
-      async ({ page }) => {
-        const h = givenRunPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on run-show`, async ({ page }) => {
+      const h = givenRunPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
-  test('shared-project-header@S14 on run-show', PENDING, () => {
+  test('shared-project-header@S14 on run-show', () => {
     test.skip(
       true,
       'variant require-email-verification is not configured on this instance'
@@ -1054,19 +1024,19 @@ test.describe('shared-project-header', () => {
   });
 
   // The run page marks History (annotation 6.2)
-  test('shared-project-header@S15 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-header@S15 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'viewer' }, HOST);
     await projectHeader.S15(page, h.path, ME, h.id, 'History');
   });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test('shared-project-header@S16 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-header@S16 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'editor' }, HOST);
     await projectHeader.S16(page, h.path, ME, { channels: true });
   });
 
   // A superuser needs a role on the project to open this page at all
-  test('shared-project-header@S17 on run-show', PASSING, async ({ page }) => {
+  test('shared-project-header@S17 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
     await projectHeader.S17(page, h.path);
   });
@@ -1077,7 +1047,7 @@ test.describe('shared-project-header', () => {
 // about the step rerun icon, which only History shows (not_reachable_here);
 // S15 to S18 are the editor run viewer's.
 test.describe('shared-run-components', () => {
-  test('shared-run-components@S01 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S01 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const labelled = [
       ['available', 'Enqueued'],
@@ -1093,7 +1063,7 @@ test.describe('shared-run-components', () => {
     }
   });
 
-  test('shared-run-components@S02 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S02 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const run = givenRun(projectId, {
       state: 'started',
@@ -1112,7 +1082,7 @@ test.describe('shared-run-components', () => {
     });
   });
 
-  test('shared-run-components@S03 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S03 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const kill = (name: string, errorType: string) => ({
       name,
@@ -1138,7 +1108,7 @@ test.describe('shared-run-components', () => {
     });
   });
 
-  test('shared-run-components@S04 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S04 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const run = givenRun(projectId, {
       state: 'started',
@@ -1150,7 +1120,7 @@ test.describe('shared-run-components', () => {
   });
 
   // The run that has not started is on a second page
-  test('shared-run-components@S05 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S05 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const ran = givenRun(projectId, {
       steps: [{ name: 'Fetch', seconds: 90 }],
@@ -1170,7 +1140,7 @@ test.describe('shared-run-components', () => {
     );
   });
 
-  test('shared-run-components@S06 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S06 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const run = givenRun(projectId, {
       state: 'failed',
@@ -1189,7 +1159,7 @@ test.describe('shared-run-components', () => {
   });
 
   // The workflow link and the step's inspect link; page S17 runs the same
-  test('shared-run-components@S07 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S07 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const { older, current } = givenOlderAndCurrent(projectId);
     await openRun(page, projectId, older.runId);
@@ -1205,7 +1175,7 @@ test.describe('shared-run-components', () => {
     });
   });
 
-  test('shared-run-components@S08 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S08 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const { older } = givenOlderAndCurrent(projectId);
     setPreferences(ME, { experimental_features: true });
@@ -1219,7 +1189,7 @@ test.describe('shared-run-components', () => {
     );
   });
 
-  test('shared-run-components@S09 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S09 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject({ [ME]: 'editor' });
     const run = givenRun(projectId, { state: 'available' });
     await openRun(page, projectId, run.runId);
@@ -1232,7 +1202,7 @@ test.describe('shared-run-components', () => {
     );
   });
 
-  test('shared-run-components@S10 on run-show', PASSING, async ({ page }) => {
+  test('shared-run-components@S10 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject({ [ME]: 'editor' });
     const run = givenRun(projectId, { state: 'available' });
     await openRun(page, projectId, run.runId);
@@ -1244,50 +1214,41 @@ test.describe('shared-run-components', () => {
   });
 
   // Sent from my own queued run's page, naming Kenya TB's run
-  // Fails on the port: Cancel always cancels the page's own run, so no other run can be named.
-  test(
-    'shared-run-components@S11 on run-show',
-    PASSING_OLD,
-    async ({ page }) => {
-      const { id: projectId } = givenProject({ [ME]: 'editor' });
-      const mine = givenRun(projectId, { state: 'available' });
-      const kenya = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
-      const theirs = givenRun(kenya.id, { state: 'available' });
-      await openRun(page, projectId, mine.runId);
+  test('shared-run-components@S11 on run-show', async ({ page }) => {
+    const { id: projectId } = givenProject({ [ME]: 'editor' });
+    const mine = givenRun(projectId, { state: 'available' });
+    const kenya = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
+    const theirs = givenRun(kenya.id, { state: 'available' });
+    await openRun(page, projectId, mine.runId);
 
-      await runComponents.S11(
-        page,
-        () => sendCancelFor(page, theirs.runId),
-        theirs.runId
-      );
-    }
-  );
+    await runComponents.S11(
+      page,
+      () => sendCancelFor(page, theirs.runId),
+      theirs.runId
+    );
+  });
 
   // A viewer sees no cancel button on a queued run; an editor sees none on a
   // claimed, a started or a finished one
-  test(
-    'shared-run-components@S12 on run-show',
-    PASSING,
-    async ({ page, browser }) => {
-      const { id: projectId } = givenProject({
-        [ME]: 'viewer',
-        [THIRD]: 'editor',
-      });
-      const queued = givenRun(projectId, { state: 'available' });
-      await openRun(page, projectId, queued.runId);
-      await expect(summary(page)).toBeVisible();
-      await runComponents.S12(page, cancelButton(page));
+  test('shared-run-components@S12 on run-show', async ({ page, browser }) => {
+    const { id: projectId } = givenProject({
+      [ME]: 'viewer',
+      [THIRD]: 'editor',
+    });
+    const queued = givenRun(projectId, { state: 'available' });
+    await openRun(page, projectId, queued.runId);
+    await expect(summary(page)).toBeVisible();
+    await runComponents.S12(page, cancelButton(page));
 
-      const editor = await otherSession(browser, THIRD);
-      for (const state of ['claimed', 'started', 'success']) {
-        const run = givenRun(projectId, { workflow: `Intake ${state}`, state });
-        await open(editor, runPath(projectId, run.runId));
-        await expect(summary(editor)).toBeVisible();
-        await runComponents.S12(editor, cancelButton(editor));
-      }
-      await editor.context().close();
+    const editor = await otherSession(browser, THIRD);
+    for (const state of ['claimed', 'started', 'success']) {
+      const run = givenRun(projectId, { workflow: `Intake ${state}`, state });
+      await open(editor, runPath(projectId, run.runId));
+      await expect(summary(editor)).toBeVisible();
+      await runComponents.S12(editor, cancelButton(editor));
     }
-  );
+    await editor.context().close();
+  });
 
   // shared-run-components S13 to S18 are not run on this page (see above).
 });
@@ -1310,7 +1271,7 @@ test.describe('shared-local-datetime', () => {
 
   test.describe(() => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-    test('shared-local-datetime@S01 on run-show', PASSING, async ({ page }) => {
+    test('shared-local-datetime@S01 on run-show', async ({ page }) => {
       await localDatetime.S01(
         page,
         await started(page, localDatetime.given.S01)
@@ -1319,21 +1280,15 @@ test.describe('shared-local-datetime', () => {
   });
 
   for (const id of ['S02', 'S04', 'S05', 'S06'] as const)
-    test(
-      `shared-local-datetime@${id} on run-show`,
-      PASSING,
-      async ({ page }) => {
-        await localDatetime[id](
-          page,
-          await started(page, localDatetime.given[id])
-        );
-      }
-    );
+    test(`shared-local-datetime@${id} on run-show`, async ({ page }) => {
+      await localDatetime[id](
+        page,
+        await started(page, localDatetime.given[id])
+      );
+    });
 
-  // "Finished" of a run that is still going. Expect it to fail on today's
-  // page, which leaves it empty (annotation 6.2).
-  // Pending on old: Finished is left empty, not "--" (annotation 6.2).
-  test('shared-local-datetime@S07 on run-show', PENDING, async ({ page }) => {
+  // "Finished" of a run that is still going.
+  test('shared-local-datetime@S07 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const run = givenRun(projectId, {
       state: 'started',
@@ -1361,8 +1316,7 @@ test.describe('shared-hash-tabs', () => {
     return { run, path, step: `${path}?step=${run.steps.Fetch}` };
   }
 
-  // Fails on the port: the tabs show no tab panel.
-  test('shared-hash-tabs@S01 on run-show', PASSING_OLD, async ({ page }) => {
+  test('shared-hash-tabs@S01 on run-show', async ({ page }) => {
     const t = givenTabs();
     await signInAs(page, ME);
     await hashTabs.S01(
@@ -1374,8 +1328,7 @@ test.describe('shared-hash-tabs', () => {
     );
   });
 
-  // Fails on the port: the tabs show no tab panel.
-  test('shared-hash-tabs@S02 on run-show', PASSING_OLD, async ({ page }) => {
+  test('shared-hash-tabs@S02 on run-show', async ({ page }) => {
     const t = givenTabs();
     await signInAs(page, ME);
     await hashTabs.S02(
@@ -1387,8 +1340,7 @@ test.describe('shared-hash-tabs', () => {
     );
   });
 
-  // Fails on the port: the tabs show no tab panel.
-  test('shared-hash-tabs@S03 on run-show', PASSING_OLD, async ({ page }) => {
+  test('shared-hash-tabs@S03 on run-show', async ({ page }) => {
     const t = givenTabs();
     await signInAs(page, ME);
     await open(page, t.step);
@@ -1398,7 +1350,7 @@ test.describe('shared-hash-tabs', () => {
     ]);
   });
 
-  test('shared-hash-tabs@S04 on run-show', PASSING, async ({ page }) => {
+  test('shared-hash-tabs@S04 on run-show', async ({ page }) => {
     const t = givenTabs();
     await signInAs(page, ME);
     await hashTabs.S04(
@@ -1410,7 +1362,7 @@ test.describe('shared-hash-tabs', () => {
   });
 
   // The server re-renders when another step of the run starts
-  test('shared-hash-tabs@S05 on run-show', PASSING, async ({ page }) => {
+  test('shared-hash-tabs@S05 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const run = givenRun(projectId, {
       state: 'started',
@@ -1430,7 +1382,7 @@ test.describe('shared-hash-tabs', () => {
     });
   });
 
-  test('shared-hash-tabs@S06 on run-show', PASSING, async ({ page }) => {
+  test('shared-hash-tabs@S06 on run-show', async ({ page }) => {
     const t = givenTabs();
     await signInAs(page, ME);
     await open(page, t.path);
@@ -1440,7 +1392,7 @@ test.describe('shared-hash-tabs', () => {
 
 // Inherited from shared-log-viewer: the Log tab
 test.describe('shared-log-viewer', () => {
-  test('shared-log-viewer@S01 on run-show', PASSING, async ({ page }) => {
+  test('shared-log-viewer@S01 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const run = givenRun(projectId, {
       steps: [{ name: 'Fetch', seconds: 3 }],
@@ -1453,7 +1405,7 @@ test.describe('shared-log-viewer', () => {
     );
   });
 
-  test('shared-log-viewer@S02 on run-show', PASSING, async ({ page }) => {
+  test('shared-log-viewer@S02 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const { json, notJson } = logViewer.given.S02;
     const run = givenRun(projectId, {
@@ -1465,7 +1417,7 @@ test.describe('shared-log-viewer', () => {
     await logViewer.S02(page);
   });
 
-  test('shared-log-viewer@S03 on run-show', PASSING, async ({ page }) => {
+  test('shared-log-viewer@S03 on run-show', async ({ page }) => {
     setPreferences(ME, {});
     const { id: projectId } = givenProject();
     const { debug, info } = logViewer.given.S03;
@@ -1481,7 +1433,7 @@ test.describe('shared-log-viewer', () => {
     await logViewer.S03(page);
   });
 
-  test('shared-log-viewer@S04 on run-show', PASSING, async ({ page }) => {
+  test('shared-log-viewer@S04 on run-show', async ({ page }) => {
     setPreferences(ME, {});
     const { id: projectId } = givenProject();
     const logs = [
@@ -1503,26 +1455,20 @@ test.describe('shared-log-viewer', () => {
     );
   });
 
-  // Pending on old: the highlight starts one line early (annotation 6.1).
-  // Passes on the port only: the highlight starts on the step's first line.
-  test(
-    'shared-log-viewer@S05 on run-show',
-    { tag: '@passing-new' },
-    async ({ page }) => {
-      const { id: projectId } = givenProject();
-      const run = givenLoggedSteps(projectId);
-      await openRun(page, projectId, run.runId);
+  test('shared-log-viewer@S05 on run-show', async ({ page }) => {
+    const { id: projectId } = givenProject();
+    const run = givenLoggedSteps(projectId);
+    await openRun(page, projectId, run.runId);
 
-      await logViewer.S05(
-        page,
-        STEP_LINES.Transform.map(line => `R/T ${line}`),
-        () => selectStep(page, run.steps.Transform, 'Transform'),
-        () => page.goBack().then(() => undefined)
-      );
-    }
-  );
+    await logViewer.S05(
+      page,
+      STEP_LINES.Transform.map(line => `R/T ${line}`),
+      () => selectStep(page, run.steps.Transform, 'Transform'),
+      () => page.goBack().then(() => undefined)
+    );
+  });
 
-  test('shared-log-viewer@S06 on run-show', PASSING, async ({ page }) => {
+  test('shared-log-viewer@S06 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const run = givenRun(projectId, { state: 'lost' });
     await openRun(page, projectId, run.runId);
@@ -1550,116 +1496,85 @@ test.describe('shared-dataclip-body-viewer', () => {
     return { projectId, run, path };
   }
 
-  test(
-    'shared-dataclip-body-viewer@S01 on run-show',
-    PASSING,
-    async ({ page }) => {
-      const body = { patients: [{ id: 1 }] };
-      await onOutput(page, body);
-      await bodyViewer.S01(page, body);
-    }
-  );
+  test('shared-dataclip-body-viewer@S01 on run-show', async ({ page }) => {
+    const body = { patients: [{ id: 1 }] };
+    await onOutput(page, body);
+    await bodyViewer.S01(page, body);
+  });
 
-  test(
-    'shared-dataclip-body-viewer@S02 on run-show',
-    PASSING,
-    async ({ page }) => {
-      const body = { patients: [{ id: 1 }] };
-      await onOutput(page, body);
-      await bodyViewer.S02(page, body);
-    }
-  );
+  test('shared-dataclip-body-viewer@S02 on run-show', async ({ page }) => {
+    const body = { patients: [{ id: 1 }] };
+    await onOutput(page, body);
+    await bodyViewer.S02(page, body);
+  });
 
   // The webhook request is the first step's input
-  test(
-    'shared-dataclip-body-viewer@S03 on run-show',
-    PASSING,
-    async ({ page }) => {
-      const { id: projectId } = givenProject();
-      const { username, password } = bodyViewer.given.S03;
-      const run = givenRun(projectId, {
-        basicAuth: [username, password],
-        input: bodyViewer.webhookRequest(),
-        steps: [{ name: 'Fetch' }],
-      });
-      await openRun(
-        page,
-        projectId,
-        run.runId,
-        `?step=${run.steps.Fetch}#input`
-      );
-      await bodyViewer.S03(page);
-    }
-  );
+  test('shared-dataclip-body-viewer@S03 on run-show', async ({ page }) => {
+    const { id: projectId } = givenProject();
+    const { username, password } = bodyViewer.given.S03;
+    const run = givenRun(projectId, {
+      basicAuth: [username, password],
+      input: bodyViewer.webhookRequest(),
+      steps: [{ name: 'Fetch' }],
+    });
+    await openRun(page, projectId, run.runId, `?step=${run.steps.Fetch}#input`);
+    await bodyViewer.S03(page);
+  });
 
-  test(
-    'shared-dataclip-body-viewer@S04 on run-show',
-    PASSING,
-    async ({ page }) => {
-      const { id: projectId } = givenProject();
-      const { Login, Fetch, Post, output } = bodyViewer.given.S04;
-      const run = givenRun(projectId, {
-        steps: [
-          { name: 'Login', credential: Login },
-          { name: 'Fetch', credential: Fetch, output },
-          { name: 'Post', credential: Post },
-        ],
-      });
-      await openRun(
-        page,
-        projectId,
-        run.runId,
-        `?step=${run.steps.Fetch}#output`
-      );
-      await bodyViewer.S04(page);
-    }
-  );
+  test('shared-dataclip-body-viewer@S04 on run-show', async ({ page }) => {
+    const { id: projectId } = givenProject();
+    const { Login, Fetch, Post, output } = bodyViewer.given.S04;
+    const run = givenRun(projectId, {
+      steps: [
+        { name: 'Login', credential: Login },
+        { name: 'Fetch', credential: Fetch, output },
+        { name: 'Post', credential: Post },
+      ],
+    });
+    await openRun(
+      page,
+      projectId,
+      run.runId,
+      `?step=${run.steps.Fetch}#output`
+    );
+    await bodyViewer.S04(page);
+  });
 
   // Each Examples row is its own "Kenya TB"; my own run is on "Malawi HIV",
-  // which I can read. Expect it to fail on the port, as on dataclip-show
-  // (the copy button stays when the body failed to load).
-  // Fails on the port: the copy button stays when the body failed to load.
-  test(
-    'shared-dataclip-body-viewer@S05 on run-show',
-    PASSING_OLD,
-    async ({ page }) => {
-      const mine = await onOutput(page, { shared: true });
-      const kenya = (members: Record<string, Role>) => {
-        const { id } = givenProject(members, { name: 'Kenya TB' });
-        return {
-          id,
-          d: seedDataclip(id, {
-            type: 'global',
-            body: bodyViewer.given.S05.body,
-          }),
-        };
+  // which I can read.
+  test('shared-dataclip-body-viewer@S05 on run-show', async ({ page }) => {
+    const mine = await onOutput(page, { shared: true });
+    const kenya = (members: Record<string, Role>) => {
+      const { id } = givenProject(members, { name: 'Kenya TB' });
+      return {
+        id,
+        d: seedDataclip(id, {
+          type: 'global',
+          body: bodyViewer.given.S05.body,
+        }),
       };
-      const notMine = kenya({ [OWNER]: 'owner' });
-      const scheduled = kenya({ [ME]: 'viewer' });
-      exec(
-        `update projects set scheduled_deletion = now() + interval '7 days' where id = '${scheduled.id}'`
-      );
-      const mfa = kenya({ [ME]: 'viewer' });
-      exec(`update projects set requires_mfa = true where id = '${mfa.id}'`);
-      removeMfaOf(ME);
+    };
+    const notMine = kenya({ [OWNER]: 'owner' });
+    const scheduled = kenya({ [ME]: 'viewer' });
+    exec(
+      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${scheduled.id}'`
+    );
+    const mfa = kenya({ [ME]: 'viewer' });
+    exec(`update projects set requires_mfa = true where id = '${mfa.id}'`);
+    removeMfaOf(ME);
 
-      for (const k of [notMine, scheduled, mfa])
-        await bodyViewer.S05(page, mine.run.outputs.Fetch, k.d, () =>
-          reopen(page, mine.path)
-        );
-    }
-  );
-
-  test(
-    'shared-dataclip-body-viewer@S06 on run-show',
-    PASSING,
-    async ({ page }) => {
-      const mine = await onOutput(page, { shared: true });
-      await bodyViewer.S06(page, mine.run.outputs.Fetch, () =>
+    for (const k of [notMine, scheduled, mfa])
+      await bodyViewer.S05(page, mine.run.outputs.Fetch, k.d, () =>
         reopen(page, mine.path)
       );
-    }
-  );
+  });
+
+  test('shared-dataclip-body-viewer@S06 on run-show', async ({ page }) => {
+    const mine = await onOutput(page, { shared: true });
+    await bodyViewer.S06(page, mine.run.outputs.Fetch, () =>
+      reopen(page, mine.path)
+    );
+  });
 });
 
 // The page's own flashes: "Run cancelled." (info), and "Run not found"
@@ -1674,12 +1589,12 @@ test.describe('shared-flash-messages', () => {
     return { run, act: () => cancelButton(page).click() };
   }
 
-  test('shared-flash-messages@S01 on run-show', PASSING, async ({ page }) => {
+  test('shared-flash-messages@S01 on run-show', async ({ page }) => {
     const { act } = await cancelling(page);
     await flashMessages.S01(page, 'Run cancelled.', act);
   });
 
-  test('shared-flash-messages@S02 on run-show', PASSING, async ({ page }) => {
+  test('shared-flash-messages@S02 on run-show', async ({ page }) => {
     const h = givenRunPage({ [ME]: 'editor' });
     const other = givenRunPage({ [ME]: 'editor' }, 'Kenya TB');
     await signInAs(page, ME);
@@ -1688,13 +1603,13 @@ test.describe('shared-flash-messages', () => {
     });
   });
 
-  test('shared-flash-messages@S03 on run-show', PASSING, async ({ page }) => {
+  test('shared-flash-messages@S03 on run-show', async ({ page }) => {
     const { act } = await cancelling(page);
     await flashMessages.S03(page, 'Run cancelled.', act);
   });
 
   // The page next updates when the cancelled run logs a line
-  test('shared-flash-messages@S04 on run-show', PASSING, async ({ page }) => {
+  test('shared-flash-messages@S04 on run-show', async ({ page }) => {
     const { run, act } = await cancelling(page);
     await flashMessages.S04(page, 'Run cancelled.', act, async () => {
       workerReports(run.runId, { log: 'After the cancel' });
@@ -1702,7 +1617,7 @@ test.describe('shared-flash-messages', () => {
     });
   });
 
-  test('shared-flash-messages@S06 on run-show', PASSING, async ({ page }) => {
+  test('shared-flash-messages@S06 on run-show', async ({ page }) => {
     const h = givenRunPage();
     const notMine = givenRunPage({ [OWNER]: 'owner' }, 'Kenya TB');
     await signInAs(page, ME);

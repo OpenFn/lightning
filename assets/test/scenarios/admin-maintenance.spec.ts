@@ -36,7 +36,6 @@ import {
   standInRegistry,
   startRegistryRefresh,
   storedAdaptor,
-  tagFor,
   type Upstream,
 } from './steps';
 
@@ -96,7 +95,7 @@ const run = (page: Page, card: MaintenanceCard) =>
 //   Then I see the title "Maintenance"
 //   And I see a "Refresh Adaptor Registry" card reading "Re-fetch the list of available adaptors and their versions." with a "Run" button
 //   And I see a "Refresh Adaptor Icons" card reading "Does not touch adaptor metadata or version history." with a "Run" button
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   await signedIn(page);
 
   await expect(
@@ -120,27 +119,23 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I click "Run" on the "Refresh Adaptor Registry" card
 //   Then I see "Adaptor refresh queued."
 //   And the flow "flow-adaptor-catalogue-update" has started
-test(
-  '@S02',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const http = freshAdaptor();
-    registry({ [http]: { version: '7.0.0', schema: SCHEMA, icon: 'icon-a' } });
-    seedAdaptor(http);
-    await signedIn(page);
-    publishUpstream({
-      [http]: { version: '7.1.0', schema: SCHEMA, icon: 'icon-a' },
-    });
+test('@S02', { tag: ['@serial'] }, async ({ page }) => {
+  const http = freshAdaptor();
+  registry({ [http]: { version: '7.0.0', schema: SCHEMA, icon: 'icon-a' } });
+  seedAdaptor(http);
+  await signedIn(page);
+  publishUpstream({
+    [http]: { version: '7.1.0', schema: SCHEMA, icon: 'icon-a' },
+  });
 
-    await run(page, REGISTRY);
+  await run(page, REGISTRY);
 
-    await expect(toast(page, 'Adaptor refresh queued.')).toBeVisible();
-    // The handoff: the new version is in the catalogue
-    await expect
-      .poll(() => storedAdaptor(http)?.latest_version, EVENTUALLY)
-      .toBe('7.1.0');
-  }
-);
+  await expect(toast(page, 'Adaptor refresh queued.')).toBeVisible();
+  // The handoff: the new version is in the catalogue
+  await expect
+    .poll(() => storedAdaptor(http)?.latest_version, EVENTUALLY)
+    .toBe('7.1.0');
+});
 
 // @S03
 // Scenario: A registry refresh that can't be started is reported as a failure
@@ -149,19 +144,15 @@ test(
 //   When I click "Run" on the "Refresh Adaptor Registry" card
 //   Then I see an error beginning "Refresh failed:"
 //   And I do not see "Adaptor refresh queued."
-test(
-  '@S03',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    await signedIn(page);
-    cleanups.push(schedulerUnreachable());
+test('@S03', { tag: ['@serial'] }, async ({ page }) => {
+  await signedIn(page);
+  cleanups.push(schedulerUnreachable());
 
-    await run(page, REGISTRY);
+  await run(page, REGISTRY);
 
-    await expect(toast(page, 'Refresh failed:')).toBeVisible(EVENTUALLY);
-    await expect(toast(page, 'Adaptor refresh queued.')).toHaveCount(0);
-  }
-);
+  await expect(toast(page, 'Refresh failed:')).toBeVisible(EVENTUALLY);
+  await expect(toast(page, 'Adaptor refresh queued.')).toHaveCount(0);
+});
 
 // @S04
 // Scenario: A registry refresh during one already running joins it
@@ -170,28 +161,24 @@ test(
 //   When I click "Run" on the "Refresh Adaptor Registry" card
 //   Then I see "Adaptor refresh queued."
 //   And only one registry refresh runs
-test(
-  '@S04',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const http = freshAdaptor();
-    registry({ [http]: { version: '7.1.0', schema: SCHEMA, icon: 'icon-a' } });
-    await signedIn(page);
-    held();
-    startRegistryRefresh();
-    await expect.poll(listingsSoFar).toBe(1);
+test('@S04', { tag: ['@serial'] }, async ({ page }) => {
+  const http = freshAdaptor();
+  registry({ [http]: { version: '7.1.0', schema: SCHEMA, icon: 'icon-a' } });
+  await signedIn(page);
+  held();
+  startRegistryRefresh();
+  await expect.poll(listingsSoFar).toBe(1);
 
-    await run(page, REGISTRY);
-    await expect(toast(page, 'Adaptor refresh queued.')).toBeVisible();
+  await run(page, REGISTRY);
+  await expect(toast(page, 'Adaptor refresh queued.')).toBeVisible();
 
-    holdRegistry(false);
-    await expect
-      .poll(() => storedAdaptor(http)?.latest_version, EVENTUALLY)
-      .toBe('7.1.0');
-    // A second refresh would have asked for its own listing by now
-    expect(listingsSoFar(), 'registry listings').toBe(1);
-  }
-);
+  holdRegistry(false);
+  await expect
+    .poll(() => storedAdaptor(http)?.latest_version, EVENTUALLY)
+    .toBe('7.1.0');
+  // A second refresh would have asked for its own listing by now
+  expect(listingsSoFar(), 'registry listings').toBe(1);
+});
 
 // @S05
 // Scenario: Refreshing icons reports its start and then its result
@@ -201,29 +188,25 @@ test(
 //   Then I see "Icon refresh started."
 //   And eventually I see "Icon refresh complete" with 1 updated and the rest unchanged
 //   And the flow "flow-adaptor-catalogue-update" has started for "@openfn/language-dhis2"
-test(
-  '@S05',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const dhis2 = freshAdaptor();
-    registry({ [dhis2]: { version: '2.0.0', schema: SCHEMA, icon: 'icon-a' } });
-    seedAdaptor(dhis2);
-    const rest = adaptorsOnInstance() - 1;
-    await signedIn(page);
-    held();
+test('@S05', { tag: ['@serial'] }, async ({ page }) => {
+  const dhis2 = freshAdaptor();
+  registry({ [dhis2]: { version: '2.0.0', schema: SCHEMA, icon: 'icon-a' } });
+  seedAdaptor(dhis2);
+  const rest = adaptorsOnInstance() - 1;
+  await signedIn(page);
+  held();
 
-    await run(page, ICONS);
+  await run(page, ICONS);
 
-    await expect(toast(page, 'Icon refresh started.')).toBeVisible();
-    holdRegistry(false);
-    const done = toast(page, 'Icon refresh complete');
-    await expect(done).toBeVisible(EVENTUALLY);
-    await expect(done).toContainText(/(?<!\d)1 updated/);
-    await expect(done).toContainText(new RegExp(`(?<!\\d)${rest} unchanged`));
-    // The handoff: the new icon is in the catalogue
-    expect(storedAdaptor(dhis2)?.icon_sha256).toBe(sha256('icon-a'));
-  }
-);
+  await expect(toast(page, 'Icon refresh started.')).toBeVisible();
+  holdRegistry(false);
+  const done = toast(page, 'Icon refresh complete');
+  await expect(done).toBeVisible(EVENTUALLY);
+  await expect(done).toContainText(/(?<!\d)1 updated/);
+  await expect(done).toContainText(new RegExp(`(?<!\\d)${rest} unchanged`));
+  // The handoff: the new icon is in the catalogue
+  expect(storedAdaptor(dhis2)?.icon_sha256).toBe(sha256('icon-a'));
+});
 
 // @S06
 // Scenario: A failed icon refresh is reported as an error
@@ -231,19 +214,15 @@ test(
 //   And fetching icons upstream fails
 //   When I click "Run" on the "Refresh Adaptor Icons" card
 //   Then eventually I see an error beginning "Icon refresh failed"
-test(
-  '@S06',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    registry();
-    failIconFetches();
-    await signedIn(page);
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
+  registry();
+  failIconFetches();
+  await signedIn(page);
 
-    await run(page, ICONS);
+  await run(page, ICONS);
 
-    await expect(toast(page, 'Icon refresh failed')).toBeVisible(EVENTUALLY);
-  }
-);
+  await expect(toast(page, 'Icon refresh failed')).toBeVisible(EVENTUALLY);
+});
 
 // @S07
 // Scenario: An icon refresh never changes adaptor versions or metadata
@@ -252,31 +231,27 @@ test(
 //   When I run the icon refresh as a superuser
 //   Then "@openfn/language-http" is still stored at "7.0.0" with the same schema and version history
 //   And its icon is updated
-test(
-  '@S07',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const http = freshAdaptor();
-    registry({ [http]: { version: '7.0.0', schema: SCHEMA, icon: 'icon-a' } });
-    seedAdaptor(http);
-    const before = storedAdaptor(http)!;
-    expect(before.latest_version).toBe('7.0.0');
-    expect(before.schema_sha256).toBe(sha256(SCHEMA));
-    publishUpstream({
-      [http]: { version: '7.1.0', schema: NEW_SCHEMA, icon: 'icon-b' },
-    });
+test('@S07', { tag: ['@serial'] }, async ({ page }) => {
+  const http = freshAdaptor();
+  registry({ [http]: { version: '7.0.0', schema: SCHEMA, icon: 'icon-a' } });
+  seedAdaptor(http);
+  const before = storedAdaptor(http)!;
+  expect(before.latest_version).toBe('7.0.0');
+  expect(before.schema_sha256).toBe(sha256(SCHEMA));
+  publishUpstream({
+    [http]: { version: '7.1.0', schema: NEW_SCHEMA, icon: 'icon-b' },
+  });
 
-    await signedIn(page);
-    await run(page, ICONS);
-    await expect(toast(page, 'Icon refresh complete')).toBeVisible(EVENTUALLY);
+  await signedIn(page);
+  await run(page, ICONS);
+  await expect(toast(page, 'Icon refresh complete')).toBeVisible(EVENTUALLY);
 
-    const after = storedAdaptor(http)!;
-    expect(after.latest_version).toBe('7.0.0');
-    expect(after.schema_sha256).toBe(before.schema_sha256);
-    expect(after.versions).toEqual(before.versions);
-    expect(after.icon_sha256).toBe(sha256('icon-b'));
-  }
-);
+  const after = storedAdaptor(http)!;
+  expect(after.latest_version).toBe('7.0.0');
+  expect(after.schema_sha256).toBe(before.schema_sha256);
+  expect(after.versions).toEqual(before.versions);
+  expect(after.icon_sha256).toBe(sha256('icon-b'));
+});
 
 // @S08 @variant:local-adaptors
 // Scenario: Under the local adaptors strategy, icons come from the local repo
@@ -284,7 +259,7 @@ test(
 //   And I have replaced the square icon of "@openfn/language-http" in the local adaptors repo
 //   When I run the icon refresh as a superuser
 //   Then eventually I see "Icon refresh complete" with 1 updated
-test('@S08', { tag: '@pending' }, () => {
+test('@S08', () => {
   test.skip(
     true,
     'variant local-adaptors is not configured on this instance: the strategy and its catalogue source are chosen at boot'
@@ -294,163 +269,118 @@ test('@S08', { tag: '@pending' }, () => {
 // Inherited from shared-admin-space: the gate (this page checks the policy
 // itself), and the settings layout and side menu with "Maintenance" current.
 test.describe('shared-admin-space', () => {
-  test(
-    'shared-admin-space@S01 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S01(page, PAGE, ME, 'Maintenance');
-    }
-  );
+  test('shared-admin-space@S01 on admin-maintenance', async ({ page }) => {
+    await adminSpace.S01(page, PAGE, ME, 'Maintenance');
+  });
 
-  test(
-    'shared-admin-space@S02 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S02(page, PAGE, REGULAR);
-    }
-  );
+  test('shared-admin-space@S02 on admin-maintenance', async ({ page }) => {
+    await adminSpace.S02(page, PAGE, REGULAR);
+  });
 
-  test(
-    'shared-admin-space@S03 on admin-maintenance',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'needs a socket-only mount that skips the HTTP check, which no browser action produces'
-      );
-    }
-  );
+  test('shared-admin-space@S03 on admin-maintenance', () => {
+    test.skip(
+      true,
+      'needs a socket-only mount that skips the HTTP check, which no browser action produces'
+    );
+  });
 
   for (const id of ['S04', 'S05'])
-    test(
-      `shared-admin-space@${id} on admin-maintenance`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02 and the gate'
-        );
-      }
-    );
-
-  test(
-    'shared-admin-space@S06 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await adminSpace.S06(page, browser, PAGE, ME);
-    }
-  );
-
-  test(
-    'shared-admin-space@S07 on admin-maintenance',
-    { tag: '@pending' },
-    () => {
+    test(`shared-admin-space@${id} on admin-maintenance`, () => {
       test.skip(
         true,
-        'variant settings-menu-extension is not configured on this instance'
+        'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02 and the gate'
       );
-    }
-  );
+    });
+
+  test('shared-admin-space@S06 on admin-maintenance', async ({
+    page,
+    browser,
+  }) => {
+    await adminSpace.S06(page, browser, PAGE, ME);
+  });
+
+  test('shared-admin-space@S07 on admin-maintenance', () => {
+    test.skip(
+      true,
+      'variant settings-menu-extension is not configured on this instance'
+    );
+  });
 });
 
 // Inherited from shared-authenticated-session, on "/settings/maintenance".
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on admin-maintenance', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on admin-maintenance', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on admin-maintenance', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      // The admin menu has no "Credentials"; "Audit" is a label it does have
-      await authenticatedSession.S07(
-        page,
-        browser,
-        PAGE,
-        '/settings/audit',
-        ME,
-        'Audit'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on admin-maintenance', async ({
+    page,
+    browser,
+  }) => {
+    // The admin menu has no "Credentials"; "Audit" is a label it does have
+    await authenticatedSession.S07(
+      page,
+      browser,
+      PAGE,
+      '/settings/audit',
+      ME,
+      'Audit'
+    );
+  });
 
   for (const id of ['S04', 'S05', 'S06'])
-    test(
-      `shared-authenticated-session@${id} on admin-maintenance`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'variant require-email-verification is not configured on this instance'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-maintenance`, () => {
+      test.skip(
+        true,
+        'variant require-email-verification is not configured on this instance'
+      );
+    });
 
   for (const id of ['S08', 'S09', 'S10', 'S11'])
-    test(
-      `shared-authenticated-session@${id} on admin-maintenance`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line says banners are not on the settings layout (S08 to S10), and S11 is a first-setup redirect before any page'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-maintenance`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line says banners are not on the settings layout (S08 to S10), and S11 is a first-setup redirect before any page'
+      );
+    });
 });
 
 // Inherited from shared-project-header: the global picker, the confirmation
 // banner and the account menu (no-project parts).
 test.describe('shared-project-header', () => {
   for (const id of ['S04', 'S06', 'S08', 'S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on admin-maintenance`,
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        await projectHeader[id](page, PAGE, ME);
-      }
-    );
+    test(`shared-project-header@${id} on admin-maintenance`, async ({
+      page,
+    }) => {
+      await projectHeader[id](page, PAGE, ME);
+    });
 
   // The Examples row "the projects list or my profile | the workflows page"
-  test(
-    'shared-project-header@S10 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S10(page, PAGE, ME, '/w');
-    }
-  );
+  test('shared-project-header@S10 on admin-maintenance', async ({ page }) => {
+    await projectHeader.S10(page, PAGE, ME, '/w');
+  });
 
-  test(
-    'shared-project-header@S14 on admin-maintenance',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'variant require-email-verification is not configured on this instance'
-      );
-    }
-  );
+  test('shared-project-header@S14 on admin-maintenance', () => {
+    test.skip(
+      true,
+      'variant require-email-verification is not configured on this instance'
+    );
+  });
 
   for (const id of [
     'S01',
@@ -463,16 +393,12 @@ test.describe('shared-project-header', () => {
     'S16',
     'S17',
   ])
-    test(
-      `shared-project-header@${id} on admin-maintenance`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
-        );
-      }
-    );
+    test(`shared-project-header@${id} on admin-maintenance`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
+      );
+    });
 });
 
 // Inherited from shared-flash-messages. Every result on this page is a flash
@@ -481,7 +407,7 @@ test.describe('shared-project-header', () => {
 test.describe('shared-flash-messages', () => {
   test(
     'shared-flash-messages@S07 on admin-maintenance',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       registry();
       await flashMessages.S07(page, 'Adaptor refresh queued.', async () => {
@@ -503,11 +429,7 @@ test.describe('shared-flash-messages', () => {
     ],
     ['S08', 'it is about the sign-in and account forms'],
   ])
-    test(
-      `shared-flash-messages@${id} on admin-maintenance`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(true, `not reachable here: ${why}`);
-      }
-    );
+    test(`shared-flash-messages@${id} on admin-maintenance`, () => {
+      test.skip(true, `not reachable here: ${why}`);
+    });
 });

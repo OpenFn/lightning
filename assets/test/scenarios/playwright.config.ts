@@ -7,11 +7,7 @@ import { defineConfig, devices } from '@playwright/test';
 // audit log, the mailbox, every project) are tagged @serial, and admin-audit
 // is serial as a whole: they run afterwards, alone. Use ./run, which runs
 // the two groups one after the other; plain `playwright test` runs both at once.
-// TARGET=demo runs them against the openfn-ia-demo Vite app instead.
-const baseURL =
-  process.env.TARGET === 'demo'
-    ? process.env.DEMO_URL || 'http://localhost:5173/openfn-3-poc/'
-    : process.env.LIGHTNING_URL || 'http://localhost:4003';
+const baseURL = process.env.LIGHTNING_URL || 'http://localhost:4003';
 
 const use = {
   ...devices['Desktop Chrome'],
@@ -26,7 +22,10 @@ export default defineConfig({
   globalSetup: new URL('./global-setup.ts', import.meta.url).pathname,
   workers: Number(process.env.SCENARIO_WORKERS || 4),
   fullyParallel: false,
-  reporter: 'list',
+  // ./run sets SCENARIO_REPORT so status.mjs can write STATUS.md afterwards.
+  reporter: process.env.SCENARIO_REPORT
+    ? [['list'], ['json', { outputFile: process.env.SCENARIO_REPORT }]]
+    : 'list',
   use,
   projects: [
     {

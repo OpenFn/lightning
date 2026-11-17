@@ -35,7 +35,6 @@ import {
   signInAs,
   sql,
   submit,
-  tagFor,
   user,
   watchLiveView,
   type UserSeed,
@@ -117,7 +116,7 @@ async function typeFilter(page: Page, text: string) {
 //   And the row for "amara@example.org" shows role "user", a support tick and no enabled tick
 //   And the row for "bob@example.org" shows role "superuser" and an enabled tick
 //   And I see the note that a superuser can access everything in a Lightning installation
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const amara = given('amara', {
     firstName: 'Amara',
     supportUser: true,
@@ -174,7 +173,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And I do not see "alice@example.org"
 //   When I click the clear filter button
 //   Then I see "alice@example.org" and "bob@example.org"
-test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const alice = given('alice', { firstName: 'Alice', lastName: 'Smith' });
   const bob = given('bob', {
     firstName: 'Bob',
@@ -213,7 +212,7 @@ test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then "disabled@example.org" is listed before the enabled accounts
 //   When I click the "Role*" header
 //   Then superusers are listed before users
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const emails = ['alpha', 'beta', 'charlie'].map(p => given(p).email);
   const disabled = given('disabled', { disabled: true }).email;
   given('root', { role: 'superuser' });
@@ -267,7 +266,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //     | state                         | label        |
 //     | not scheduled for deletion    | "Delete"     |
 //     | scheduled for deletion        | "Delete now" |
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const examples = [
     { root: given('root', { role: 'superuser' }), label: 'Delete' },
     {
@@ -300,7 +299,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am on "/settings/users/<amara id>/delete"
 //   And the users list is still shown behind the dialog
 //   And shared-user-deletion-modal is open for "amara@example.org" with return to "/settings/users"
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const amara = given('amara');
 
   await signedIn(page);
@@ -330,7 +329,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I click "Delete now"
 //   Then I am on "/settings/users/<amara id>/delete"
 //   And shared-user-deletion-modal shows its delete-now branch
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const amara = given('amara', { scheduledDeletion: '2027-10-21 09:30:00' });
 
   await signedIn(page);
@@ -356,37 +355,33 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And I see "User deletion canceled"
 //   And the row for "amara@example.org" shows no scheduled deletion date and an enabled tick
 //   And "amara@example.org" can sign in again with her password
-test(
-  '@S07',
-  { tag: ['@passing-old', '@passing-new'] },
-  async ({ page, browser }) => {
-    const amara = given('amara', {
-      scheduledDeletion: '2027-10-21 09:30:00',
-      disabled: true,
-    });
+test('@S07', async ({ page, browser }) => {
+  const amara = given('amara', {
+    scheduledDeletion: '2027-10-21 09:30:00',
+    disabled: true,
+  });
 
-    await signedIn(page);
-    const menu = await openActions(page, amara.email);
-    await menuAction(menu, 'Cancel deletion').click();
+  await signedIn(page);
+  const menu = await openActions(page, amara.email);
+  await menuAction(menu, 'Cancel deletion').click();
 
-    await expectAt(page, PAGE);
-    await expect(
-      flashMessages.toast(page, 'User deletion canceled')
-    ).toBeVisible();
-    await expect(
-      await cell(page, amara.email, 'Scheduled Deletion')
-    ).toHaveText(/^\s*$/);
-    await expect(tick(await cell(page, amara.email, 'Enabled?'))).toBeVisible();
-    expect(
-      sql(
-        `select disabled, scheduled_deletion from users where id = '${amara.id}'`
-      )
-    ).toEqual([{ disabled: false, scheduled_deletion: null }]);
+  await expectAt(page, PAGE);
+  await expect(
+    flashMessages.toast(page, 'User deletion canceled')
+  ).toBeVisible();
+  await expect(await cell(page, amara.email, 'Scheduled Deletion')).toHaveText(
+    /^\s*$/
+  );
+  await expect(tick(await cell(page, amara.email, 'Enabled?'))).toBeVisible();
+  expect(
+    sql(
+      `select disabled, scheduled_deletion from users where id = '${amara.id}'`
+    )
+  ).toEqual([{ disabled: false, scheduled_deletion: null }]);
 
-    const later = await otherSession(browser, amara.email);
-    await later.context().close();
-  }
-);
+  const later = await otherSession(browser, amara.email);
+  await later.context().close();
+});
 
 // @S08
 // Scenario Outline: The list leads to the user form
@@ -399,7 +394,7 @@ test(
 //     | action                                                  | path                              |
 //     | click "New User"                                        | /settings/users/new               |
 //     | open the "Actions" menu for "amara@example.org" and click "Edit" | /settings/users/<amara id> |
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const amara = given('amara');
 
   await signedIn(page);
@@ -415,23 +410,15 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 // Inherited from shared-admin-space: the gate, and the settings layout and
 // side menu with "Users" current.
 test.describe('shared-admin-space', () => {
-  test(
-    'shared-admin-space@S01 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S01(page, PAGE, ME, 'Users');
-    }
-  );
+  test('shared-admin-space@S01 on admin-users', async ({ page }) => {
+    await adminSpace.S01(page, PAGE, ME, 'Users');
+  });
 
-  test(
-    'shared-admin-space@S02 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S02(page, PAGE, REGULAR);
-    }
-  );
+  test('shared-admin-space@S02 on admin-users', async ({ page }) => {
+    await adminSpace.S02(page, PAGE, REGULAR);
+  });
 
-  test('shared-admin-space@S03 on admin-users', { tag: '@pending' }, () => {
+  test('shared-admin-space@S03 on admin-users', () => {
     test.skip(
       true,
       'needs a socket-only mount that skips the HTTP check, which no browser action produces'
@@ -439,26 +426,18 @@ test.describe('shared-admin-space', () => {
   });
 
   for (const id of ['S04', 'S05'])
-    test(
-      `shared-admin-space@${id} on admin-users`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
-        );
-      }
-    );
+    test(`shared-admin-space@${id} on admin-users`, () => {
+      test.skip(
+        true,
+        'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
+      );
+    });
 
-  test(
-    'shared-admin-space@S06 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await adminSpace.S06(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-admin-space@S06 on admin-users', async ({ page, browser }) => {
+    await adminSpace.S06(page, browser, PAGE, ME);
+  });
 
-  test('shared-admin-space@S07 on admin-users', { tag: '@pending' }, () => {
+  test('shared-admin-space@S07 on admin-users', () => {
     test.skip(
       true,
       'variant settings-menu-extension is not configured on this instance'
@@ -468,93 +447,67 @@ test.describe('shared-admin-space', () => {
 
 // Inherited from shared-authenticated-session, on "/settings/users".
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on admin-users', async ({ page }) => {
+    await authenticatedSession.S01(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on admin-users', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on admin-users', async ({ page }) => {
+    await authenticatedSession.S03(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      // The admin menu has no "Credentials"; "Audit" is a label it does have
-      await authenticatedSession.S07(
-        page,
-        browser,
-        PAGE,
-        '/settings/audit',
-        ME,
-        'Audit'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on admin-users', async ({
+    page,
+    browser,
+  }) => {
+    // The admin menu has no "Credentials"; "Audit" is a label it does have
+    await authenticatedSession.S07(
+      page,
+      browser,
+      PAGE,
+      '/settings/audit',
+      ME,
+      'Audit'
+    );
+  });
 
   for (const id of ['S04', 'S05', 'S06'])
-    test(
-      `shared-authenticated-session@${id} on admin-users`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'variant require-email-verification is not configured on this instance'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-users`, () => {
+      test.skip(
+        true,
+        'variant require-email-verification is not configured on this instance'
+      );
+    });
 
   for (const id of ['S08', 'S09', 'S10', 'S11'])
-    test(
-      `shared-authenticated-session@${id} on admin-users`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line says S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-users`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line says S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
+      );
+    });
 });
 
 // Inherited from shared-project-header: the global picker, the confirmation
 // banner and the account menu (no-project parts).
 test.describe('shared-project-header', () => {
   for (const id of ['S04', 'S06', 'S08', 'S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on admin-users`,
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        await projectHeader[id](page, PAGE, ME);
-      }
-    );
+    test(`shared-project-header@${id} on admin-users`, async ({ page }) => {
+      await projectHeader[id](page, PAGE, ME);
+    });
 
   // The Examples row "the projects list or my profile | the workflows page"
-  test(
-    'shared-project-header@S10 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S10(page, PAGE, ME, '/w');
-    }
-  );
+  test('shared-project-header@S10 on admin-users', async ({ page }) => {
+    await projectHeader.S10(page, PAGE, ME, '/w');
+  });
 
-  test('shared-project-header@S14 on admin-users', { tag: '@pending' }, () => {
+  test('shared-project-header@S14 on admin-users', () => {
     test.skip(
       true,
       'variant require-email-verification is not configured on this instance'
@@ -572,16 +525,12 @@ test.describe('shared-project-header', () => {
     'S16',
     'S17',
   ])
-    test(
-      `shared-project-header@${id} on admin-users`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
-        );
-      }
-    );
+    test(`shared-project-header@${id} on admin-users`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
+      );
+    });
 });
 
 // Inherited from shared-user-deletion-modal, on the admin host:
@@ -593,113 +542,80 @@ test.describe('shared-user-deletion-modal', () => {
     await open(page, deletePath(id));
   };
 
-  test(
-    'shared-user-deletion-modal@S01 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const amara = given('amara');
-      await signInAs(page, ME);
-      await userDeletionModal.S01(page, amara, deletionOf(page), "This user's");
-    }
-  );
+  test('shared-user-deletion-modal@S01 on admin-users', async ({ page }) => {
+    const amara = given('amara');
+    await signInAs(page, ME);
+    await userDeletionModal.S01(page, amara, deletionOf(page), "This user's");
+  });
 
-  test(
-    'shared-user-deletion-modal@S02 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const amara = given('amara');
-      const lv = watchLiveView(page);
-      await signInAs(page, ME);
-      await userDeletionModal.S02(page, amara, deletionOf(page), email =>
-        sendDeletion(page, lv, email)
-      );
-    }
-  );
+  test('shared-user-deletion-modal@S02 on admin-users', async ({ page }) => {
+    const amara = given('amara');
+    const lv = watchLiveView(page);
+    await signInAs(page, ME);
+    await userDeletionModal.S02(page, amara, deletionOf(page), email =>
+      sendDeletion(page, lv, email)
+    );
+  });
 
-  test(
-    'shared-user-deletion-modal@S03 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const root = given('root', { role: 'superuser' });
-      await signInAs(page, ME);
-      await userDeletionModal.S03(page, root, deletionOf(page));
-    }
-  );
+  test('shared-user-deletion-modal@S03 on admin-users', async ({ page }) => {
+    const root = given('root', { role: 'superuser' });
+    await signInAs(page, ME);
+    await userDeletionModal.S03(page, root, deletionOf(page));
+  });
 
-  test(
-    'shared-user-deletion-modal@S04 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      const amara = given('amara');
-      await signInAs(page, ME);
-      await userDeletionModal.S04(page, browser, amara, deletionOf(page), PAGE);
-    }
-  );
+  test('shared-user-deletion-modal@S04 on admin-users', async ({
+    page,
+    browser,
+  }) => {
+    const amara = given('amara');
+    await signInAs(page, ME);
+    await userDeletionModal.S04(page, browser, amara, deletionOf(page), PAGE);
+  });
 
-  test(
-    'shared-user-deletion-modal@S05 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const amara = given('amara');
-      withRun(amara.id);
-      const bob = given('bob', { firstName: 'Bob' });
-      await signInAs(page, ME);
-      await userDeletionModal.S05(page, amara, bob, deletionOf(page));
-    }
-  );
+  test('shared-user-deletion-modal@S05 on admin-users', async ({ page }) => {
+    const amara = given('amara');
+    withRun(amara.id);
+    const bob = given('bob', { firstName: 'Bob' });
+    await signInAs(page, ME);
+    await userDeletionModal.S05(page, amara, bob, deletionOf(page));
+  });
 
-  test(
-    'shared-user-deletion-modal@S06 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const amara = given('amara', {
-        scheduledDeletion: '2027-10-21 09:30:00',
-      });
-      await signInAs(page, ME);
-      await userDeletionModal.S06(page, amara, deletionOf(page), PAGE);
-    }
-  );
+  test('shared-user-deletion-modal@S06 on admin-users', async ({ page }) => {
+    const amara = given('amara', {
+      scheduledDeletion: '2027-10-21 09:30:00',
+    });
+    await signInAs(page, ME);
+    await userDeletionModal.S06(page, amara, deletionOf(page), PAGE);
+  });
 
-  test(
-    'shared-user-deletion-modal@S07 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const amara = given('amara', {
-        scheduledDeletion: '2027-10-21 09:30:00',
-      });
-      withRun(amara.id);
-      await signInAs(page, ME);
-      await userDeletionModal.S07(page, amara, deletionOf(page));
-    }
-  );
+  test('shared-user-deletion-modal@S07 on admin-users', async ({ page }) => {
+    const amara = given('amara', {
+      scheduledDeletion: '2027-10-21 09:30:00',
+    });
+    withRun(amara.id);
+    await signInAs(page, ME);
+    await userDeletionModal.S07(page, amara, deletionOf(page));
+  });
 
-  test(
-    'shared-user-deletion-modal@S08 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const amara = given('amara', {
-        scheduledDeletion: '2027-10-21 09:30:00',
-      });
-      await signInAs(page, ME);
-      await userDeletionModal.S08(
-        page,
-        amara,
-        deletionOf(page),
-        () => withRun(amara.id),
-        PAGE
-      );
-    }
-  );
+  test('shared-user-deletion-modal@S08 on admin-users', async ({ page }) => {
+    const amara = given('amara', {
+      scheduledDeletion: '2027-10-21 09:30:00',
+    });
+    await signInAs(page, ME);
+    await userDeletionModal.S08(
+      page,
+      amara,
+      deletionOf(page),
+      () => withRun(amara.id),
+      PAGE
+    );
+  });
 
-  test(
-    'shared-user-deletion-modal@S09 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const amara = given('amara');
-      await signInAs(page, ME);
-      await userDeletionModal.S09(page, amara, deletionOf(page), 'Close', PAGE);
-    }
-  );
+  test('shared-user-deletion-modal@S09 on admin-users', async ({ page }) => {
+    const amara = given('amara');
+    await signInAs(page, ME);
+    await userDeletionModal.S09(page, amara, deletionOf(page), 'Close', PAGE);
+  });
 });
 
 // Inherited from shared-flash-messages. This page is on the settings layout,
@@ -713,40 +629,32 @@ test.describe('shared-flash-messages', () => {
     await menuAction(menu, 'Cancel deletion').click();
   }
 
-  test(
-    'shared-flash-messages@S05 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const amara = given('amara', {
-        scheduledDeletion: '2027-10-21 09:30:00',
-      });
-      await signInAs(page, ME);
-      await flashMessages.S05(
-        page,
-        'User deleted',
-        async () => {
-          // "Delete now", confirmed: the page redirects to the list
-          await open(page, deletePath(amara.id));
-          const d = modal(page, 'Delete user');
-          await expect(modalTitle(page, 'Delete user')).toBeVisible();
-          await field(d, 'User email').fill(amara.email);
-          await field(d, 'User email').blur();
-          await submit(d, 'Delete account');
-        },
-        PAGE
-      );
-    }
-  );
+  test('shared-flash-messages@S05 on admin-users', async ({ page }) => {
+    const amara = given('amara', {
+      scheduledDeletion: '2027-10-21 09:30:00',
+    });
+    await signInAs(page, ME);
+    await flashMessages.S05(
+      page,
+      'User deleted',
+      async () => {
+        // "Delete now", confirmed: the page redirects to the list
+        await open(page, deletePath(amara.id));
+        const d = modal(page, 'Delete user');
+        await expect(modalTitle(page, 'Delete user')).toBeVisible();
+        await field(d, 'User email').fill(amara.email);
+        await field(d, 'User email').blur();
+        await submit(d, 'Delete account');
+      },
+      PAGE
+    );
+  });
 
-  test(
-    'shared-flash-messages@S07 on admin-users',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await flashMessages.S07(page, 'User deletion canceled', () =>
-        cancelDeletion(page)
-      );
-    }
-  );
+  test('shared-flash-messages@S07 on admin-users', async ({ page }) => {
+    await flashMessages.S07(page, 'User deletion canceled', () =>
+      cancelDeletion(page)
+    );
+  });
 
   for (const [id, why] of [
     ['S01', 'it is about the live layout; the settings layout toast is S07'],
@@ -759,11 +667,7 @@ test.describe('shared-flash-messages', () => {
     ],
     ['S08', 'it is about the sign-in and account forms'],
   ])
-    test(
-      `shared-flash-messages@${id} on admin-users`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(true, `not reachable here: ${why}`);
-      }
-    );
+    test(`shared-flash-messages@${id} on admin-users`, () => {
+      test.skip(true, `not reachable here: ${why}`);
+    });
 });

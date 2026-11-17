@@ -111,9 +111,6 @@ const AMARA = 'super@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-const PENDING = { tag: '@pending' };
-const PASSING_OLD = { tag: '@passing-old' };
-
 // A page that has to react to something done elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 
@@ -267,7 +264,7 @@ const runInState = (projectId: string, state: string) =>
 //   Then the right panel shows a chip "Run <first 7 characters of R id>" and the tabs "Logs", "Input" and "Output"
 //   And the run details show "Work Order", "Run", "Status", "Duration", "Started" and "Started by" "amara@example.org"
 //   And "Run Steps" lists "Fetch" then "Transform", "Fetch" with a duration of "3 s"
-test('@S01', PASSING_OLD, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { id, run } = givenRun({
     createdBy: AMARA,
     steps: [{ name: 'Fetch', seconds: 3 }, { name: 'Transform' }],
@@ -291,7 +288,7 @@ test('@S01', PASSING_OLD, async ({ page }) => {
 //   Given the loaded run is in state "<state>"
 //   Then the status pill reads "<label>"
 //   Examples: available Enqueued; claimed Starting; started Running; failed Failed
-test('@S02', PASSING_OLD, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const id = givenProject();
   await signInAs(page, ME);
 
@@ -309,7 +306,7 @@ test('@S02', PASSING_OLD, async ({ page }) => {
 //   And the running step's duration counts up each second while the run has not started any step reads "Not started"
 // The kill family is told apart as shared-run-components S03 does. "Not
 // started" is the duration of a run no worker has started.
-test('@S03', PASSING_OLD, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const { id, run } = givenRun(OUTCOMES);
   const waiting = runIn(id, {
     workflow: 'Intake waiting',
@@ -333,7 +330,7 @@ test('@S03', PASSING_OLD, async ({ page }) => {
 //   When I load "R2" in the run viewer
 //   Then "Fetch" is faded with a paperclip whose tooltip says it "was originally executed in a previous run"
 //   And "Transform" has no paperclip
-test('@S04', PASSING_OLD, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const { id, run } = givenRun(RETRIED);
   await signInAs(page, ME);
 
@@ -351,8 +348,7 @@ test('@S04', PASSING_OLD, async ({ page }) => {
 //   And "Transform" is highlighted in the step list
 //   And the "Input" and "Output" tabs show "Transform"'s data and the "Logs" tab marks its lines (shared-log-viewer S05)
 // "Transform"'s input is "Fetch"'s output.
-// Still pending, old: picking a step marks its log lines from one line early, so the line before it is marked too
-test('@S05', PENDING, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const { id, run } = givenRun({
     steps: [
       { name: 'Fetch', output: { fetched: 12 } },
@@ -403,7 +399,7 @@ test('@S05', PENDING, async ({ page }) => {
 //     | failed  | has no output dataclip | Output | No output state could be saved for this run. |
 // A run picks its first step by itself, so no step is chosen only while the
 // run has none.
-test('@S06', PASSING_OLD, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const id = givenProject();
   const noStep = runIn(id, {
     workflow: 'Intake no step',
@@ -450,7 +446,7 @@ test('@S06', PASSING_OLD, async ({ page }) => {
 //     | available | Waiting for a worker to establish a secure claim...     |
 //     | claimed   | Creating an isolated runtime and installing adaptors... |
 // The hints' wording is not checked: it has typos (annotation 6.1).
-test('@S07', PASSING_OLD, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const id = givenProject();
   await signInAs(page, ME);
   const rows = [
@@ -490,8 +486,7 @@ test('@S07', PASSING_OLD, async ({ page }) => {
 //   Then the run panel is faded and the run chip turns to its warning style
 //   And the chip's tooltip reads "Notify was not part of this run. Pick another job or deselect the run."
 //   But while "R" is still running the panel is not faded
-// Still pending, old: the warning run chip never opens its tooltip
-test('@S08', PENDING, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const { id, run } = givenRun({ jobs: ['Notify'] });
   await signInAs(page, ME);
   await openRun(page, id, run, 'Fetch');
@@ -518,7 +513,7 @@ test('@S08', PENDING, async ({ page }) => {
 //   Given run "R" of work order "W" is loaded with step "S" selected
 //   Then "Work Order" links to "/projects/<project id>/history?filters[workorder_id]=<W id>"
 //   And "Run" links to "/projects/<project id>/runs/<R id>?step=<S id>"
-test('@S09', PASSING_OLD, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const { id, run } = givenRun();
   await signInAs(page, ME);
 
@@ -548,8 +543,7 @@ test('@S09', PASSING_OLD, async ({ page }) => {
 //   And a job that ran three times shows a "3" badge
 // "Fetch" is the job that ran three times. Annotation 6.1 expects today's
 // page to read "Started by unknown" for a run opened by its URL.
-// Still pending, old: a run opened by its URL reads "Started by unknown" on its start badge
-test('@S10', PENDING, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const { id, run } = givenRun({
     createdBy: AMARA,
     steps: [
@@ -590,7 +584,7 @@ test('@S10', PENDING, async ({ page }) => {
 //   When I open the IDE with "run=<X>"
 //   Then the run panel shows "Error loading run" and "Failed to connect: not_found"
 //   And for a run in a project I cannot access it shows "Failed to connect: unauthorized"
-test('@S11', PASSING_OLD, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const id = givenProject();
   const wf = seedEditorWorkflow(id, OWNER, { steps: ['Fetch'] });
   const kenya = givenProject({}, 'Kenya TB');
@@ -620,7 +614,7 @@ test('@S11', PASSING_OLD, async ({ page }) => {
 // I am a member of both projects, so only the editor's project scope keeps
 // "R" off this canvas. Had it been painted, every step would fade: none of
 // its jobs is in "Intake".
-test('@S12', PASSING_OLD, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const id = givenProject();
   const wf = seedEditorWorkflow(id, OWNER, { steps: ['Fetch', 'Load'] });
   const kenya = givenProject({ [ME]: 'editor' }, 'Kenya TB');
@@ -649,7 +643,7 @@ test('@S12', PASSING_OLD, async ({ page }) => {
 //   Then the run viewer shows "R" with that step's job open
 // The inspect link is the run page's. The step's own data is not checked:
 // annotation 6.1 expects today's viewer to select the run's first step.
-test('@S13', PASSING_OLD, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const id = givenProject();
   const wf = seedEditorWorkflow(id, OWNER, { steps: ['Fetch', 'Load'] });
   const seeded = runIn(id, { workflow: 'Intake seeded' });
@@ -700,7 +694,7 @@ test.describe('shared-log-viewer', () => {
   }
 
   // "Posted batch 1" is stored first but logged a second later
-  test(name('S01'), PASSING_OLD, async ({ page }) => {
+  test(name('S01'), async ({ page }) => {
     const { source, lines, shown } = logViewer.given.S01;
     const { id, run } = givenRun({
       steps: [{ name: 'Fetch', seconds: 3 }],
@@ -715,7 +709,7 @@ test.describe('shared-log-viewer', () => {
     expect(await logLines(page)).toEqual(shown);
   });
 
-  test(name('S02'), PASSING_OLD, async ({ page }) => {
+  test(name('S02'), async ({ page }) => {
     const { json, notJson } = logViewer.given.S02;
     const { id, run } = givenRun({
       steps: [{ name: 'Fetch' }],
@@ -734,7 +728,7 @@ test.describe('shared-log-viewer', () => {
       ]);
   });
 
-  test(name('S03'), PASSING_OLD, async ({ page }) => {
+  test(name('S03'), async ({ page }) => {
     const { debug, info } = logViewer.given.S03;
     const { id, run } = givenRun({
       steps: [{ name: 'Fetch' }],
@@ -762,8 +756,7 @@ test.describe('shared-log-viewer', () => {
   // Steps are chosen in "Run Steps". The editor has no way to clear a step
   // without choosing another, so the last When picks "Fetch" instead, and
   // only "Fetch"'s lines are then marked.
-  // Still pending, old: picking a step marks its log lines from one line early
-  test(name('S05'), PENDING, async ({ page }) => {
+  test(name('S05'), async ({ page }) => {
     const lines = {
       // Short lines: the log panel is narrow and wraps long ones
       Fetch: ['Fetching', 'Fetched 12'],
@@ -796,7 +789,7 @@ test.describe('shared-log-viewer', () => {
   });
 
   // The level control stays on the editor's log; only the run page hides it
-  test(name('S06'), PASSING_OLD, async ({ page }) => {
+  test(name('S06'), async ({ page }) => {
     const { id, run } = givenRun({ state: 'lost', steps: [], jobs: ['Fetch'] });
     await openLog(page, id, run);
 
@@ -817,7 +810,7 @@ test.describe('shared-dataclip-body-viewer', () => {
   const formatted = JSON.stringify(body, null, 2);
 
   // "Fetch"'s input
-  test(name('S01'), PASSING_OLD, async ({ page }) => {
+  test(name('S01'), async ({ page }) => {
     const { id, run } = givenRun({
       input: { type: 'global', body },
       steps: [{ name: 'Fetch' }],
@@ -833,7 +826,7 @@ test.describe('shared-dataclip-body-viewer', () => {
   });
 
   // "Fetch"'s output
-  test(name('S02'), PASSING_OLD, async ({ page }) => {
+  test(name('S02'), async ({ page }) => {
     const { id, run } = givenRun({ steps: [{ name: 'Fetch', output: body }] });
     await page
       .context()
@@ -854,7 +847,7 @@ test.describe('shared-dataclip-body-viewer', () => {
   });
 
   // "Fetch"'s output, with "Fetch" picked in "Run Steps"
-  test(name('S04'), PASSING_OLD, async ({ page }) => {
+  test(name('S04'), async ({ page }) => {
     const { Login, Fetch, Post, output } = bodyViewer.given.S04;
     const { id, run } = givenRun({
       steps: [
@@ -885,17 +878,15 @@ test.describe('shared-dataclip-body-viewer', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('shared-run-retry-controls', () => {
-  test(
-    'shared-run-retry-controls@S02 on workflow-editor-run-viewer',
-    PASSING_OLD,
-    async ({ page }) => {
-      const { id, run } = givenRun();
-      await signInAs(page, ME);
-      await openRun(page, id, run, 'Fetch');
+  test('shared-run-retry-controls@S02 on workflow-editor-run-viewer', async ({
+    page,
+  }) => {
+    const { id, run } = givenRun();
+    await signInAs(page, ME);
+    await openRun(page, id, run, 'Fetch');
 
-      await runRetry.S02(page, ideHeader(page), run);
-    }
-  );
+    await runRetry.S02(page, ideHeader(page), run);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -907,7 +898,7 @@ test.describe('shared-run-components', () => {
     `shared-run-components@${id} on workflow-editor-run-viewer`;
 
   // Each pill also has the text colour the run page gives it
-  test(name('S15'), PASSING_OLD, async ({ page }) => {
+  test(name('S15'), async ({ page }) => {
     const id = givenProject();
     await signInAs(page, ME);
     const colourOf = async (pill: ReturnType<typeof statusPill>) =>
@@ -933,7 +924,7 @@ test.describe('shared-run-components', () => {
 
   // The crashed step's orange is not checked: the shared icon reader only
   // tells green, red and grey apart
-  test(name('S16'), PASSING_OLD, async ({ page }) => {
+  test(name('S16'), async ({ page }) => {
     const { id, run } = givenRun(OUTCOMES);
     await signInAs(page, ME);
     await openRun(page, id, run, 'Fetch');
@@ -942,7 +933,7 @@ test.describe('shared-run-components', () => {
   });
 
   // The run that finishes after 90 seconds is a second step of the same run
-  test(name('S17'), PASSING_OLD, async ({ page }) => {
+  test(name('S17'), async ({ page }) => {
     const { id, run } = givenRun({
       state: 'started',
       steps: [
@@ -968,7 +959,7 @@ test.describe('shared-run-components', () => {
     await expect(runDuration(page)).toHaveText('Not started');
   });
 
-  test(name('S18'), PASSING_OLD, async ({ page }) => {
+  test(name('S18'), async ({ page }) => {
     const { id, run } = givenRun(RETRIED);
     await signInAs(page, ME);
     await openRun(page, id, run, 'Transform');

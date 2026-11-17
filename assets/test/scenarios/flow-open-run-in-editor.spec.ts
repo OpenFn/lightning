@@ -65,12 +65,6 @@ const OWNER = 'owner@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {};
-const tags = (key: string) => ({
-  tag: [key in STILL_PENDING ? '@pending' : '@passing-old'],
-});
-
 // A page that has to react to something happening elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 
@@ -147,7 +141,7 @@ async function expectReadOnly(page: Page, why: string) {
 //   Then I am in the workflow editor for "Intake" at version 1
 //   And the run viewer shows "R" with its steps
 //   And the canvas cannot be edited, saying "You are viewing a pinned version of this workflow"
-test('@S01', tags('S01'), async ({ page }) => {
+test('@S01', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id);
   movedOn(run);
@@ -175,7 +169,7 @@ test('@S01', tags('S01'), async ({ page }) => {
 //   When I follow that step's inspect link from the run page or from History
 //   Then the workflow editor opens with the IDE showing "Send to DHIS2"
 //   And the run viewer has "R"'s step for "Send to DHIS2" selected
-test('@S02', tags('S02'), async ({ page }) => {
+test('@S02', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id);
   await signInAs(page, ME);
@@ -214,7 +208,7 @@ test('@S02', tags('S02'), async ({ page }) => {
 //   When I follow the work order's workflow name on History
 //   Then the workflow editor opens on the latest "Intake" with "R" in the run viewer
 //   And I can edit the workflow
-test('@S03', tags('S03'), async ({ page }) => {
+test('@S03', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id);
   await signInAs(page, ME);
@@ -243,7 +237,7 @@ test('@S03', tags('S03'), async ({ page }) => {
 //   And the run viewer shows "R" with no version mismatch warning
 //   And the canvas cannot be edited, saying "You are viewing this workflow as a past run executed it"
 // "Intake" was never taken live, so the run's version is a draft save.
-test('@S04', tags('S04'), async ({ page }) => {
+test('@S04', async ({ page }) => {
   experimental();
   const id = givenProject();
   const run = givenRun(id);
@@ -274,7 +268,7 @@ test('@S04', tags('S04'), async ({ page }) => {
 //   Then the editor opens with no run data for "R"
 // Malawi HIV's "Intake" is a copy of the run's workflow, with the same step
 // names, so painting "R" would show on it.
-test('@S05', tags('S05'), async ({ page }) => {
+test('@S05', async ({ page }) => {
   const malawi = givenProject('Malawi HIV', { [ME]: 'owner' });
   const mine = givenRun(malawi, {
     state: 'success',
@@ -300,7 +294,7 @@ test('@S05', tags('S05'), async ({ page }) => {
 //   When I open "Intake" with "as_run=<R id>"
 //   Then the editor reports "run not found" and shows no content as executed
 // The report is the editor's refused join of the run's room.
-test('@S06', tags('S06'), async ({ page }) => {
+test('@S06', async ({ page }) => {
   experimental();
   const id = givenProject();
   const intake = givenRun(id, {
@@ -329,7 +323,7 @@ test('@S06', tags('S06'), async ({ page }) => {
 //   When I open it
 //   Then I am redirected to "/projects/<project_id>/w/<Intake id>" with "run=<R id>" and "s=<job id>"
 //   And the run viewer shows "R"
-test('@S07', tags('S07'), async ({ page }) => {
+test('@S07', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id);
   const jobId = jobsOf(run.workflowId)[SEND];

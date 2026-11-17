@@ -31,8 +31,6 @@ const SENSITIVE = '/profile/auth/backup_codes';
 const EDITOR = 'editor@openfn.org';
 // The authenticator secret seeded below, as an app would hold it
 const SECRET = 'VOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5L';
-const PASSING = { tag: ['@passing-old', '@passing-new'] };
-const PENDING = { tag: '@pending' };
 
 let cleanups: (() => void)[] = [];
 test.beforeEach(() => {
@@ -104,7 +102,7 @@ const switchTo = (page: Page, name: string) => clickable(page, name).click();
 //   And I see "Enter your password to confirm access"
 //   And I see a "Confirm" button
 //   And I do not see "Authentication Code"
-test('@S01', PASSING, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const amara = me();
   await signInAs(page, amara.email);
   await sentHere(page);
@@ -134,8 +132,7 @@ test('@S01', PASSING, async ({ page }) => {
 // The flow continuing is the backup codes page opening with the token
 // (profile-backup-codes). "Replacing in history": going back from there
 // skips "Confirm access" and lands on the page I was on before.
-// @pending on both apps: the return is a full page load that adds a history entry, so back lands on Confirm access.
-test('@S02', PENDING, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const amara = me();
   await signInAs(page, amara.email);
   await open(page, '/profile');
@@ -158,7 +155,7 @@ test('@S02', PENDING, async ({ page }) => {
 //   Then I see "Invalid password! Try again."
 //   And I am still on "Confirm access"
 //   And no sudo session is recorded for me
-test('@S03', PASSING, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const amara = me();
   await signInAs(page, amara.email);
   await sentHere(page);
@@ -184,7 +181,7 @@ test('@S03', PASSING, async ({ page }) => {
 //   Then I see "Password" and "Enter your password to confirm access"
 //   And I see "Use your authenticator app instead"
 // MFA is turned on after signing in, so the sign-in needs no code.
-test('@S04', PASSING, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const amara = me();
   await signInAs(page, amara.email);
   withMfa(amara.id);
@@ -220,7 +217,7 @@ test('@S04', PASSING, async ({ page }) => {
 //   Given I am signed in without MFA
 //   And I was sent to "Confirm access" from "/profile/auth/backup_codes"
 //   Then I do not see "Use your authenticator app instead"
-test('@S05', PASSING, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const amara = me();
   await signInAs(page, amara.email);
   await sentHere(page);
@@ -241,7 +238,7 @@ test('@S05', PASSING, async ({ page }) => {
 //   And I am taken to "/profile/auth/backup_codes" with a "sudo_token" query parameter
 //   And the flow "flow-reauth-backup-codes" continues on that page
 // MFA is turned on after signing in, so no code has been used yet.
-test('@S06', PASSING, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const amara = me();
   await signInAs(page, amara.email);
   withMfa(amara.id);
@@ -269,7 +266,7 @@ test('@S06', PASSING, async ({ page }) => {
 // The message is already showing from the first try, so the second refusal
 // is read as: the server answered, I am still here and nothing is unlocked,
 // all inside the time step the code was used in.
-test('@S07', PASSING, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const amara = me();
   withMfa(amara.id);
   const lv = watchLiveView(page);
@@ -307,56 +304,43 @@ test('@S07', PASSING, async ({ page }) => {
 // (annotation inherits line).
 test.describe('shared-authenticated-session', () => {
   // Signed out, the visit itself is what sends me here after logging in
-  test(
-    'shared-authenticated-session@S01 on auth-confirm-access',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PATH, me().email);
-    }
-  );
+  test('shared-authenticated-session@S01 on auth-confirm-access', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, PATH, me().email);
+  });
 
   // Opened the way users reach it, from the backup codes page; the reload is
   // of "Confirm access"
-  test(
-    'shared-authenticated-session@S02 on auth-confirm-access',
-    PASSING,
-    async ({ page, browser }) => {
-      cleanups.push(keepAccount(EDITOR));
-      await authenticatedSession.S02(page, browser, SENSITIVE, EDITOR);
-    }
-  );
+  test('shared-authenticated-session@S02 on auth-confirm-access', async ({
+    page,
+    browser,
+  }) => {
+    cleanups.push(keepAccount(EDITOR));
+    await authenticatedSession.S02(page, browser, SENSITIVE, EDITOR);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on auth-confirm-access',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PATH, me().email);
-    }
-  );
+  test('shared-authenticated-session@S03 on auth-confirm-access', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, PATH, me().email);
+  });
 
   for (const id of ['S04', 'S05'])
-    test(
-      `shared-authenticated-session@${id} on auth-confirm-access`,
-      PENDING,
-      () => {
-        test.skip(
-          true,
-          'variant require-email-verification is not configured on this instance'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on auth-confirm-access`, () => {
+      test.skip(
+        true,
+        'variant require-email-verification is not configured on this instance'
+      );
+    });
 
   for (const id of ['S06', 'S07', 'S08', 'S09', 'S10'])
-    test(
-      `shared-authenticated-session@${id} on auth-confirm-access`,
-      PENDING,
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the page has no header, sidebar or banners (annotation inherits line)'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on auth-confirm-access`, () => {
+      test.skip(
+        true,
+        'not reachable here: the page has no header, sidebar or banners (annotation inherits line)'
+      );
+    });
 
   // @S11 @variant:first-setup-open
   //   Given first setup is allowed
@@ -365,7 +349,7 @@ test.describe('shared-authenticated-session', () => {
   //   Then I am on "/first_setup"
   test(
     'shared-authenticated-session@S11 on auth-confirm-access',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       cleanups.push(firstSetupOpen());
       await authenticatedSession.S11(page, PATH);

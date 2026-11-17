@@ -35,8 +35,6 @@ import {
 const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new'] };
-
 let cleanups: (() => void)[] = [];
 test.beforeEach(() => {
   cleanups = [];
@@ -109,7 +107,7 @@ const NOT_AUTHORIZED = /You are not authori[sz]ed to perform this action/;
 //   And I see "(currently required for this project)"
 //   And project "Malawi HIV" requires MFA
 //   And an audit event "requires_mfa_updated" is recorded with me as the actor, before false and after true
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const id = givenProject('admin');
   await signInAs(page, ME);
   enrolled();
@@ -135,7 +133,7 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 //   And I see "(currently optional for this project)"
 //   And project "Malawi HIV" does not require MFA
 //   And an audit event "requires_mfa_updated" is recorded with me as the actor, before true and after false
-test('@S02', PASSING_BOTH, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const id = givenProject('owner');
   setRequiresMfa(id, true);
   await signInAs(page, ME);
@@ -161,7 +159,7 @@ test('@S02', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Multi-Factor Authentication"
 //   And I see "(currently optional for this project)"
 for (const role of ['viewer', 'editor', 'admin', 'owner'] as const) {
-  test(`@S03 ${role}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S03 ${role}`, async ({ page }) => {
     const id = givenProject(role);
     await onSecurity(page, id);
 
@@ -193,7 +191,7 @@ const S04: [string, () => string][] = [
   ],
 ];
 for (const [who, seed] of S04) {
-  test(`@S04 ${who}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S04 ${who}`, async ({ page }) => {
     const id = seed();
     const lv = await onSecurity(page, id);
 
@@ -217,7 +215,7 @@ for (const [who, seed] of S04) {
 //   When I click the "Require MFA?" switch
 //   Then I see "You are not authorized to perform this action"
 //   And project "Malawi HIV" still does not require MFA
-test('@S05', PASSING_BOTH, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const id = givenProject('admin');
   await onSecurity(page, id);
   // Without the page being told: no role-change event is broadcast
@@ -242,28 +240,24 @@ test('@S05', PASSING_BOTH, async ({ page }) => {
 //   When "toggle-mfa" is sent directly
 //   Then I see "You are not authorized to perform this action"
 //   And project "Malawi HIV" still does not require MFA
-test(
-  '@S06',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    cleanups.push(
-      withLimiterRefusing('require_mfa', 'MFA Feature is disabled', {
-        banner: true,
-      })
-    );
-    const id = givenProject('admin');
-    const lv = await onSecurity(page, id);
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
+  cleanups.push(
+    withLimiterRefusing('require_mfa', 'MFA Feature is disabled', {
+      banner: true,
+    })
+  );
+  const id = givenProject('admin');
+  const lv = await onSecurity(page, id);
 
-    // A plan-limit banner: the design-system page draws it beside the panel
-    await expect(page.getByText('MFA Feature is disabled')).toBeVisible();
-    // The plan limit is the Value, so the switch is off
-    await expect(mfaSwitch(page)).toBeDisabled();
-    await sendMfaChange(page, lv, true);
+  // A plan-limit banner: the design-system page draws it beside the panel
+  await expect(page.getByText('MFA Feature is disabled')).toBeVisible();
+  // The plan limit is the Value, so the switch is off
+  await expect(mfaSwitch(page)).toBeDisabled();
+  await sendMfaChange(page, lv, true);
 
-    expect(requiresMfa(id)).toBe(false);
-    expect(lv.crashes()).toBe(0);
-  }
-);
+  expect(requiresMfa(id)).toBe(false);
+  expect(lv.crashes()).toBe(0);
+});
 
 // @S07 @variant:sandbox
 // Scenario: The requirement can't be changed from a sandbox
@@ -272,7 +266,7 @@ test(
 //   When I open the settings of sandbox "dev" on the "Security" tab
 //   Then the "Require MFA?" switch is disabled
 //   And clicking it sends nothing
-test('@S07', PASSING_BOTH, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const w = seedWorkspace(
     {
       name: 'Malawi HIV',
@@ -299,7 +293,7 @@ test('@S07', PASSING_BOTH, async ({ page }) => {
 //   And "bob@example.org" is an editor on the project who has not enrolled in MFA
 //   When I turn on the MFA requirement
 //   Then the flow "flow-require-project-mfa" has started for "bob@example.org"
-test('@S08', PASSING_BOTH, async ({ page, browser }) => {
+test('@S08', async ({ page, browser }) => {
   const bob = seedUser('bob', { firstName: 'Bob' });
   cleanups.push(bob.remove);
   const id = givenProject('admin');

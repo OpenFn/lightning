@@ -77,14 +77,6 @@ const ME = 'editor@openfn.org';
 const OWNER = 'owner@openfn.org';
 const AMARA = 'super@openfn.org';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {
-  S01: 'unconfirmed: passes on a fresh seed, but after other editor runs the editor opens with ?panel=run; some state outlives the test',
-};
-const tags = (key: string) => ({
-  tag: [key in STILL_PENDING ? '@pending' : '@passing-old'],
-});
-
 // A run the e2e worker runs, or a page reacting to one, gets this long
 const EVENTUALLY = { timeout: 30000 };
 // How long a page is watched for a change that should not come
@@ -165,7 +157,7 @@ async function newRun(workflowId: string, before: number) {
 //   And the run history list shows R's work order at the top with "R" selected
 //   When the worker starts and then completes "Fetch"
 //   Then eventually the "Fetch" node shows it ran and how it ended, without a reload
-test('@S01', tags('S01'), async ({ page }) => {
+test('@S01', async ({ page }) => {
   const wf = givenIntake();
   await openAs(page, wf, runPanelQuery({ job: wf.steps.Fetch }));
 
@@ -196,7 +188,7 @@ test('@S01', tags('S01'), async ({ page }) => {
 // The IDE's run control is its header's "Run". The job logs the line itself:
 // I write it so, in a workflow that allows console.log(), and the run saves
 // it first.
-test('@S02', tags('S02'), async ({ page }) => {
+test('@S02', async ({ page }) => {
   const wf = givenIntake();
   exec(`update workflows set enable_job_logs = true where id = '${wf.id}'`);
   await signInAs(page, ME);
@@ -228,7 +220,7 @@ test('@S02', tags('S02'), async ({ page }) => {
 //   And once the run's "Fetch" step has that input, the run button offers "Retry"
 // The panel's input is read off the run and its stored input; the panel
 // itself is behind the run viewer while it follows the run.
-test('@S03', tags('S03'), async ({ page }) => {
+test('@S03', async ({ page }) => {
   const wf = givenIntake();
   await signInAs(page, ME);
   await openIde(page, wf.projectId, wf.id, wf.steps.Fetch);
@@ -258,7 +250,7 @@ test('@S03', tags('S03'), async ({ page }) => {
 //   When the editor joins
 //   Then the run viewer shows "R" as started with the steps it has already begun
 //   And later step and state changes are applied on top
-test('@S04', tags('S04'), async ({ page }) => {
+test('@S04', async ({ page }) => {
   const { run, wf } = givenRun(givenProject(), { state: 'available' });
   workerReports(run.runId, { claim: true });
   workerReports(run.runId, { start: true });
@@ -290,7 +282,7 @@ test('@S04', tags('S04'), async ({ page }) => {
 //   And the flow "flow-failure-alert-email" starts for "R"
 // The alert's first hop: I (alerted on failures in the project) am mailed a
 // link to "R".
-test('@S05', tags('S05'), async ({ page }) => {
+test('@S05', async ({ page }) => {
   const id = givenProject();
   exec(`update project_users set failure_alert = true
         where project_id = '${id}' and user_id = '${user(ME).id}'`);
@@ -333,7 +325,7 @@ test('@S05', tags('S05'), async ({ page }) => {
 //   When I start run "R" from the panel
 //   Then eventually her run history list shows R's work order
 //   And her editor still follows "Q" and her URL is unchanged
-test('@S06', tags('S06'), async ({ page, browser }) => {
+test('@S06', async ({ page, browser }) => {
   const wf = givenIntake();
   const q = seedRunOn(wf, {
     inputId: seedDataclip(wf.projectId, { type: 'http_request' }),
@@ -362,7 +354,7 @@ test('@S06', tags('S06'), async ({ page, browser }) => {
 //   Then the run viewer and the canvas still show only R's steps and logs
 //   And "S" appears only as its own entry in the run history list
 // "S" is an earlier run of the same workflow, put back to running.
-test('@S07', tags('S07'), async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { run, wf } = givenRun(givenProject(), {
     state: 'started',
     steps: [{ name: 'Fetch' }],
@@ -395,7 +387,7 @@ test('@S07', tags('S07'), async ({ page }) => {
 //   And removing a different member, or me from another project, leaves it open
 // The channel is watched on the page's own socket. The harmless removals
 // come first.
-test('@S08', tags('S08'), async ({ page }) => {
+test('@S08', async ({ page }) => {
   const id = givenProject();
   const other = givenProject('Kenya TB');
   const { run, wf } = givenRun(id, {

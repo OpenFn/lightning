@@ -34,14 +34,6 @@ import {
 const OWNER = 'owner@openfn.org';
 const AMARA = 'super@openfn.org';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {
-  S03: 'old: the reopened editor shows "Intake v2" but keeps the unsaved job rename "Fetch draft" (as shared-editor-session S04 on the canvas)',
-};
-const tags = (key: string) => ({
-  tag: [key in STILL_PENDING ? '@pending' : '@passing-old'],
-});
-
 // A page that has to react to something happening elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 
@@ -94,7 +86,7 @@ const conflict = (wf: EditorWorkflow) => ({
 //   And "Intake" is still named "Intake" with its lock version unchanged
 //   And the open editor still shows "Intake" with no new message
 //   Examples: PATCH, PUT
-test('@S01', tags('S01'), async ({ page, request }) => {
+test('@S01', async ({ page, request }) => {
   const wf = givenIntake();
   await amaraOpens(page, wf);
   const token = seededApiTokenOf(OWNER).token;
@@ -130,7 +122,7 @@ test('@S01', tags('S01'), async ({ page, request }) => {
 //   And the response body's workflow is named "Intake v2"
 // Her session ends a moment after the tab closes, so the PATCH is sent until
 // it is answered with something other than the refusal.
-test('@S02', tags('S02'), async ({ browser, request }) => {
+test('@S02', async ({ browser, request }) => {
   const wf = givenIntake();
   const amara = await otherSession(browser, AMARA);
   await openEditor(amara, wf.projectId, wf.id);
@@ -156,7 +148,7 @@ test('@S02', tags('S02'), async ({ browser, request }) => {
 //   When "amara@example.org" opens "Intake" in the editor again
 //   Then the editor shows "Intake v2"
 //   And the unsaved job rename is gone
-test('@S03', tags('S03'), async ({ browser, request }) => {
+test('@S03', async ({ browser, request }) => {
   const wf = givenIntake();
   const amara = await otherSession(browser, AMARA);
   await openEditor(amara, wf.projectId, wf.id);

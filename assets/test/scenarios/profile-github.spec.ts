@@ -89,21 +89,15 @@ async function expectConnectStarted(page: Page, verb: 'Connect' | 'Reconnect') {
 //   And I do not see "Disconnect from GitHub"
 //   When I click "Connect your GitHub Account"
 //   Then the flow "flow-github-connect" has started for my account
-test(
-  '@S01',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    await signedIn(page);
+test('@S01', { tag: ['@serial'] }, async ({ page }) => {
+  await signedIn(page);
 
-    await expect(
-      page.getByText('GitHub Access', { exact: true })
-    ).toBeVisible();
-    await expect(githubLink(page, 'Connect')).toBeVisible();
-    await expect(page.getByRole('button', { name: DISCONNECT })).toHaveCount(0);
+  await expect(page.getByText('GitHub Access', { exact: true })).toBeVisible();
+  await expect(githubLink(page, 'Connect')).toBeVisible();
+  await expect(page.getByRole('button', { name: DISCONNECT })).toHaveCount(0);
 
-    await expectConnectStarted(page, 'Connect');
-  }
-);
+  await expectConnectStarted(page, 'Connect');
+});
 
 // @S02
 // Scenario: A linked user sees they are connected
@@ -111,17 +105,13 @@ test(
 //   When I open "/profile"
 //   Then I see "Disconnect from GitHub"
 //   And I do not see "Connect your GitHub Account"
-test(
-  '@S02',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    await signedIn(page, 'fresh');
+test('@S02', { tag: ['@serial'] }, async ({ page }) => {
+  await signedIn(page, 'fresh');
 
-    await expect(page.getByRole('button', { name: DISCONNECT })).toBeVisible();
-    await expect(githubLink(page, 'Connect')).toHaveCount(0);
-    await expect(githubLink(page, 'Reconnect')).toHaveCount(0);
-  }
-);
+  await expect(page.getByRole('button', { name: DISCONNECT })).toBeVisible();
+  await expect(githubLink(page, 'Connect')).toHaveCount(0);
+  await expect(githubLink(page, 'Reconnect')).toHaveCount(0);
+});
 
 // @S03
 // Scenario: A user whose GitHub link lapsed is told and can reconnect
@@ -131,20 +121,16 @@ test(
 //   And I do not see "Disconnect from GitHub"
 //   When I click "Reconnect your GitHub Account"
 //   Then the flow "flow-github-connect" has started for my account
-test(
-  '@S03',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    await signedIn(page, 'lapsed');
+test('@S03', { tag: ['@serial'] }, async ({ page }) => {
+  await signedIn(page, 'lapsed');
 
-    const link = githubLink(page, 'Reconnect');
-    await expect(link).toBeVisible();
-    await expectHint(page, link, 'Your token has expired');
-    await expect(page.getByRole('button', { name: DISCONNECT })).toHaveCount(0);
+  const link = githubLink(page, 'Reconnect');
+  await expect(link).toBeVisible();
+  await expectHint(page, link, 'Your token has expired');
+  await expect(page.getByRole('button', { name: DISCONNECT })).toHaveCount(0);
 
-    await expectConnectStarted(page, 'Reconnect');
-  }
-);
+  await expectConnectStarted(page, 'Reconnect');
+});
 
 // @S04
 // Scenario: A user disconnects GitHub after confirming
@@ -157,35 +143,31 @@ test(
 //   And I am on "/profile" with "GitHub connection removed successfully"
 //   And I see "Connect your GitHub Account"
 //   And no GitHub token is stored on my account
-test(
-  '@S04',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    await signedIn(page, 'lasting');
+test('@S04', { tag: ['@serial'] }, async ({ page }) => {
+  await signedIn(page, 'lasting');
 
-    const confirm = await openDisconnect(page);
-    await expect(confirm).toContainText(
-      'Until you reconnect, you will not be able to set up or modify version control for your projects.'
-    );
-    // Nothing happens until I confirm
-    expect(revocations()).toHaveLength(0);
+  const confirm = await openDisconnect(page);
+  await expect(confirm).toContainText(
+    'Until you reconnect, you will not be able to set up or modify version control for your projects.'
+  );
+  // Nothing happens until I confirm
+  expect(revocations()).toHaveLength(0);
 
-    await confirm
-      .getByRole('button', { name: 'Disconnect', exact: true })
-      .click();
+  await confirm
+    .getByRole('button', { name: 'Disconnect', exact: true })
+    .click();
 
-    await expect(page.getByText(REMOVED)).toBeVisible();
-    await expectAt(page, PAGE);
-    await expect(githubLink(page, 'Connect')).toBeVisible();
-    expect(revocations()).toEqual([
-      expect.objectContaining({
-        method: 'delete',
-        body: expect.stringContaining('access-seeded'),
-      }),
-    ]);
-    expect(githubTokenOf(me.id)).toBeNull();
-  }
-);
+  await expect(page.getByText(REMOVED)).toBeVisible();
+  await expectAt(page, PAGE);
+  await expect(githubLink(page, 'Connect')).toBeVisible();
+  expect(revocations()).toEqual([
+    expect.objectContaining({
+      method: 'delete',
+      body: expect.stringContaining('access-seeded'),
+    }),
+  ]);
+  expect(githubTokenOf(me.id)).toBeNull();
+});
 
 // @S05
 // Scenario: Disconnecting with an expired access token still revokes the grant on GitHub
@@ -195,32 +177,28 @@ test(
 //   And OpenFn's grant is revoked on GitHub with the refreshed access token
 //   And I see "GitHub connection removed successfully"
 //   And no GitHub token is stored on my account
-test(
-  '@S05',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    await signedIn(page, 'access-expired');
+test('@S05', { tag: ['@serial'] }, async ({ page }) => {
+  await signedIn(page, 'access-expired');
 
-    await disconnect(page);
+  await disconnect(page);
 
-    await expect(page.getByText(REMOVED)).toBeVisible();
-    const asked = github.requests().map(r => r.url);
-    const refreshed = asked.findIndex(url =>
-      url.endsWith('/login/oauth/access_token')
-    );
-    expect(refreshed, 'the access token was refreshed').toBeGreaterThan(-1);
-    expect(revocations()).toEqual([
-      expect.objectContaining({
-        body: expect.stringContaining('access-refreshed'),
-      }),
-    ]);
-    expect(
-      asked.findIndex(url => url.endsWith('/grant')),
-      'revoked after the refresh'
-    ).toBeGreaterThan(refreshed);
-    expect(githubTokenOf(me.id)).toBeNull();
-  }
-);
+  await expect(page.getByText(REMOVED)).toBeVisible();
+  const asked = github.requests().map(r => r.url);
+  const refreshed = asked.findIndex(url =>
+    url.endsWith('/login/oauth/access_token')
+  );
+  expect(refreshed, 'the access token was refreshed').toBeGreaterThan(-1);
+  expect(revocations()).toEqual([
+    expect.objectContaining({
+      body: expect.stringContaining('access-refreshed'),
+    }),
+  ]);
+  expect(
+    asked.findIndex(url => url.endsWith('/grant')),
+    'revoked after the refresh'
+  ).toBeGreaterThan(refreshed);
+  expect(githubTokenOf(me.id)).toBeNull();
+});
 
 // @S06
 // Scenario: Disconnecting succeeds locally even when GitHub refuses
@@ -230,21 +208,17 @@ test(
 //   Then I see "GitHub connection removed successfully"
 //   And I see "Connect your GitHub Account"
 //   And no GitHub token is stored on my account
-test(
-  '@S06',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    github.revokeAnswers(422);
-    await signedIn(page, 'fresh');
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
+  github.revokeAnswers(422);
+  await signedIn(page, 'fresh');
 
-    await disconnect(page);
+  await disconnect(page);
 
-    await expect(page.getByText(REMOVED)).toBeVisible();
-    await expect(githubLink(page, 'Connect')).toBeVisible();
-    expect(revocations()).toHaveLength(1);
-    expect(githubTokenOf(me.id)).toBeNull();
-  }
-);
+  await expect(page.getByText(REMOVED)).toBeVisible();
+  await expect(githubLink(page, 'Connect')).toBeVisible();
+  expect(revocations()).toHaveLength(1);
+  expect(githubTokenOf(me.id)).toBeNull();
+});
 
 // @S07
 // Scenario: Backing out of the disconnect dialog keeps the link
@@ -254,22 +228,18 @@ test(
 //   Then the dialog closes
 //   And I still see "Disconnect from GitHub"
 //   And my GitHub token is unchanged
-test(
-  '@S07',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    await signedIn(page, 'fresh');
-    const before = githubTokenOf(me.id);
+test('@S07', { tag: ['@serial'] }, async ({ page }) => {
+  await signedIn(page, 'fresh');
+  const before = githubTokenOf(me.id);
 
-    const confirm = await openDisconnect(page);
-    await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
+  const confirm = await openDisconnect(page);
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
 
-    await expect(confirm).toHaveCount(0);
-    await expect(page.getByRole('button', { name: DISCONNECT })).toBeVisible();
-    expect(revocations()).toHaveLength(0);
-    expect(githubTokenOf(me.id)).toEqual(before);
-  }
-);
+  await expect(confirm).toHaveCount(0);
+  await expect(page.getByRole('button', { name: DISCONNECT })).toBeVisible();
+  expect(revocations()).toHaveLength(0);
+  expect(githubTokenOf(me.id)).toEqual(before);
+});
 
 // Inherited from shared-authenticated-session and shared-project-header:
 // this card is part of "/profile", whose session and header scenarios run in
@@ -280,7 +250,7 @@ test(
 test.describe('shared-flash-messages', () => {
   test(
     'shared-flash-messages@S05 on profile-github',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       await signedIn(page, 'fresh');
       await flashMessages.S05(page, REMOVED, () => disconnect(page), PAGE);

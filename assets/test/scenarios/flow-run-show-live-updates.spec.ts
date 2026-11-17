@@ -45,12 +45,6 @@ import {
 const ME = 'editor@openfn.org';
 const OWNER = 'owner@openfn.org';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {};
-const tags = (key: string) => ({
-  tag: [key in STILL_PENDING ? '@pending' : '@passing-old'],
-});
-
 // How long an unaffected page is watched for a change that should not come
 const QUIET = 3000;
 
@@ -108,7 +102,7 @@ async function stopped(duration: Locator) {
 //   When a worker claims "R"
 //   Then eventually the status reads "Starting"
 //   And the "Cancel" action is gone
-test('@S01', tags('S01'), async ({ page }) => {
+test('@S01', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id, { state: 'available', jobs: ['Fetch'] });
   await openRun(page, id, run.runId);
@@ -128,7 +122,7 @@ test('@S01', tags('S01'), async ({ page }) => {
 //   Then eventually the status reads "Running"
 //   And "Started" shows the start time
 //   And "Duration" counts up from the start time
-test('@S02', tags('S02'), async ({ page }) => {
+test('@S02', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id, { state: 'claimed', jobs: ['Fetch'] });
   await openRun(page, id, run.runId);
@@ -148,7 +142,7 @@ test('@S02', tags('S02'), async ({ page }) => {
 //   When the worker starts step "Fetch" and then step "Transform"
 //   Then eventually the step list shows "Fetch" then "Transform", in the order they started
 //   And each step's duration counts up from its start time
-test('@S03', tags('S03'), async ({ page }) => {
+test('@S03', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id, { state: 'started', jobs: ['Fetch', 'Transform'] });
   await openRun(page, id, run.runId);
@@ -172,7 +166,7 @@ test('@S03', tags('S03'), async ({ page }) => {
 //   And when another step completes with reason "success" it shows a success icon
 // "Load" is still running beside them, for shared-run-components S02's
 // pending icon.
-test('@S04', tags('S04'), async ({ page }) => {
+test('@S04', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id, {
     state: 'started',
@@ -204,7 +198,7 @@ test('@S04', tags('S04'), async ({ page }) => {
 //   And the "Output" tab shows "Nothing yet"
 //   When the worker completes "Fetch" with an output
 //   Then eventually the "Output" tab shows that output
-test('@S05', tags('S05'), async ({ page }) => {
+test('@S05', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id, { state: 'started', jobs: ['Fetch'] });
   const fetch = workerReports(run.runId, { startStep: 'Fetch' });
@@ -226,7 +220,7 @@ test('@S05', tags('S05'), async ({ page }) => {
 //   When the worker sends the log line "Fetched 12 patients"
 //   And then sends "Posted batch 1" and "Posted batch 2" in one batch
 //   Then eventually the "Log" tab shows all three lines in time order
-test('@S06', tags('S06'), async ({ page }) => {
+test('@S06', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id, { state: 'started', jobs: ['Fetch'] });
   const fetch = workerReports(run.runId, { startStep: 'Fetch' });
@@ -255,7 +249,7 @@ test('@S06', tags('S06'), async ({ page }) => {
 //   Then the "Log" tab shows every line exactly once, in time order
 // The worker sends 40 more lines, 50 ms apart, starting just before the page
 // opens. The whole log is read by copying it out of the viewer.
-test('@S07', tags('S07'), async ({ page }) => {
+test('@S07', async ({ page }) => {
   const id = givenProject();
   const stored = Array.from({ length: 500 }, (_, i) => `Stored line ${i + 1}`);
   const live = Array.from({ length: 40 }, (_, i) => `Live line ${i + 1}`);
@@ -287,7 +281,7 @@ test('@S07', tags('S07'), async ({ page }) => {
 // The flows' first hops only: a History tab shows the work order's new
 // state, and I (alerted on failures in the project) am mailed a link to the
 // failed run.
-test('@S08', tags('S08'), async ({ page }) => {
+test('@S08', async ({ page }) => {
   const id = givenProject();
   exec(`update project_users set failure_alert = true
         where project_id = '${id}' and user_id = '${user(ME).id}'`);
@@ -324,7 +318,7 @@ test('@S08', tags('S08'), async ({ page }) => {
 //   Given I have run "R" open while it is "Starting" and nothing has been logged
 //   When "R" completes with state "crashed" without sending any log line
 //   Then eventually the "Log" tab says "No logs were received for this run."
-test('@S09', tags('S09'), async ({ page }) => {
+test('@S09', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id, { state: 'claimed', jobs: ['Fetch'] });
   await openRun(page, id, run.runId);
@@ -344,7 +338,7 @@ test('@S09', tags('S09'), async ({ page }) => {
 //   When a worker starts a step and logs a line for run "S"
 //   Then nothing on the page changes
 // "S" is a run in another project, of a workflow with the same step names.
-test('@S10', tags('S10'), async ({ page }) => {
+test('@S10', async ({ page }) => {
   const id = givenProject();
   const run = givenRun(id, { state: 'started', jobs: ['Fetch'] });
   const other = givenRun(givenProject('Kenya TB'), {

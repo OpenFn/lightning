@@ -53,9 +53,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const PROJECT = 'Malawi HIV';
 
-const PASSING_OLD = { tag: ['@passing-old', '@serial'] };
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new', '@serial'] };
-
 const AMARA = 'User: amara';
 const REPO = 'amara/hiv-sync';
 // GitHub as most tests find it: my installation "User: amara" (1234) can
@@ -183,7 +180,7 @@ async function confirmDirection(
 //   And I see "Repository: amara/hiv-sync" and branch "main"
 //   And an audit event "repo_connection_created" is recorded for the project
 //   And the flow "flow-github-sync-actions" has started for project "Malawi HIV"
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenProject('admin').id(PROJECT);
@@ -218,7 +215,7 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 //   And I click "Connect Branch & Initiate First Sync"
 //   Then I see "Connection made successfully"
 //   And no sync to GitHub is started
-test('@S02', PASSING_BOTH, async ({ page }) => {
+test('@S02', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenProject('admin').id(PROJECT);
@@ -245,7 +242,7 @@ test('@S02', PASSING_BOTH, async ({ page }) => {
 // (The Value is that no import is set up without a file, so this checks that
 // nothing is connected, through the form and past it. Whether the YAML
 // option shows is an open decision, not checked.)
-test('@S03', PASSING_BOTH, async ({ page }) => {
+test('@S03', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenProject('admin').id(PROJECT);
@@ -285,7 +282,7 @@ for (const [direction, destroyed] of [
   ['Export', false],
   ['Import', true],
 ] as const) {
-  test(`@S04 ${direction}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S04 ${direction}`, { tag: ['@serial'] }, async ({ page }) => {
     givenGithub();
     givenMyGithub();
     const id = givenProject('admin').id(PROJECT);
@@ -316,7 +313,7 @@ for (const [direction, destroyed] of [
 //   And if the form is submitted anyway I see "This field can't be blank"
 // (The Value is that nothing incomplete reaches GitHub: checked through the
 // form and past it, by what GitHub and the database got.)
-test('@S05', PASSING_BOTH, async ({ page }) => {
+test('@S05', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenProject('admin').id(PROJECT);
@@ -348,7 +345,7 @@ test('@S05', PASSING_BOTH, async ({ page }) => {
 //   Then "Branch" lists that repository's branches
 //   When I clear the installation
 //   Then no repository and no branch is selected
-test('@S06', PASSING_BOTH, async ({ page }) => {
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub({
     installations: [
       ...WORLD.installations!,
@@ -384,7 +381,7 @@ test('@S06', PASSING_BOTH, async ({ page }) => {
 //   When the GitHub App is now installed on my account
 //   And I click the refresh button next to "GitHub Installation"
 //   Then "GitHub Installation" lists the new installation
-test('@S07', PASSING_BOTH, async ({ page }) => {
+test('@S07', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub({
     answers: [
       {
@@ -417,7 +414,7 @@ test('@S07', PASSING_BOTH, async ({ page }) => {
 //   And I click the refresh button next to "Branch"
 //   Then "Branch" lists "main" and "openfn"
 //   And no branch is selected
-test('@S08', PASSING_BOTH, async ({ page }) => {
+test('@S08', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub({
     installations: [{ id: 1234, login: 'amara', repos: { [REPO]: ['main'] } }],
   });
@@ -446,7 +443,7 @@ test('@S08', PASSING_BOTH, async ({ page }) => {
 //   Then "Branch" lists no branches
 //   And clicking the refresh button next to "Branch" still lists no branches
 // (The Value is that GitHub is never asked for that repository's branches.)
-test('@S09', PASSING_BOTH, async ({ page }) => {
+test('@S09', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub({
     installations: [
       ...WORLD.installations!,
@@ -489,7 +486,7 @@ test('@S09', PASSING_BOTH, async ({ page }) => {
 //   When I select branch "dev"
 //   Then that message is gone
 // (Disabled is checked by its effect: submitting connects nothing.)
-test('@S10', PASSING_BOTH, async ({ page }) => {
+test('@S10', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const w = givenProject('admin', {
@@ -517,7 +514,7 @@ test('@S10', PASSING_BOTH, async ({ page }) => {
 //   Then I see "No GitHub installations found"
 //   And I see "You haven't installed the OpenFn GitHub App yet, or you may have uninstalled it."
 //   And "Install or manage GitHub app installations" opens the app's GitHub page in a new tab
-test('@S11', PASSING_BOTH, async ({ page }) => {
+test('@S11', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub({});
   givenMyGithub();
   const id = givenProject('admin').id(PROJECT);
@@ -550,7 +547,7 @@ test('@S11', PASSING_BOTH, async ({ page }) => {
 //   And I see "There was a problem connecting to GitHub. Refresh the page or contact support if the problem persists."
 //   And "GitHub Installation" is disabled
 // (Disabled is not the Value here; the message is.)
-test('@S12', PASSING_BOTH, async ({ page }) => {
+test('@S12', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub({
     answers: [
       {
@@ -583,7 +580,7 @@ test('@S12', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Connect your OpenFn account to GitHub"
 //   And I see a "Connect your GitHub Account" link that opens GitHub in a new tab
 //   And the flow "flow-github-connect" can start from this link
-test('@S13', PASSING_OLD, async ({ page }) => {
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   const id = givenProject('admin').id(PROJECT);
   const tab = await onGithub(page, id);
@@ -605,7 +602,7 @@ test('@S13', PASSING_OLD, async ({ page }) => {
 //   When I open the "Sync to GitHub" tab
 //   Then I see "Reconnect your GitHub Account"
 //   And I do not see the connect form
-test('@S14', PASSING_OLD, async ({ page }) => {
+test('@S14', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub('lapsed');
   const id = givenProject('admin').id(PROJECT);
@@ -628,7 +625,7 @@ test('@S14', PASSING_OLD, async ({ page }) => {
 //     | viewer |
 //     | editor |
 for (const role of ['viewer', 'editor'] as const) {
-  test(`@S15 ${role}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S15 ${role}`, { tag: ['@serial'] }, async ({ page }) => {
     givenGithub();
     givenMyGithub();
     const id = givenProject(role).id(PROJECT);
@@ -653,7 +650,7 @@ for (const role of ['viewer', 'editor'] as const) {
 //   And I am a viewer on project "Malawi HIV"
 //   When I open the "Sync to GitHub" tab
 //   Then I see "Version Control is not configured for this Lightning instance. Contact the superuser for more information."
-test('@S16', PASSING_BOTH, async ({ page }) => {
+test('@S16', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   github.removeApp();
   const id = givenProject('viewer').id(PROJECT);
@@ -674,7 +671,7 @@ test('@S16', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Repository:" linking to "https://www.github.com/amara/hiv-sync"
 //   And I see "Branch:" "main", "GitHub Installation ID:" "1234", "Path to config:" and "Sync version:"
 //   And I do not see the connect form
-test('@S17', PASSING_BOTH, async ({ page }) => {
+test('@S17', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   const id = givenConnected('viewer');
   const tab = await onGithub(page, id);
@@ -696,7 +693,7 @@ test('@S17', PASSING_BOTH, async ({ page }) => {
 //   When I open the "Sync to GitHub" tab
 //   Then I eventually see "Your repository is properly configured."
 //   And I do not see "Click here to reconnect"
-test('@S18', PASSING_OLD, async ({ page }) => {
+test('@S18', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenConnected('admin');
@@ -719,7 +716,7 @@ test('@S18', PASSING_OLD, async ({ page }) => {
 //   And "Initiate Sync to Branch" is disabled
 // (Whether sync stays off on a broken connection is not the Value, which is
 // that the team finds out and can repair it.)
-test('@S19', PASSING_OLD, async ({ page }) => {
+test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   givenMyGithub();
   const id = givenConnected('admin');
   givenGithub({ ...WORLD, missing: [deployFile(id)] });
@@ -753,7 +750,7 @@ for (const [role, access] of [
   ['admin', false],
   ['owner', false],
 ] as const) {
-  test(`@S20 ${role}`, PASSING_OLD, async ({ page }) => {
+  test(`@S20 ${role}`, { tag: ['@serial'] }, async ({ page }) => {
     givenMyGithub();
     const id = givenConnected(role);
     givenGithub({
@@ -779,7 +776,7 @@ for (const [role, access] of [
 //   And in "Reconnect to GitHub" I keep "OpenFn --> GitHub" selected, tick the confirmation and click "Reconnect"
 //   Then I see "Connected to GitHub"
 //   And the flow "flow-github-sync-actions" has started for project "Malawi HIV"
-test('@S21', PASSING_OLD, async ({ page }) => {
+test('@S21', { tag: ['@serial'] }, async ({ page }) => {
   givenMyGithub();
   const id = givenConnected('admin');
   givenGithub({ ...WORLD, missing: [deployFile(id)] });
@@ -805,7 +802,7 @@ test('@S21', PASSING_OLD, async ({ page }) => {
 //   When I click "Initiate Sync to Branch"
 //   Then I see "GitHub sync initiated"
 //   And the flow "flow-github-sync-actions" has started for project "Malawi HIV"
-test('@S22', PASSING_BOTH, async ({ page }) => {
+test('@S22', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   const id = givenConnected('editor');
   await onGithub(page, id);
@@ -830,7 +827,7 @@ test('@S22', PASSING_BOTH, async ({ page }) => {
 //   When I open the "Sync to GitHub" tab
 //   Then "Initiate Sync to Branch" is disabled with the tooltip "Contact an editor or admin to sync."
 //   And I do not see "Remove Integration."
-test('@S23', PASSING_BOTH, async ({ page }) => {
+test('@S23', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   const id = givenConnected('viewer');
   await onGithub(page, id);
@@ -872,7 +869,7 @@ for (const [role, kind] of [
   ['editor', 'delete-connection'],
   ['editor', 'save'],
 ] as [Role, GithubRequest][]) {
-  test(`@S24 ${role} ${kind}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S24 ${role} ${kind}`, { tag: ['@serial'] }, async ({ page }) => {
     givenGithub();
     givenMyGithub();
     const id = givenConnected(role);
@@ -910,7 +907,7 @@ for (const [role, kind] of [
 //   Then I see "Connection removed successfully"
 //   And the project has no GitHub connection
 //   And an audit event "repo_connection_removed" is recorded for the project
-test('@S25', PASSING_BOTH, async ({ page }) => {
+test('@S25', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenConnected('admin');
@@ -939,7 +936,7 @@ test('@S25', PASSING_BOTH, async ({ page }) => {
 //   When I remove the integration
 //   Then I see "Connection removed successfully"
 //   And the project has no GitHub connection
-test('@S26', PASSING_BOTH, async ({ page }) => {
+test('@S26', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   const id = givenConnected('admin');
   await onGithub(page, id);
@@ -964,7 +961,7 @@ test('@S26', PASSING_BOTH, async ({ page }) => {
 //   And "Connect Branch & Initiate First Sync" is disabled
 // (Blocking is checked by its effect: a connect sent past the form makes
 // nothing.)
-test('@S27', PASSING_BOTH, async ({ page }) => {
+test('@S27', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   cleanups.push(
@@ -997,7 +994,7 @@ test('@S27', PASSING_BOTH, async ({ page }) => {
 //   When I submit the connect form
 //   Then I see "Plan limit reached"
 //   And the project has no GitHub connection
-test('@S28', PASSING_BOTH, async ({ page }) => {
+test('@S28', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenProject('admin').id(PROJECT);
@@ -1022,7 +1019,7 @@ test('@S28', PASSING_BOTH, async ({ page }) => {
 //   When I click "Initiate Sync to Branch"
 //   Then I see an error naming "My Flow" and "My-Flow"
 //   And no workflow is dispatched in GitHub
-test('@S29', PASSING_BOTH, async ({ page }) => {
+test('@S29', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenConnected('admin', { workflows: ['My Flow', 'My-Flow'] });
@@ -1043,7 +1040,7 @@ test('@S29', PASSING_BOTH, async ({ page }) => {
 //   When the connect runs
 //   Then I see "GitHub Error: Resource not accessible by integration"
 //   And the project has no GitHub connection
-test('@S30', PASSING_BOTH, async ({ page }) => {
+test('@S30', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub({
     ...WORLD,
     answers: [

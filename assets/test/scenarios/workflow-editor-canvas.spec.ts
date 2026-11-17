@@ -110,7 +110,6 @@ import {
   storedWorkflow,
   submit,
   switchWorkflowOnNode,
-  tagFor,
   unconfirmedSince,
   withFlag,
   withLimiterRefusing,
@@ -126,36 +125,6 @@ const OWNER = 'owner@openfn.org';
 const THIRD = 'super@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
-
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {
-  S07: 'old: disabled Undo and Redo show no tooltip',
-  S09: 'old: saving after "Run auto layout" keeps the earlier manual positions',
-  S10: 'old: the diagram does not refit when the canvas is resized',
-  S16: 'old: the disabled Undo shows no tooltip on a live workflow',
-  S23: 'variant not configured on this instance',
-  S27: 'old: Save keeps the unsaved changes marker after a switch made elsewhere',
-  'shared-editor-session@S04':
-    'old: the shared copy stayed open after the page left, so the stored draft is never reloaded',
-  'shared-editor-session@S18':
-    "old: no cursor labelled with the other member's name was found (unconfirmed)",
-  'shared-editor-session@S20':
-    'old: no sandbox button found after "Edit in sandbox" (unconfirmed)',
-  'shared-usage-limits-banner@S01': 'variant not configured on this instance',
-  'shared-run-retry-controls@S03':
-    'old: "Retry" on a pinned version starts no run',
-  'shared-run-retry-controls@S07': 'old: Ctrl+Enter in the IDE starts no run',
-  'shared-run-retry-controls@S10':
-    'old: the run button is enabled on a workflow not yet created',
-  'shared-run-retry-controls@S13':
-    'old: the run button reads "Retry" while the run is going (unconfirmed)',
-};
-const tags = (key: string, serial = false) => ({
-  tag: [
-    key in STILL_PENDING ? '@pending' : '@passing-old',
-    ...(serial ? ['@serial'] : []),
-  ],
-});
 
 const LIMIT = 'Your plan is at its limit.';
 
@@ -236,7 +205,7 @@ async function addHttpStep(page: Page, from: string) {
 //   Then I see "Loading workflow" until the document has synced
 //   And I see the trigger, "Fetch" and "Load" connected by their paths
 //   And I see the fit view, layout, undo and redo controls and a minimap
-test('@S01', tags('S01'), async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { path } = givenIntake({ [ME]: 'viewer' });
   const sock = await watchEditorSocket(page);
   await signInAs(page, ME);
@@ -273,7 +242,7 @@ test('@S01', tags('S01'), async ({ page }) => {
 //   And "Http" is selected and its inspector is open
 //   When I add another HTTP step the same way
 //   Then it is named "Http 1"
-test('@S02', tags('S02'), async ({ page }) => {
+test('@S02', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
 
@@ -303,7 +272,7 @@ test('@S02', tags('S02'), async ({ page }) => {
 //   Then a new step appears connected from "Load"
 //   When I instead release over an existing step that is not a valid target
 //   Then nothing is added
-test('@S03', tags('S03'), async ({ page }) => {
+test('@S03', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
 
@@ -332,7 +301,7 @@ test('@S03', tags('S03'), async ({ page }) => {
 //   Given I am an editor with "Intake" open, where "Fetch" and "Load" are not connected
 //   When I drag a path from "Fetch" and drop it on "Load"
 //   Then an "on success" path from "Fetch" to "Load" appears
-test('@S04', tags('S04'), async ({ page }) => {
+test('@S04', async ({ page }) => {
   const { wf } = givenIntake(
     { [ME]: 'editor' },
     { paths: [['trigger', 'Fetch']] }
@@ -360,7 +329,7 @@ test('@S04', tags('S04'), async ({ page }) => {
 //     | a step                    | the trigger                | Cannot connect to a trigger     |
 //     | a step                    | one of its ancestors       | Cannot create circular workflow |
 //     | a step                    | a step it already leads to | Already connected to this step  |
-test('@S05', tags('S05'), async ({ page }) => {
+test('@S05', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
   const before = await paths(page).count();
@@ -391,7 +360,7 @@ test('@S05', tags('S05'), async ({ page }) => {
 //   Then the URL has "job=<Fetch id>" and the flow hands off to workflow-editor-inspectors
 //   When I click an empty part of the canvas
 //   Then the inspector closes
-test('@S06', tags('S06'), async ({ page }) => {
+test('@S06', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'viewer' });
   await openAs(page, wf);
 
@@ -413,7 +382,7 @@ test('@S06', tags('S06'), async ({ page }) => {
 //   When I press Ctrl+Y, or Cmd+Shift+Z on a Mac
 //   Then the step is back
 //   And "Undo" and "Redo" say "Nothing to undo" and "Nothing to redo" when there is nothing to take back
-test('@S07', tags('S07'), async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
   // Soft, so undo and redo are still checked
@@ -449,7 +418,7 @@ test('@S07', tags('S07'), async ({ page }) => {
 //   Then "Load" is in the new spot after a reload, for me and for other members
 //   When I click "Switch to auto layout mode"
 //   Then the steps are laid out automatically again
-test('@S08', tags('S08'), async ({ page, browser }) => {
+test('@S08', async ({ page, browser }) => {
   const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'viewer' });
   await openAs(page, wf);
   const auto = await whereIs(page, 'Load');
@@ -495,7 +464,7 @@ test('@S08', tags('S08'), async ({ page, browser }) => {
 //   Given I am an editor with "Intake" open in manual layout
 //   When I click "Run auto layout (override manual positions)"
 //   Then the steps move to the automatic layout and those positions become the manual ones
-test('@S09', tags('S09'), async ({ page }) => {
+test('@S09', async ({ page }) => {
   const { wf } = givenIntake(
     { [ME]: 'editor' },
     { positions: { Fetch: { x: 600, y: 0 }, Load: { x: 0, y: 600 } } }
@@ -525,7 +494,7 @@ test('@S09', tags('S09'), async ({ page }) => {
 //   When I click "Fit view"
 //   Then every step is in view
 //   And the diagram refits when the canvas is resized, for example when a side panel opens
-test('@S10', tags('S10'), async ({ page }) => {
+test('@S10', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'viewer' });
   await openAs(page, wf);
   const all = ['Webhook trigger', 'Fetch', 'Load'];
@@ -557,7 +526,7 @@ test('@S10', tags('S10'), async ({ page }) => {
 //     | I am a viewer                                               | You do not have permission to edit this workflow                              |
 //     | I am an editor reading an older version                     | You are viewing a pinned version of this workflow                             |
 //     | I am an editor viewing the workflow as a past run executed it | You are viewing this workflow as a past run executed it                     |
-test('@S11', tags('S11'), async ({ page }) => {
+test('@S11', async ({ page }) => {
   // Each row opens its own workflow; the expectations are soft so every row
   // is checked
   const viewer = givenIntake({ [ME]: 'viewer' }, { name: 'Intake viewer' });
@@ -640,7 +609,7 @@ test('@S11', tags('S11'), async ({ page }) => {
 //   When I save
 //   Then I see "Workflow saved"
 //   And "Intake" no longer starts work orders from its triggers
-test('@S12', tags('S12'), async ({ page }) => {
+test('@S12', async ({ page }) => {
   setPreferences(ME, { experimental_features: false });
   const { wf } = givenIntake({ [ME]: 'editor' }, { enabled: true });
   await openAs(page, wf);
@@ -666,7 +635,7 @@ test('@S12', tags('S12'), async ({ page }) => {
 //   When I turn the workflow switch on and save
 //   Then I see "Failed to save workflow" with "Your plan is at its limit."
 //   And "Intake" still has its triggers disabled
-test('@S13', tags('S13', true), async ({ page }) => {
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'editor' }, { enabled: false });
   withSetting(withRefusingLimiter(LIMIT));
   await openAs(page, wf);
@@ -688,7 +657,7 @@ test('@S13', tags('S13', true), async ({ page }) => {
 //   Then I see "This puts the workflow into production. Its triggers will be turned on and it will start processing real data."
 //   When I confirm "Go live"
 //   Then the badge says "Live", the triggers are enabled, and a release is recorded
-test('@S14', tags('S14'), async ({ page }) => {
+test('@S14', async ({ page }) => {
   experimental();
   const { wf } = givenIntake({ [ME]: 'editor' }, { enabled: false });
   await openAs(page, wf);
@@ -714,7 +683,7 @@ test('@S14', tags('S14'), async ({ page }) => {
 //   And I have renamed "Fetch" to "Fetch patients" without saving
 //   When I go live
 //   Then the live workflow has a step named "Fetch patients"
-test('@S15', tags('S15'), async ({ page }) => {
+test('@S15', async ({ page }) => {
   experimental();
   const { wf } = givenIntake({ [ME]: 'editor' }, { enabled: false });
   await openAs(page, wf);
@@ -734,7 +703,7 @@ test('@S15', tags('S15'), async ({ page }) => {
 //   And the canvas is read-only with "This workflow is live. Switch to draft or edit in a sandbox to make changes."
 //   When I click "Switch to draft" and confirm
 //   Then the badge says "Draft", the triggers are disabled and I can edit again
-test('@S16', tags('S16'), async ({ page }) => {
+test('@S16', async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake({ [ME]: 'editor' }, { enabled: false });
   goLiveOnNode(wf.id, by);
@@ -771,7 +740,7 @@ test('@S16', tags('S16'), async ({ page }) => {
 //   When I go live
 //   Then I see "Could not go live" with "Your plan is at its limit."
 //   And "Intake" is still a draft
-test('@S17', tags('S17', true), async ({ page }) => {
+test('@S17', { tag: ['@serial'] }, async ({ page }) => {
   experimental();
   const { wf } = givenIntake({ [ME]: 'editor' }, { enabled: false });
   withSetting(withRefusingLimiter(LIMIT));
@@ -799,7 +768,7 @@ function workflowIn(projectId: string, name: string): EditorWorkflow {
 //   Then I see "Turn on" and "Promote", and no "Go live" or lifecycle badge
 //   When I click "Turn on"
 //   Then the sandbox's "Intake" triggers are enabled and the button says "Turn off"
-test('@S18', tags('S18'), async ({ page }) => {
+test('@S18', async ({ page }) => {
   experimental();
   const { w } = givenProject(
     { [ME]: 'editor' },
@@ -829,7 +798,7 @@ test('@S18', tags('S18'), async ({ page }) => {
 //   When I open a workflow in "b"
 //   Then the project picker button says "a/b" and is marked as a sandbox
 // A project has one owner (owner@openfn.org built them), so I am an admin.
-test('@S19', tags('S19'), async ({ page }) => {
+test('@S19', async ({ page }) => {
   const { w } = givenProject(
     { [OWNER]: 'owner' },
     {
@@ -860,7 +829,7 @@ test('@S19', tags('S19'), async ({ page }) => {
 //   Given project "Malawi HIV" has environment "production"
 //   When I open one of its workflows
 //   Then I see a "production" badge after the workflow name, titled "Project environment is production"
-test('@S20', tags('S20'), async ({ page }) => {
+test('@S20', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'viewer' }, {}, { env: 'production' });
   await openAs(page, wf);
 
@@ -877,7 +846,7 @@ test('@S20', tags('S20'), async ({ page }) => {
 //   When I click "Intake" in the header
 //   Then no panel is open, nothing is selected and no run is loaded
 //   And the back button returns me to where I was
-test('@S21', tags('S21'), async ({ page }) => {
+test('@S21', async ({ page }) => {
   const p = givenProject({ [ME]: 'editor' });
   const run = seedRun(
     p.id,
@@ -909,7 +878,7 @@ test('@S21', tags('S21'), async ({ page }) => {
 //   Then the workflow settings panel opens and the flow hands off to workflow-editor-inspectors
 //   When I click it again
 //   Then the panel closes
-test('@S22', tags('S22'), async ({ page }) => {
+test('@S22', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
   expect(await settingsFlagged(page)).toBe(false);
@@ -931,7 +900,7 @@ test('@S22', tags('S22'), async ({ page }) => {
 //   When my page reconnects
 //   Then I see "A new version of Lightning is available" with "Save any changes, then reload to update." and a "Reload" button
 //   And the message stays until I reload
-test('@S23', tags('S23'), () => {
+test('@S23', () => {
   test.skip(true, 'variant stale-build is not configured on this instance');
 });
 
@@ -942,7 +911,7 @@ test('@S23', tags('S23'), () => {
 //   Then I see "Please confirm your account before" followed by the deadline 48 hours after sign-up, above the header
 //   When I click "Resend confirmation email"
 //   Then the flow "flow-resend-account-confirmation" has started
-test('@S24', tags('S24', true), async ({ page }) => {
+test('@S24', { tag: ['@serial'] }, async ({ page }) => {
   const { wf } = givenIntake();
   withSetting(withFlag('require_email_verification', true));
   withSetting(unconfirmedSince(ME, 2));
@@ -969,7 +938,7 @@ test('@S24', tags('S24', true), async ({ page }) => {
 //   When I click "Archive sandbox"
 //   Then the flow "flow-sandbox-merge" continues at its S10
 //   And the flow "flow-sandbox-scheduled-deletion" has started for "sb"
-test('@S25', tags('S25'), async ({ page }) => {
+test('@S25', async ({ page }) => {
   experimental();
   const { w } = givenProject(
     { [ME]: 'editor' },
@@ -1003,7 +972,7 @@ test('@S25', tags('S25'), async ({ page }) => {
 //   Given I have "Intake" open
 //   When another member deletes "Intake" from the workflows list
 //   Then the flow "flow-delete-open-workflow" ends here at its S01 and S02
-test('@S26', tags('S26'), async ({ page }) => {
+test('@S26', async ({ page }) => {
   const { id, wf } = givenIntake({ [ME]: 'editor' });
   await openAs(page, wf);
 
@@ -1018,7 +987,7 @@ test('@S26', tags('S26'), async ({ page }) => {
 //   Given I have "Intake" open
 //   When another member switches "Intake" off on the workflows list
 //   Then the flow "flow-toggle-workflow-open-editor" ends here at its S01
-test('@S27', tags('S27'), async ({ page }) => {
+test('@S27', async ({ page }) => {
   setPreferences(ME, { experimental_features: false });
   const { wf } = givenIntake({ [ME]: 'editor' }, { enabled: true });
   await openAs(page, wf);
@@ -1036,7 +1005,7 @@ test('@S27', tags('S27'), async ({ page }) => {
 //   When I open "/projects/<Malawi HIV id>/w/<a Kenya TB workflow id>"
 //   Then I am on "/projects/<Malawi HIV id>/w"
 //   And I see "Workflow not found"
-test('@S28', tags('S28'), async ({ page }) => {
+test('@S28', async ({ page }) => {
   const malawi = givenProject({ [ME]: 'owner' });
   const kenya = givenIntake({ [OWNER]: 'owner' }, {}, { name: 'Kenya TB' });
   await signInAs(page, ME);
@@ -1053,7 +1022,7 @@ test('@S28', tags('S28'), async ({ page }) => {
 //   Given I have "Intake" open
 //   When a client updates "Intake" through the workflows API
 //   Then the flow "flow-workflow-api-edit-conflict" applies
-test('@S29', tags('S29'), async ({ page, request }) => {
+test('@S29', async ({ page, request }) => {
   const { id, wf } = givenIntake({ [ME]: 'viewer' });
   await openAs(page, wf);
   const token = seededApiTokenOf(OWNER).token;
@@ -1077,29 +1046,25 @@ test.describe('shared-editor-session', () => {
   const ON = 'on workflow-editor-canvas';
   const name = (id: string) => `shared-editor-session@${id} ${ON}`;
 
-  test(name('S01'), tags('shared-editor-session@S01'), async ({ page }) => {
+  test(name('S01'), async ({ page }) => {
     const { wf } = givenIntake({ [ME]: 'viewer' });
     await editorSession.S01(page, ME, wf);
   });
 
   for (const id of ['S02', 'S05', 'S07', 'S08'] as const)
-    test(
-      name(id),
-      tags(`shared-editor-session@${id}`),
-      async ({ page, browser }) => {
-        const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
-        const other = await otherSession(browser, THIRD);
-        await editorSession[id](page, other, [ME, THIRD], wf);
-      }
-    );
+    test(name(id), async ({ page, browser }) => {
+      const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
+      const other = await otherSession(browser, THIRD);
+      await editorSession[id](page, other, [ME, THIRD], wf);
+    });
 
   for (const id of ['S03', 'S06', 'S22'] as const)
-    test(name(id), tags(`shared-editor-session@${id}`), async ({ page }) => {
+    test(name(id), async ({ page }) => {
       const { wf } = givenIntake();
       await editorSession[id](page, ME, wf);
     });
 
-  test(name('S04'), tags('shared-editor-session@S04'), async ({ page }) => {
+  test(name('S04'), async ({ page }) => {
     const { wf, by } = givenIntake();
     await editorSession.S04(page, ME, wf, () =>
       renameStepOnNode(wf.id, 'Load', 'Load v2', by)
@@ -1107,16 +1072,12 @@ test.describe('shared-editor-session', () => {
   });
 
   // Saves wait on the adaptor catalogue, which is instance-wide
-  test(
-    name('S09'),
-    tags('shared-editor-session@S09', true),
-    async ({ page }) => {
-      const { wf } = givenIntake();
-      await editorSession.S09(page, ME, wf, catalogueUnavailable);
-    }
-  );
+  test(name('S09'), { tag: ['@serial'] }, async ({ page }) => {
+    const { wf } = givenIntake();
+    await editorSession.S09(page, ME, wf, catalogueUnavailable);
+  });
 
-  test(name('S10'), tags('shared-editor-session@S10'), async ({ page }) => {
+  test(name('S10'), async ({ page }) => {
     // Examples, one workflow each; soft expectations in the step
     const viewer = givenIntake({ [ME]: 'viewer' });
     await editorSession.S10(
@@ -1142,51 +1103,43 @@ test.describe('shared-editor-session', () => {
     );
   });
 
-  test(name('S11'), tags('shared-editor-session@S11'), async ({ page }) => {
+  test(name('S11'), async ({ page }) => {
     const { id, wf } = givenIntake();
     await editorSession.S11(page, ME, wf, () =>
       changeRoleOnNode(id, ME, 'viewer')
     );
   });
 
-  test(
-    name('S12'),
-    tags('shared-editor-session@S12'),
-    async ({ page, browser }) => {
-      const { id, wf } = givenIntake({
-        [ME]: 'editor',
-        [THIRD]: 'editor',
-      });
-      const other = await otherSession(browser, THIRD);
-      await editorSession.S12(page, other, [ME, THIRD], wf, () =>
-        removeMemberOnNode(id, ME, OWNER)
-      );
-    }
-  );
+  test(name('S12'), async ({ page, browser }) => {
+    const { id, wf } = givenIntake({
+      [ME]: 'editor',
+      [THIRD]: 'editor',
+    });
+    const other = await otherSession(browser, THIRD);
+    await editorSession.S12(page, other, [ME, THIRD], wf, () =>
+      removeMemberOnNode(id, ME, OWNER)
+    );
+  });
 
   // A support user sees every project that allows support access
-  test(
-    name('S13'),
-    tags('shared-editor-session@S13', true),
-    async ({ page, browser }) => {
-      const { id, wf } = givenIntake(
-        { [THIRD]: 'editor' },
-        {},
-        { allowSupportAccess: true }
-      );
-      cleanups.push(makeSupportUser(ME));
-      const editor = await otherSession(browser, THIRD);
-      await editorSession.S13(
-        page,
-        editor,
-        { support: ME, editor: THIRD },
-        wf,
-        () => setSupportAccessOnNode(id, false)
-      );
-    }
-  );
+  test(name('S13'), { tag: ['@serial'] }, async ({ page, browser }) => {
+    const { id, wf } = givenIntake(
+      { [THIRD]: 'editor' },
+      {},
+      { allowSupportAccess: true }
+    );
+    cleanups.push(makeSupportUser(ME));
+    const editor = await otherSession(browser, THIRD);
+    await editorSession.S13(
+      page,
+      editor,
+      { support: ME, editor: THIRD },
+      wf,
+      () => setSupportAccessOnNode(id, false)
+    );
+  });
 
-  test(name('S14'), tags('shared-editor-session@S14'), async ({ page }) => {
+  test(name('S14'), async ({ page }) => {
     // Example 1: a registered user not on the project
     const { wf } = givenIntake({ [OWNER]: 'owner' });
     await editorSession.S14(page, ME, wf);
@@ -1198,62 +1151,46 @@ test.describe('shared-editor-session', () => {
     await editorSession.S14(page, ME, mfa.wf);
   });
 
-  test(
-    name('S15'),
-    tags('shared-editor-session@S15'),
-    async ({ page, browser }) => {
-      const one = givenIntake(
-        { [ME]: 'editor', [THIRD]: 'editor' },
-        {},
-        { name: 'project-1' }
-      );
-      const two = givenIntake(
-        { [ME]: 'editor', [THIRD]: 'editor' },
-        {},
-        { name: 'project-2' }
-      );
-      const other = await otherSession(browser, THIRD);
-      await editorSession.S15(page, other, [ME, THIRD], one.wf, two.wf, () =>
-        scheduleDeletionOnNode(one.id)
-      );
-    }
-  );
+  test(name('S15'), async ({ page, browser }) => {
+    const one = givenIntake(
+      { [ME]: 'editor', [THIRD]: 'editor' },
+      {},
+      { name: 'project-1' }
+    );
+    const two = givenIntake(
+      { [ME]: 'editor', [THIRD]: 'editor' },
+      {},
+      { name: 'project-2' }
+    );
+    const other = await otherSession(browser, THIRD);
+    await editorSession.S15(page, other, [ME, THIRD], one.wf, two.wf, () =>
+      scheduleDeletionOnNode(one.id)
+    );
+  });
 
-  test(
-    name('S16'),
-    tags('shared-editor-session@S16'),
-    async ({ page, browser }) => {
-      const { id, by, wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
-      const second = seedEditorWorkflow(id, by, { name: 'Other' });
-      const other = await otherSession(browser, THIRD);
-      await editorSession.S16(page, other, [ME, THIRD], wf, second, () =>
-        deleteWorkflowOnNode(wf.id, OWNER)
-      );
-    }
-  );
+  test(name('S16'), async ({ page, browser }) => {
+    const { id, by, wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
+    const second = seedEditorWorkflow(id, by, { name: 'Other' });
+    const other = await otherSession(browser, THIRD);
+    await editorSession.S16(page, other, [ME, THIRD], wf, second, () =>
+      deleteWorkflowOnNode(wf.id, OWNER)
+    );
+  });
 
-  test(
-    name('S17'),
-    tags('shared-editor-session@S17'),
-    async ({ page, browser }) => {
-      const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
-      const her = await otherSession(browser, THIRD);
-      const secondTab = await her.context().newPage();
-      await editorSession.S17(page, her, secondTab, ME, nameOf(THIRD), wf);
-    }
-  );
+  test(name('S17'), async ({ page, browser }) => {
+    const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
+    const her = await otherSession(browser, THIRD);
+    const secondTab = await her.context().newPage();
+    await editorSession.S17(page, her, secondTab, ME, nameOf(THIRD), wf);
+  });
 
-  test(
-    name('S18'),
-    tags('shared-editor-session@S18'),
-    async ({ page, browser }) => {
-      const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
-      const her = await otherSession(browser, THIRD);
-      await editorSession.S18(page, her, ME, nameOf(THIRD), wf);
-    }
-  );
+  test(name('S18'), async ({ page, browser }) => {
+    const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
+    const her = await otherSession(browser, THIRD);
+    await editorSession.S18(page, her, ME, nameOf(THIRD), wf);
+  });
 
-  test(name('S19'), tags('shared-editor-session@S19'), async ({ page }) => {
+  test(name('S19'), async ({ page }) => {
     // "Load" starts unconnected, so the path change can add one: a trigger
     // has no handle to drag a path from
     const { wf } = givenIntake(
@@ -1272,41 +1209,33 @@ test.describe('shared-editor-session', () => {
     });
   });
 
-  test(
-    name('S20'),
-    tags('shared-editor-session@S20'),
-    async ({ page, browser }) => {
-      experimental();
-      const { w, by, wf } = givenIntake(
-        { [ME]: 'editor', [THIRD]: 'editor' },
-        {},
-        { sandboxes: [{ name: 'dev' }] }
-      );
-      goLiveOnNode(wf.id, by);
-      setPreferences(THIRD, { experimental_features: false });
-      cleanups.push(keepAccount(THIRD));
-      const colleague = await otherSession(browser, THIRD);
-      await signInAs(page, ME);
-      expect(w.id('dev')).toBeTruthy();
-      await editorSession.S20(
-        page,
-        colleague,
-        { me: ME, colleague: THIRD },
-        wf,
-        'dev'
-      );
-    }
-  );
+  test(name('S20'), async ({ page, browser }) => {
+    experimental();
+    const { w, by, wf } = givenIntake(
+      { [ME]: 'editor', [THIRD]: 'editor' },
+      {},
+      { sandboxes: [{ name: 'dev' }] }
+    );
+    goLiveOnNode(wf.id, by);
+    setPreferences(THIRD, { experimental_features: false });
+    cleanups.push(keepAccount(THIRD));
+    const colleague = await otherSession(browser, THIRD);
+    await signInAs(page, ME);
+    expect(w.id('dev')).toBeTruthy();
+    await editorSession.S20(
+      page,
+      colleague,
+      { me: ME, colleague: THIRD },
+      wf,
+      'dev'
+    );
+  });
 
-  test(
-    name('S21'),
-    tags('shared-editor-session@S21'),
-    async ({ page, browser }) => {
-      const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'viewer' });
-      const viewer = await otherSession(browser, THIRD);
-      await editorSession.S21(page, viewer, { editor: ME, viewer: THIRD }, wf);
-    }
-  );
+  test(name('S21'), async ({ page, browser }) => {
+    const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'viewer' });
+    const viewer = await otherSession(browser, THIRD);
+    await editorSession.S21(page, viewer, { editor: ME, viewer: THIRD }, wf);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1316,58 +1245,41 @@ test.describe('shared-editor-session', () => {
 test.describe('shared-authenticated-session', () => {
   const name = (id: string) =>
     `shared-authenticated-session@${id} on workflow-editor-canvas`;
-  const PASSED = ['S01', 'S02', 'S03', 'S07'];
 
   for (const id of ['S01', 'S03'] as const)
-    test(name(id), { tag: tagFor(id, PASSED) }, async ({ page }) => {
+    test(name(id), async ({ page }) => {
       await authenticatedSession[id](page, givenIntake().path, ME);
     });
 
-  test(
-    name('S02'),
-    { tag: tagFor('S02', PASSED) },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, givenIntake().path, ME);
-    }
-  );
+  test(name('S02'), async ({ page, browser }) => {
+    await authenticatedSession.S02(page, browser, givenIntake().path, ME);
+  });
 
   // The variant is an instance flag read at request time
-  test(
-    name('S04'),
-    tags('shared-authenticated-session@S04', true),
-    async ({ page }) => {
-      const h = givenIntake();
-      withSetting(withFlag('require_email_verification', true));
-      withSetting(unconfirmedSince(ME, 50));
-      await authenticatedSession.S04(page, h.path, ME);
-    }
-  );
+  test(name('S04'), { tag: ['@serial'] }, async ({ page }) => {
+    const h = givenIntake();
+    withSetting(withFlag('require_email_verification', true));
+    withSetting(unconfirmedSince(ME, 50));
+    await authenticatedSession.S04(page, h.path, ME);
+  });
 
-  test(
-    name('S05'),
-    tags('shared-authenticated-session@S05', true),
-    async ({ page }) => {
-      withSetting(withFlag('require_email_verification', true));
-      withSetting(unconfirmedSince(ME, 50));
-      await authenticatedSession.S05(page, ME);
-    }
-  );
+  test(name('S05'), { tag: ['@serial'] }, async ({ page }) => {
+    withSetting(withFlag('require_email_verification', true));
+    withSetting(unconfirmedSince(ME, 50));
+    await authenticatedSession.S05(page, ME);
+  });
 
-  test(
-    name('S07'),
-    { tag: tagFor('S07', PASSED) },
-    async ({ page, browser }) => {
-      const h = givenIntake();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        workflowsListPath(h.id),
-        ME,
-        'History'
-      );
-    }
-  );
+  test(name('S07'), async ({ page, browser }) => {
+    const h = givenIntake();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      workflowsListPath(h.id),
+      ME,
+      'History'
+    );
+  });
 
   for (const [id, variant] of [
     ['S06', 'require-email-verification'],
@@ -1376,7 +1288,7 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(name(id), { tag: tagFor(id, PASSED) }, () => {
+    test(name(id), () => {
       test.skip(true, `variant ${variant} is not configured on this instance`);
     });
 });
@@ -1390,53 +1302,49 @@ test.describe('shared-project-scope', () => {
   const name = (id: string) =>
     `shared-project-scope@${id} on workflow-editor-canvas`;
 
-  test(name('S01'), tags('shared-project-scope@S01'), async ({ page }) => {
+  test(name('S01'), async ({ page }) => {
     await projectScope.S01(page, givenIntake().path);
   });
 
-  test(name('S02'), tags('shared-project-scope@S02'), async ({ page }) => {
+  test(name('S02'), async ({ page }) => {
     await projectScope.S02(page, givenIntake().path, ME, node(page, 'Fetch'));
   });
 
-  test(name('S03'), tags('shared-project-scope@S03'), async ({ page }) => {
+  test(name('S03'), async ({ page }) => {
     const h = givenIntake({ [OWNER]: 'owner' });
     await projectScope.S03(page, h.path, ME);
   });
 
-  test(name('S04'), tags('shared-project-scope@S04'), async ({ page }) => {
+  test(name('S04'), async ({ page }) => {
     const h = givenIntake({ [ME]: 'owner' }, {}, { scheduledInDays: 7 });
     await projectScope.S04(page, h.path, ME);
   });
 
-  test(name('S05'), tags('shared-project-scope@S05'), async ({ page }) => {
+  test(name('S05'), async ({ page }) => {
     const h = givenIntake();
     exec(`update projects set requires_mfa = true where id = '${h.id}'`);
     removeMfaOf(ME);
     await projectScope.S05(page, h.path, ME);
   });
 
-  test(
-    name('S06'),
-    tags('shared-project-scope@S06', true),
-    async ({ page }) => {
-      const h = givenIntake(
-        { [OWNER]: 'owner' },
-        {},
-        { allowSupportAccess: true }
-      );
-      cleanups.push(makeSupportUser(ME));
-      await projectScope.S06(page, h.path, ME, node(page, 'Fetch'));
-    }
-  );
+  test(name('S06'), { tag: ['@serial'] }, async ({ page }) => {
+    const h = givenIntake(
+      { [OWNER]: 'owner' },
+      {},
+      { allowSupportAccess: true }
+    );
+    cleanups.push(makeSupportUser(ME));
+    await projectScope.S06(page, h.path, ME, node(page, 'Fetch'));
+  });
 
-  test(name('S07'), tags('shared-project-scope@S07'), async ({ page }) => {
+  test(name('S07'), async ({ page }) => {
     const h = givenIntake();
     await projectScope.S07(page, h.path, ME, () =>
       removeMemberOnNode(h.id, ME, OWNER)
     );
   });
 
-  test(name('S08'), tags('shared-project-scope@S08'), async ({ page }) => {
+  test(name('S08'), async ({ page }) => {
     const h = givenIntake({ [ME]: 'admin' });
     await projectScope.S08(
       page,
@@ -1447,23 +1355,19 @@ test.describe('shared-project-scope', () => {
     );
   });
 
-  test(
-    name('S09'),
-    tags('shared-project-scope@S09', true),
-    async ({ page }) => {
-      const h = givenIntake(
-        { [OWNER]: 'owner' },
-        {},
-        { allowSupportAccess: true }
-      );
-      cleanups.push(makeSupportUser(ME));
-      await projectScope.S09(page, h.path, ME, () =>
-        setSupportAccessOnNode(h.id, false)
-      );
-    }
-  );
+  test(name('S09'), { tag: ['@serial'] }, async ({ page }) => {
+    const h = givenIntake(
+      { [OWNER]: 'owner' },
+      {},
+      { allowSupportAccess: true }
+    );
+    cleanups.push(makeSupportUser(ME));
+    await projectScope.S09(page, h.path, ME, () =>
+      setSupportAccessOnNode(h.id, false)
+    );
+  });
 
-  test(name('S10'), tags('shared-project-scope@S10'), async ({ page }) => {
+  test(name('S10'), async ({ page }) => {
     const h = givenIntake();
     await projectScope.S10(page, h.path, ME, () =>
       scheduleDeletionOnNode(h.id)
@@ -1471,7 +1375,7 @@ test.describe('shared-project-scope', () => {
   });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test(name('S11'), tags('shared-project-scope@S11'), async ({ page }) => {
+  test(name('S11'), async ({ page }) => {
     experimental();
     const { w, id, by } = givenProject(
       { [ME]: 'editor' },
@@ -1489,7 +1393,7 @@ test.describe('shared-project-scope', () => {
     );
   });
 
-  test(name('S12'), tags('shared-project-scope@S12'), async ({ page }) => {
+  test(name('S12'), async ({ page }) => {
     const h = givenIntake();
     await projectScope.S12(
       page,
@@ -1506,29 +1410,20 @@ test.describe('shared-project-scope', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('shared-usage-limits-banner', () => {
-  test(
-    'shared-usage-limits-banner@S01 on workflow-editor-canvas',
-    tags('shared-usage-limits-banner@S01'),
-    () => {
-      test.skip(
-        true,
-        'variant usage-limited is not configured on this instance'
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S01 on workflow-editor-canvas', () => {
+    test.skip(true, 'variant usage-limited is not configured on this instance');
+  });
 
-  test(
-    'shared-usage-limits-banner@S02 on workflow-editor-canvas',
-    tags('shared-usage-limits-banner@S02'),
-    async ({ page }) => {
-      await usageLimitsBanner.S02(
-        page,
-        givenIntake().path,
-        ME,
-        node(page, 'Fetch')
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S02 on workflow-editor-canvas', async ({
+    page,
+  }) => {
+    await usageLimitsBanner.S02(
+      page,
+      givenIntake().path,
+      ME,
+      node(page, 'Fetch')
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1540,33 +1435,28 @@ test.describe('shared-usage-limits-banner', () => {
 
 test.describe('shared-project-header', () => {
   const HOST = 'Editor host';
-  const PASSED = ['S04', 'S05', 'S06', 'S08', 'S11', 'S12'];
   const name = (id: string) =>
     `shared-project-header@${id} on workflow-editor-canvas`;
 
   for (const id of ['S04', 'S05', 'S06', 'S08', 'S11', 'S12'] as const)
-    test(name(id), { tag: tagFor(id, PASSED) }, async ({ page }) => {
+    test(name(id), async ({ page }) => {
       const h = givenIntake({ [ME]: 'editor' }, {}, { name: HOST });
       await projectHeader[id](page, h.path, ME);
     });
 
   // A support user sees every project that allows support access
-  test(
-    name('S07'),
-    tags('shared-project-header@S07', true),
-    async ({ page }) => {
-      const h = givenIntake({ [ME]: 'editor' }, {}, { name: HOST });
-      await projectHeader.S07(page, h.path, ME);
-    }
-  );
+  test(name('S07'), { tag: ['@serial'] }, async ({ page }) => {
+    const h = givenIntake({ [ME]: 'editor' }, {}, { name: HOST });
+    await projectHeader.S07(page, h.path, ME);
+  });
 
   // S09 starts on a project settings page, whatever page hosts the header
-  test(name('S09'), tags('shared-project-header@S09'), async ({ page }) => {
+  test(name('S09'), async ({ page }) => {
     await projectHeader.S09(page, ME);
   });
 
   // The Examples row "a workflow's editor | the workflows page"
-  test(name('S10'), tags('shared-project-header@S10'), async ({ page }) => {
+  test(name('S10'), async ({ page }) => {
     const h = givenIntake({ [ME]: 'editor' }, {}, { name: HOST });
     await projectHeader.S10(page, h.path, ME, '/w');
   });
@@ -1599,13 +1489,13 @@ test.describe('shared-flash-messages', () => {
     return { h, deleteIt };
   }
 
-  test(name('S01'), tags('shared-flash-messages@S01'), async ({ page }) => {
+  test(name('S01'), async ({ page }) => {
     const { deleteIt } = await withDeletion(page);
     await flashMessages.S01(page, FLASH, deleteIt);
   });
 
   // The error flash this page can end up showing: "Workflow not found"
-  test(name('S02'), tags('shared-flash-messages@S02'), async ({ page }) => {
+  test(name('S02'), async ({ page }) => {
     const h = givenIntake();
     const other = givenIntake({ [ME]: 'viewer' }, {}, { name: 'Kenya TB' });
     await signInAs(page, ME);
@@ -1614,12 +1504,12 @@ test.describe('shared-flash-messages', () => {
     });
   });
 
-  test(name('S03'), tags('shared-flash-messages@S03'), async ({ page }) => {
+  test(name('S03'), async ({ page }) => {
     const { deleteIt } = await withDeletion(page);
     await flashMessages.S03(page, FLASH, deleteIt);
   });
 
-  test(name('S04'), tags('shared-flash-messages@S04'), async ({ page }) => {
+  test(name('S04'), async ({ page }) => {
     const { deleteIt } = await withDeletion(page);
     await flashMessages.S04(page, FLASH, deleteIt, async () => {
       // Sorting makes the workflow list render again
@@ -1630,12 +1520,12 @@ test.describe('shared-flash-messages', () => {
     });
   });
 
-  test(name('S05'), tags('shared-flash-messages@S05'), async ({ page }) => {
+  test(name('S05'), async ({ page }) => {
     const { h, deleteIt } = await withDeletion(page);
     await flashMessages.S05(page, FLASH, deleteIt, workflowsListPath(h.id));
   });
 
-  test(name('S06'), tags('shared-flash-messages@S06'), async ({ page }) => {
+  test(name('S06'), async ({ page }) => {
     const h = givenIntake();
     const notMine = givenIntake({ [OWNER]: 'owner' }, {}, { name: 'Kenya TB' });
     await openAs(page, h.wf);
@@ -1689,7 +1579,7 @@ test.describe('shared-run-retry-controls', () => {
       `select id from triggers where workflow_id = '${workflowId}'`
     )[0].id;
 
-  test(name('S01'), tags('shared-run-retry-controls@S01'), async ({ page }) => {
+  test(name('S01'), async ({ page }) => {
     const { wf } = givenIntake();
     await openAs(page, wf);
     await runRetry.S01(page, header(page), {
@@ -1698,14 +1588,14 @@ test.describe('shared-run-retry-controls', () => {
     });
   });
 
-  test(name('S02'), tags('shared-run-retry-controls@S02'), async ({ page }) => {
+  test(name('S02'), async ({ page }) => {
     const { id, run } = givenFinishedRun();
     await signInAs(page, ME);
     await openEditor(page, id, run.workflowId, `?run=${run.runId}`);
     await runRetry.S02(page, header(page), run);
   });
 
-  test(name('S03'), tags('shared-run-retry-controls@S03'), async ({ page }) => {
+  test(name('S03'), async ({ page }) => {
     experimental();
     const { id, by, run } = givenFinishedRun();
     renameStepOnNode(run.workflowId, 'Load', 'Load v2', by);
@@ -1723,7 +1613,7 @@ test.describe('shared-run-retry-controls', () => {
     });
   });
 
-  test(name('S07'), tags('shared-run-retry-controls@S07'), async ({ page }) => {
+  test(name('S07'), async ({ page }) => {
     const { wf } = givenIntake();
     const fetch = wf.steps.Fetch;
     await openAs(page, wf, ME, `?panel=run&job=${fetch}`);
@@ -1734,7 +1624,7 @@ test.describe('shared-run-retry-controls', () => {
 
   // Examples, one step each. The rows that make me an editor share one
   // workflow; the deleted row comes last.
-  test(name('S10'), tags('shared-run-retry-controls@S10'), async ({ page }) => {
+  test(name('S10'), async ({ page }) => {
     const why = runRetry.given.S10;
     const h = givenIntake({ [ME]: 'viewer' });
     const sock = await watchEditorSocket(page);
@@ -1773,30 +1663,26 @@ test.describe('shared-run-retry-controls', () => {
   });
 
   // The usage limiter is instance-wide
-  test(
-    name('S11'),
-    tags('shared-run-retry-controls@S11', true),
-    async ({ page }) => {
-      const { id, run } = givenFinishedRun();
-      cleanups.push(withLimiterRefusing('new_run', runRetry.given.S11.limit));
-      await signInAs(page, ME);
-      await openEditor(page, id, run.workflowId, `?run=${run.runId}`);
-      await runRetry.S11(
-        page,
-        header(page),
-        {
-          id: run.workflowId,
-          projectId: id,
-          triggerId: triggerOf(run.workflowId),
-        },
-        { runId: run.runId, stepId: run.steps.Fetch }
-      );
-    }
-  );
+  test(name('S11'), { tag: ['@serial'] }, async ({ page }) => {
+    const { id, run } = givenFinishedRun();
+    cleanups.push(withLimiterRefusing('new_run', runRetry.given.S11.limit));
+    await signInAs(page, ME);
+    await openEditor(page, id, run.workflowId, `?run=${run.runId}`);
+    await runRetry.S11(
+      page,
+      header(page),
+      {
+        id: run.workflowId,
+        projectId: id,
+        triggerId: triggerOf(run.workflowId),
+      },
+      { runId: run.runId, stepId: run.steps.Fetch }
+    );
+  });
 
   // Examples in turn: a viewer on "Malawi HIV", an editor on "Kenya TB" only,
   // signed out
-  test(name('S12'), tags('shared-run-retry-controls@S12'), async ({ page }) => {
+  test(name('S12'), async ({ page }) => {
     const status = runRetry.given.S12;
     const malawi = givenFinishedRun({ [ME]: 'viewer' });
     const kenya = givenProject({ [ME]: 'editor' }, { name: 'Kenya TB' });
@@ -1818,7 +1704,7 @@ test.describe('shared-run-retry-controls', () => {
       runRetry.S12(page, retry, malawi.id, status.signedOut));
   });
 
-  test(name('S13'), tags('shared-run-retry-controls@S13'), async ({ page }) => {
+  test(name('S13'), async ({ page }) => {
     const { wf } = givenIntake();
     // The e2e worker finishes a run at once; a slow first step keeps it
     // processing long enough to see
@@ -1840,49 +1726,37 @@ test.describe('shared-adaptor-credential-config', () => {
   const name = (id: string) =>
     `shared-adaptor-credential-config@${id} on workflow-editor-canvas`;
 
-  test(
-    name('S08'),
-    tags('shared-adaptor-credential-config@S08'),
-    async ({ page }) => {
-      const { wf } = givenIntake();
-      await openAs(page, wf);
-      await adaptorConfig.S08(
-        page,
-        () => clickPlus(page, 'Fetch'),
-        node(page, 'Http')
-      );
-    }
-  );
+  test(name('S08'), async ({ page }) => {
+    const { wf } = givenIntake();
+    await openAs(page, wf);
+    await adaptorConfig.S08(
+      page,
+      () => clickPlus(page, 'Fetch'),
+      node(page, 'Http')
+    );
+  });
 
   // The adaptor catalogue is instance-wide
-  test(
-    name('S09'),
-    tags('shared-adaptor-credential-config@S09', true),
-    async ({ page }) => {
-      let putBack: (() => void) | null = catalogueUnavailable();
-      const makeAvailable = () => {
-        putBack?.();
-        putBack = null;
-      };
-      cleanups.push(makeAvailable);
-      const { wf } = givenIntake();
-      await openAs(page, wf);
-      await adaptorConfig.S09(
-        page,
-        () => clickPlus(page, 'Fetch'),
-        makeAvailable
-      );
-    }
-  );
+  test(name('S09'), { tag: ['@serial'] }, async ({ page }) => {
+    let putBack: (() => void) | null = catalogueUnavailable();
+    const makeAvailable = () => {
+      putBack?.();
+      putBack = null;
+    };
+    cleanups.push(makeAvailable);
+    const { wf } = givenIntake();
+    await openAs(page, wf);
+    await adaptorConfig.S09(
+      page,
+      () => clickPlus(page, 'Fetch'),
+      makeAvailable
+    );
+  });
 
-  test(
-    name('S10'),
-    tags('shared-adaptor-credential-config@S10', true),
-    async ({ page }) => {
-      cleanups.push(adaptorConfig.withRetiredAdaptors());
-      const { wf } = givenIntake();
-      await openAs(page, wf);
-      await adaptorConfig.S10(page, () => clickPlus(page, 'Fetch'));
-    }
-  );
+  test(name('S10'), { tag: ['@serial'] }, async ({ page }) => {
+    cleanups.push(adaptorConfig.withRetiredAdaptors());
+    const { wf } = givenIntake();
+    await openAs(page, wf);
+    await adaptorConfig.S10(page, () => clickPlus(page, 'Fetch'));
+  });
 });

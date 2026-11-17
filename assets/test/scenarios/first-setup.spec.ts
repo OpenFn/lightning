@@ -34,7 +34,6 @@ import {
 const PATH = '/first_setup';
 const REGULAR = 'editor@openfn.org';
 const GOOD_PASSWORD = 'a long enough password';
-const PASSING = { tag: ['@passing-old', '@passing-new', '@serial'] };
 
 let cleanups: (() => void)[] = [];
 test.beforeEach(() => {
@@ -121,7 +120,7 @@ async function createSuperuser(page: Page, email: string) {
 //   And I click "Save"
 //   Then a user "foo@example.com" exists with role superuser
 //   And the flow "flow-first-superuser-sign-in" has started for "foo@example.com"
-test('@S01', PASSING, async ({ page }) => {
+test('@S01', { tag: ['@serial'] }, async ({ page }) => {
   noSuperuser();
   const email = freshEmail('foo');
   await open(page, PATH);
@@ -157,7 +156,7 @@ test('@S01', PASSING, async ({ page }) => {
 //   And "Save" is disabled
 // "Save is disabled" is not asserted: today's form turns it off, the design
 // system keeps it on and refuses on press. Pressing it creates nothing on both.
-test('@S02', PASSING, async ({ page }) => {
+test('@S02', { tag: ['@serial'] }, async ({ page }) => {
   noSuperuser();
   await open(page, PATH);
 
@@ -177,7 +176,7 @@ test('@S02', PASSING, async ({ page }) => {
 //   Then I see "Password minimum length is 12 characters."
 //   And "Save" is disabled
 // "Save is disabled": as S02.
-test('@S03', PASSING, async ({ page }) => {
+test('@S03', { tag: ['@serial'] }, async ({ page }) => {
   noSuperuser();
   await open(page, PATH);
 
@@ -205,7 +204,7 @@ test('@S03', PASSING, async ({ page }) => {
 // "Save is disabled": as S02. "Submit anyway" is the save sent past the form.
 // Today's page shows "can't be blank" translated ("This field can't be
 // blank."); the design system shows the raw text. Both hold the words.
-test('@S04', PASSING, async ({ page }) => {
+test('@S04', { tag: ['@serial'] }, async ({ page }) => {
   noSuperuser();
   const email = freshEmail('nameless');
   const lv = watchLiveView(page);
@@ -233,7 +232,7 @@ test('@S04', PASSING, async ({ page }) => {
 //   And no user "bell@example.com" exists
 //   And there is still no superuser
 // Today's Save is off for this form, so the save is also sent past the form.
-test('@S05', PASSING, async ({ page }) => {
+test('@S05', { tag: ['@serial'] }, async ({ page }) => {
   noSuperuser();
   const email = freshEmail('bell');
   const lv = watchLiveView(page);
@@ -269,7 +268,7 @@ test('@S05', PASSING, async ({ page }) => {
 // "Save is disabled": as S02. Today's page shows both messages translated
 // ("Email address not valid.", "This value should be unique."); either
 // wording passes.
-test('@S06', PASSING, async ({ page }) => {
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
   noSuperuser();
   const amara = seedUser('amara');
   cleanups.push(amara.remove);
@@ -298,7 +297,7 @@ test('@S06', PASSING, async ({ page }) => {
 //   When I visit "/first_setup"
 //   Then I am redirected to "/projects"
 // Signed in, so /projects opens rather than sending me on to log in.
-test('@S07', PASSING, async ({ page }) => {
+test('@S07', { tag: ['@serial'] }, async ({ page }) => {
   firstSetupAllowed();
   expect(superuserCount()).toBeGreaterThan(0);
   await signInAs(page, REGULAR);
@@ -317,7 +316,7 @@ test('@S07', PASSING, async ({ page }) => {
 //   When a live navigation takes me to "/first_setup"
 //   Then I land on "/projects"
 //   And no registration form is shown
-test('@S08', PASSING, async ({ page }) => {
+test('@S08', { tag: ['@serial'] }, async ({ page }) => {
   firstSetupAllowed();
   expect(superuserCount()).toBeGreaterThan(0);
   await signInAs(page, REGULAR);
@@ -335,7 +334,7 @@ test('@S08', PASSING, async ({ page }) => {
 //   And there is no superuser
 //   When I visit "/first_setup"
 //   Then I get a 404 with "First setup is disabled for this instance."
-test('@S09', PASSING, async ({ page }) => {
+test('@S09', { tag: ['@serial'] }, async ({ page }) => {
   noSuperuser();
   firstSetupClosed();
 
@@ -353,7 +352,7 @@ test('@S09', PASSING, async ({ page }) => {
 //   And I am signed in on "/credentials"
 //   When a live navigation takes me to "/first_setup"
 //   Then I am redirected to "/projects"
-test('@S10', PASSING, async ({ page }) => {
+test('@S10', { tag: ['@serial'] }, async ({ page }) => {
   firstSetupClosed();
   await signInAs(page, REGULAR);
   await open(page, '/credentials');
@@ -370,7 +369,7 @@ test('@S10', PASSING, async ({ page }) => {
 //   And there is no superuser
 //   When I visit "/"
 //   Then I am not redirected to "/first_setup"
-test('@S11', PASSING, async ({ page }) => {
+test('@S11', { tag: ['@serial'] }, async ({ page }) => {
   noSuperuser();
   firstSetupClosed();
 
@@ -393,7 +392,7 @@ test.describe('shared-authenticated-session', () => {
   //   Then I am on "/first_setup"
   test(
     'shared-authenticated-session@S11 on first-setup',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       noSuperuser();
       await authenticatedSession.S11(page, '/projects');
@@ -420,7 +419,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S01 on first-setup',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       await flashMessages.S01(page, CREATED, creating(page));
     }
@@ -428,7 +427,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S03 on first-setup',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       await flashMessages.S03(page, CREATED, creating(page));
     }
@@ -436,7 +435,7 @@ test.describe('shared-flash-messages', () => {
 
   test(
     'shared-flash-messages@S05 on first-setup',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       await flashMessages.S05(page, CREATED, creating(page), '/projects');
     }

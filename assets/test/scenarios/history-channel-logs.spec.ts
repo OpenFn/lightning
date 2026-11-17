@@ -142,7 +142,7 @@ const ALL_CHANNELS = /^\s*All channels\s*$/i;
 //   Then I see both requests
 //   And the 2 January request is listed first
 //   And each row shows the channel name "test-channel"
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { id } = givenProject();
   const { requests } = givenChannel(id, 'test-channel', [
     { at: '2026-01-01 10:00:00' },
@@ -164,7 +164,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And no request has passed through any channel in my project
 //   When I open the channel logs tab
 //   Then I see "No channel requests found."
-test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const { id } = givenProject();
   givenChannel(id, 'quiet-channel');
 
@@ -185,9 +185,8 @@ test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see no requests
 // The Value is that Kenya TB's request never shows. Malawi HIV has a request
 // of its own, so the list is known to be drawn. With Kenya TB's channel in
-// the URL today's tab lists nothing, while the port treats an unknown
-// channel as any channel (annotation 6.1); either way Kenya TB's stays out.
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+// the URL today's tab lists nothing; Kenya TB's stays out.
+test('@S03', async ({ page }) => {
   const malawi = givenProject();
   const kenya = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   const mine = givenChannel(malawi.id, 'malawi-channel', [
@@ -220,7 +219,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the channel logs tab
 //   Then row "A" shows path "/some/upstream/path" and status "Success"
 //   And row "B" shows error message "connect timeout" and status "Error"
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const { id } = givenProject();
   const {
     requests: [a, b],
@@ -259,7 +258,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //     | error   | Error       |
 // Every example is one request on one page; the labels are matched in any
 // letter case (today's reads "In Progress", annotation 6.2).
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const examples = [
     ['pending', 'In progress'],
     ['success', 'Success'],
@@ -297,7 +296,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the URL carries "filters[channel_id]=<channel-one id>"
 //   And I see only "channel-one"'s request
 //   And the chip reads "Channel is channel-one"
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const { id } = givenProject();
   const one = givenChannel(id, 'channel-one', [{ at: '2026-01-01 10:00:00' }]);
   const two = givenChannel(id, 'channel-two', [{ at: '2026-01-01 10:01:00' }]);
@@ -323,7 +322,7 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see requests from every channel in the project
 //   And the chip reads "Channel is any"
 //   And choosing "All channels" from the dropdown does the same
-test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { id } = givenProject();
   const one = givenChannel(id, 'channel-one', [{ at: '2026-01-01 10:00:00' }]);
   const two = givenChannel(id, 'channel-two', [{ at: '2026-01-01 10:01:00' }]);
@@ -354,7 +353,7 @@ test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the channel chip's dropdown
 //   Then I see "All channels", "alpha", "bravo" in that order
 //   And no channel from another project
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const { id } = givenProject();
   const other = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   givenChannel(id, 'bravo');
@@ -378,7 +377,7 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And requests from "channel-one" and "channel-two" are listed
 //   When I click "channel-one" in a row
 //   Then I see only "channel-one"'s requests
-test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const { id } = givenProject();
   const one = givenChannel(id, 'channel-one', [
     { at: '2026-01-01 10:00:00' },
@@ -402,7 +401,7 @@ test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I have experimental features enabled
 //   When I follow a link to channel logs with "filters[channel_id]" set to "channel-one"
 //   Then I see only "channel-one"'s requests and the chip reads "Channel is channel-one"
-test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const { id } = givenProject();
   const one = givenChannel(id, 'channel-one', [{ at: '2026-01-01 10:00:00' }]);
   givenChannel(id, 'channel-two', [{ at: '2026-01-01 10:01:00' }]);
@@ -425,7 +424,7 @@ test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see the remaining 5 "channel-one" requests and no "channel-two" request
 // "channel-two"'s requests fall between "channel-one"'s, so page 2 without
 // the filter would hold some of them.
-test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const { id } = givenProject();
   const one = givenChannel(id, 'channel-one', requestsAt(15, '10'));
   const two = givenChannel(id, 'channel-two', requestsAt(5, '10', 1));
@@ -453,7 +452,7 @@ test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am on page 1 of that channel's requests
 // "channel-two"'s 5 requests are the oldest, so page 2 of all 13 shows only
 // 3 of them, and page 1 of "channel-two" shows all 5.
-test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const { id } = givenProject();
   givenChannel(id, 'channel-one', requestsAt(8, '11'));
   const two = givenChannel(id, 'channel-two', requestsAt(5, '10'));
@@ -475,7 +474,7 @@ test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And request "A" is listed
 //   Then its ID cell shows the first 8 characters of its request ID, with the full ID on hover
 //   And it links to "/projects/<project_id>/history/channels/<A's id>"
-test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const { id } = givenProject();
   const {
     requests: [a],
@@ -506,7 +505,7 @@ test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And the flow "flow-zero-persistence-channel-requests" ends on this tab
 // The request is stored through Lightning's own rule for what the project
 // keeps, which drops the path it was given.
-test('@S14', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const { id } = givenProject();
   keepNoData(id);
   const {
@@ -532,7 +531,7 @@ test('@S14', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am on "/projects/<project_id>/history"
 // "Selected" is the look: the two tabs look different, and after the click
 // "Work orders" takes the look "Channel logs" had.
-test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const { id } = givenProject();
   givenChannel(id, 'test-channel', [{ at: '2026-01-01 10:00:00' }]);
 
@@ -555,8 +554,6 @@ test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 
 // Inherited shared annotations, run on the channel logs tab without
 // experimental features (the list draws the same; annotation 6.1)
-const PENDING = { tag: '@pending' };
-const PASSING = { tag: ['@passing-old', '@passing-new'] };
 
 // Given project "Malawi HIV" (or <name>) with these members and a channel
 // that logged one request
@@ -572,45 +569,39 @@ function givenLogsPage(
 }
 
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S01(page, givenLogsPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on history-channel-logs', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, givenLogsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on history-channel-logs',
-    PASSING,
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, givenLogsPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on history-channel-logs', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, givenLogsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S03(page, givenLogsPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on history-channel-logs', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, givenLogsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on history-channel-logs',
-    PASSING,
-    async ({ page, browser }) => {
-      const h = givenLogsPage();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        `/projects/${h.id}/w`,
-        ME,
-        'History'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on history-channel-logs', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenLogsPage();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      `/projects/${h.id}/w`,
+      ME,
+      'History'
+    );
+  });
 
   // These variants are not configured on this instance
   for (const [id, variant] of [
@@ -622,74 +613,43 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on history-channel-logs`,
-      PENDING,
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on history-channel-logs`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 test.describe('shared-project-scope', () => {
-  test(
-    'shared-project-scope@S01 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S01(page, givenLogsPage().path);
-    }
-  );
+  test('shared-project-scope@S01 on history-channel-logs', async ({ page }) => {
+    await projectScope.S01(page, givenLogsPage().path);
+  });
 
-  test(
-    'shared-project-scope@S02 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S02(page, givenLogsPage().path, ME, channelChip(page));
-    }
-  );
+  test('shared-project-scope@S02 on history-channel-logs', async ({ page }) => {
+    await projectScope.S02(page, givenLogsPage().path, ME, channelChip(page));
+  });
 
-  test(
-    'shared-project-scope@S03 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S03(
-        page,
-        givenLogsPage({ [OWNER]: 'owner' }).path,
-        ME
-      );
-    }
-  );
+  test('shared-project-scope@S03 on history-channel-logs', async ({ page }) => {
+    await projectScope.S03(page, givenLogsPage({ [OWNER]: 'owner' }).path, ME);
+  });
 
-  test(
-    'shared-project-scope@S04 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [OWNER]: 'owner' });
-      exec(
-        `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
-      );
-      await projectScope.S04(page, h.path, OWNER);
-    }
-  );
+  test('shared-project-scope@S04 on history-channel-logs', async ({ page }) => {
+    const h = givenLogsPage({ [OWNER]: 'owner' });
+    exec(
+      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
+    );
+    await projectScope.S04(page, h.path, OWNER);
+  });
 
-  test(
-    'shared-project-scope@S05 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage();
-      exec(`update projects set requires_mfa = true where id = '${h.id}'`);
-      removeMfaOf(ME);
-      await projectScope.S05(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S05 on history-channel-logs', async ({ page }) => {
+    const h = givenLogsPage();
+    exec(`update projects set requires_mfa = true where id = '${h.id}'`);
+    removeMfaOf(ME);
+    await projectScope.S05(page, h.path, ME);
+  });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-scope@S06 on history-channel-logs',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenLogsPage({ [OWNER]: 'owner' });
       exec(
@@ -700,35 +660,27 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S07 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'editor', [OWNER]: 'owner' });
-      await projectScope.S07(page, h.path, ME, () =>
-        removeMemberOnNode(h.id, ME, OWNER)
-      );
-    }
-  );
+  test('shared-project-scope@S07 on history-channel-logs', async ({ page }) => {
+    const h = givenLogsPage({ [ME]: 'editor', [OWNER]: 'owner' });
+    await projectScope.S07(page, h.path, ME, () =>
+      removeMemberOnNode(h.id, ME, OWNER)
+    );
+  });
 
-  test(
-    'shared-project-scope@S08 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'admin', [OWNER]: 'owner' });
-      await projectScope.S08(
-        page,
-        `${h.path}?x=1`,
-        ME,
-        () => changeRoleOnNode(h.id, ME, 'viewer'),
-        channelChip(page)
-      );
-    }
-  );
+  test('shared-project-scope@S08 on history-channel-logs', async ({ page }) => {
+    const h = givenLogsPage({ [ME]: 'admin', [OWNER]: 'owner' });
+    await projectScope.S08(
+      page,
+      `${h.path}?x=1`,
+      ME,
+      () => changeRoleOnNode(h.id, ME, 'viewer'),
+      channelChip(page)
+    );
+  });
 
   test(
     'shared-project-scope@S09 on history-channel-logs',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenLogsPage({ [OWNER]: 'owner' });
       exec(
@@ -741,16 +693,12 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S10 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'editor', [OWNER]: 'owner' });
-      await projectScope.S10(page, h.path, ME, () =>
-        scheduleDeletionOnNode(h.id)
-      );
-    }
-  );
+  test('shared-project-scope@S10 on history-channel-logs', async ({ page }) => {
+    const h = givenLogsPage({ [ME]: 'editor', [OWNER]: 'owner' });
+    await projectScope.S10(page, h.path, ME, () =>
+      scheduleDeletionOnNode(h.id)
+    );
+  });
 
   // shared-project-scope S11 and S12 are not run on this page: they are about
   // an open workflow editor (archived sandbox, deleted workflow), and this
@@ -758,29 +706,20 @@ test.describe('shared-project-scope', () => {
 });
 
 test.describe('shared-usage-limits-banner', () => {
-  test(
-    'shared-usage-limits-banner@S01 on history-channel-logs',
-    PENDING,
-    () => {
-      test.skip(
-        true,
-        'variant usage-limited is not configured on this instance'
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S01 on history-channel-logs', () => {
+    test.skip(true, 'variant usage-limited is not configured on this instance');
+  });
 
-  test(
-    'shared-usage-limits-banner@S02 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      await usageLimitsBanner.S02(
-        page,
-        givenLogsPage().path,
-        ME,
-        channelChip(page)
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S02 on history-channel-logs', async ({
+    page,
+  }) => {
+    await usageLimitsBanner.S02(
+      page,
+      givenLogsPage().path,
+      ME,
+      channelChip(page)
+    );
+  });
 });
 
 // The picker scenarios seed their own "Malawi HIV", so this page's project
@@ -789,60 +728,52 @@ test.describe('shared-project-header', () => {
   const HOST = 'Channel logs host';
 
   // Today's breadcrumb ends in "History" on this tab (annotation 6.2)
-  test(
-    'shared-project-header@S01 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S01(page, h.path, ME, HOST, [{ name: 'History' }]);
-    }
-  );
+  test('shared-project-header@S01 on history-channel-logs', async ({
+    page,
+  }) => {
+    const h = givenLogsPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S01(page, h.path, ME, HOST, [{ name: 'History' }]);
+  });
 
-  test(
-    'shared-project-header@S02 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S02(page, ME, { path: h.path, project: HOST });
-    }
-  );
+  test('shared-project-header@S02 on history-channel-logs', async ({
+    page,
+  }) => {
+    const h = givenLogsPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S02(page, ME, { path: h.path, project: HOST });
+  });
 
-  test(
-    'shared-project-header@S03 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const w = seedWorkspace(
-        {
-          name: HOST,
-          members: { [ME]: 'editor', [OWNER]: 'owner' },
-          sandboxes: [
-            { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
-          ],
-        },
-        OWNER
-      );
-      cleanups.push(w.remove);
-      await projectHeader.S03(page, ME, {
-        path: channelLogsPath(w.id('dev')),
-        label: `${HOST}:dev`,
-      });
-    }
-  );
+  test('shared-project-header@S03 on history-channel-logs', async ({
+    page,
+  }) => {
+    const w = seedWorkspace(
+      {
+        name: HOST,
+        members: { [ME]: 'editor', [OWNER]: 'owner' },
+        sandboxes: [
+          { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
+        ],
+      },
+      OWNER
+    );
+    cleanups.push(w.remove);
+    await projectHeader.S03(page, ME, {
+      path: channelLogsPath(w.id('dev')),
+      label: `${HOST}:dev`,
+    });
+  });
 
   for (const id of ['S04', 'S05', 'S06', 'S08'] as const)
-    test(
-      `shared-project-header@${id} on history-channel-logs`,
-      PASSING,
-      async ({ page }) => {
-        const h = givenLogsPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on history-channel-logs`, async ({
+      page,
+    }) => {
+      const h = givenLogsPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-header@S07 on history-channel-logs',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenLogsPage({ [ME]: 'editor' }, HOST);
       await projectHeader.S07(page, h.path, ME);
@@ -850,42 +781,36 @@ test.describe('shared-project-header', () => {
   );
 
   // S09 starts on a project settings page, whatever page hosts the header
-  test(
-    'shared-project-header@S09 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
+  test('shared-project-header@S09 on history-channel-logs', async ({
+    page,
+  }) => {
+    await projectHeader.S09(page, ME);
+  });
 
   // A channel filter names a channel that exists only in this project, so
   // the tab filtered to it has no equivalent in "Kenya TB". Today the picker
   // lands on History's work orders tab (annotation 6.2).
-  test(
-    'shared-project-header@S10 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S10(
-        page,
-        channelLogsPath(h.id, h.channel.id),
-        ME,
-        '/history'
-      );
-    }
-  );
+  test('shared-project-header@S10 on history-channel-logs', async ({
+    page,
+  }) => {
+    const h = givenLogsPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S10(
+      page,
+      channelLogsPath(h.id, h.channel.id),
+      ME,
+      '/history'
+    );
+  });
 
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on history-channel-logs`,
-      PASSING,
-      async ({ page }) => {
-        const h = givenLogsPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on history-channel-logs`, async ({
+      page,
+    }) => {
+      const h = givenLogsPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
-  test('shared-project-header@S14 on history-channel-logs', PENDING, () => {
+  test('shared-project-header@S14 on history-channel-logs', () => {
     test.skip(
       true,
       'variant require-email-verification is not configured on this instance'
@@ -893,34 +818,28 @@ test.describe('shared-project-header', () => {
   });
 
   // This tab marks "History" in the side menu
-  test(
-    'shared-project-header@S15 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'viewer' }, HOST);
-      await projectHeader.S15(page, h.path, ME, h.id, 'History');
-    }
-  );
+  test('shared-project-header@S15 on history-channel-logs', async ({
+    page,
+  }) => {
+    const h = givenLogsPage({ [ME]: 'viewer' }, HOST);
+    await projectHeader.S15(page, h.path, ME, h.id, 'History');
+  });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test(
-    'shared-project-header@S16 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S16(page, h.path, ME, { channels: true });
-    }
-  );
+  test('shared-project-header@S16 on history-channel-logs', async ({
+    page,
+  }) => {
+    const h = givenLogsPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S16(page, h.path, ME, { channels: true });
+  });
 
   // A superuser needs a role on the project to open this page at all
-  test(
-    'shared-project-header@S17 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
-      await projectHeader.S17(page, h.path);
-    }
-  );
+  test('shared-project-header@S17 on history-channel-logs', async ({
+    page,
+  }) => {
+    const h = givenLogsPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
+    await projectHeader.S17(page, h.path);
+  });
 });
 
 // Inherited from shared-local-datetime: the "Started At" column.
@@ -942,29 +861,25 @@ test.describe('shared-local-datetime', () => {
 
   test.describe(() => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-    test(
-      'shared-local-datetime@S01 on history-channel-logs',
-      PASSING,
-      async ({ page }) => {
-        await localDatetime.S01(
-          page,
-          await startedAt(page, localDatetime.given.S01)
-        );
-      }
-    );
+    test('shared-local-datetime@S01 on history-channel-logs', async ({
+      page,
+    }) => {
+      await localDatetime.S01(
+        page,
+        await startedAt(page, localDatetime.given.S01)
+      );
+    });
   });
 
   for (const id of ['S02', 'S04', 'S05', 'S06'] as const)
-    test(
-      `shared-local-datetime@${id} on history-channel-logs`,
-      PASSING,
-      async ({ page }) => {
-        await localDatetime[id](
-          page,
-          await startedAt(page, localDatetime.given[id])
-        );
-      }
-    );
+    test(`shared-local-datetime@${id} on history-channel-logs`, async ({
+      page,
+    }) => {
+      await localDatetime[id](
+        page,
+        await startedAt(page, localDatetime.given[id])
+      );
+    });
 
   // shared-local-datetime S03 and S07 are not run on this page:
   // not_reachable_here does not exclude them, but the Started At column uses
@@ -975,26 +890,24 @@ test.describe('shared-local-datetime', () => {
 // This tab puts no flash of its own: it has no action, and nothing redirects
 // to it with one.
 test.describe('shared-flash-messages', () => {
-  test(
-    'shared-flash-messages@S06 on history-channel-logs',
-    PASSING,
-    async ({ page }) => {
-      const h = givenLogsPage();
-      const notMine = givenLogsPage({ [OWNER]: 'owner' }, 'Kenya TB');
-      await signInAs(page, ME);
-      await open(page, h.path);
+  test('shared-flash-messages@S06 on history-channel-logs', async ({
+    page,
+  }) => {
+    const h = givenLogsPage();
+    const notMine = givenLogsPage({ [OWNER]: 'owner' }, 'Kenya TB');
+    await signInAs(page, ME);
+    await open(page, h.path);
 
-      await flashMessages.S06(
-        page,
-        () => open(page, notMine.path),
-        '/projects',
-        page.getByRole('cell', {
-          name: manifest().projects[0].name,
-          exact: true,
-        })
-      );
-    }
-  );
+    await flashMessages.S06(
+      page,
+      () => open(page, notMine.path),
+      '/projects',
+      page.getByRole('cell', {
+        name: manifest().projects[0].name,
+        exact: true,
+      })
+    );
+  });
 
   // shared-flash-messages S01 to S05 are not run on this page: it shows no
   // info or error flash of its own and no action here redirects with one.

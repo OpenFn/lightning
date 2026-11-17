@@ -74,7 +74,7 @@ async function openAfterReauth(page: Page) {
 //   And I see "Keep your backup codes as safe as your password."
 //   And I see each of my five recovery codes
 //   And I do not see "MFA Disabled"
-test('@S01', { tag: '@passing-old' }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const enrolled = await signedInWithMfa(page);
   keepFiveCodes();
 
@@ -105,7 +105,7 @@ test('@S01', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open "/profile/auth/backup_codes"
 //   Then the flow "flow-reauth-backup-codes" has started
 //   And I do not see any of my recovery codes
-test('@S02', { tag: '@passing-old' }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const codes = await signedInWithMfa(page);
   expireSudoOf(ME);
 
@@ -121,7 +121,7 @@ test('@S02', { tag: '@passing-old' }, async ({ page }) => {
 //   Given I have just confirmed MFA setup on "/profile" for the first time
 //   Then I am on "/profile/auth/backup_codes" with a sudo token in the address
 //   And I see ten recovery codes
-test('@S03', { tag: '@passing-old' }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   await signInAs(page, ME);
 
   await enrolInMfa(page);
@@ -144,7 +144,7 @@ test('@S03', { tag: '@passing-old' }, async ({ page }) => {
 //   And I see ten recovery codes
 //   And I do not see any of my five old codes
 //   And none of my five old codes remain on my account
-test('@S04', { tag: '@passing-old' }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   await signedInWithMfa(page);
   keepFiveCodes();
   const oldIds = codeRowIds();
@@ -175,7 +175,7 @@ test('@S04', { tag: '@passing-old' }, async ({ page }) => {
 //   When I click "Copy Codes"
 //   Then my clipboard holds each of my ten codes, separated by blank lines
 //   And I see "Copied!"
-test('@S05', { tag: '@passing-old' }, async ({ page, context }) => {
+test('@S05', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const codes = await signedInWithMfa(page);
 
@@ -193,7 +193,7 @@ test('@S05', { tag: '@passing-old' }, async ({ page, context }) => {
 //   When I click "Print Codes"
 //   Then a new tab opens on "/profile/auth/backup_codes/print"
 //   And the flow "flow-reauth-backup-codes" S07 owns what that tab shows
-test('@S06', { tag: '@passing-old' }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   await signedInWithMfa(page);
 
   const [tab] = await Promise.all([
@@ -214,7 +214,7 @@ test('@S06', { tag: '@passing-old' }, async ({ page }) => {
 //   And I see "In order to use backup codes, you need to have MFA enabled in your account."
 //   When I click "Back to profile"
 //   Then I am on "/profile"
-test('@S07', { tag: '@passing-old' }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   await signInAs(page, ME);
 
   await openAfterReauth(page);

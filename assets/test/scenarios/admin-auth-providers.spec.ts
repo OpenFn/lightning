@@ -30,7 +30,6 @@ import {
   standInProvider,
   submit,
   submitButton,
-  tagFor,
   watchLiveView,
   withFlag,
   type StandInProvider,
@@ -129,20 +128,16 @@ const trustSwitch = (page: Page) =>
 //   Then I am on "/settings/authentication/new"
 //   And I see empty "Name", "Discovery URL", "Client ID" and "Client Secret" fields
 //   And I do not see a "Remove" button
-test(
-  '@S01',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    await noProviderYet();
+test('@S01', { tag: ['@serial'] }, async ({ page }) => {
+  await noProviderYet();
 
-    await signedIn(page, PAGE);
+  await signedIn(page, PAGE);
 
-    await expectAt(page, NEW);
-    for (const label of ['Name', 'Discovery URL', 'Client ID', 'Client Secret'])
-      await expect(field(page, label)).toHaveValue('');
-    await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
-  }
-);
+  await expectAt(page, NEW);
+  for (const label of ['Name', 'Discovery URL', 'Client ID', 'Client Secret'])
+    await expect(field(page, label)).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
+});
 
 // @S02
 // Scenario: A superuser creates a provider
@@ -153,32 +148,28 @@ test(
 //   And I am on "/settings/authentication"
 //   And the form shows provider "acme-idp"
 //   And a "Remove" button is shown
-test(
-  '@S02',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const idp = await noProviderYet();
-    await signedIn(page);
+test('@S02', { tag: ['@serial'] }, async ({ page }) => {
+  const idp = await noProviderYet();
+  await signedIn(page);
 
-    const values = validValues(idp);
-    await fillValid(page, values);
-    await submit(page, 'Save');
+  const values = validValues(idp);
+  await fillValid(page, values);
+  await submit(page, 'Save');
 
-    await expect(
-      page.getByText('Authentication Provider created.')
-    ).toBeVisible();
-    await expectAt(page, PAGE);
-    await expect(field(page, 'Name')).toHaveValue(NAME);
-    await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
-    expect(authProviders()).toMatchObject([
-      {
-        name: NAME,
-        discovery_url: values.discoveryUrl,
-        client_id: 'client-id',
-      },
-    ]);
-  }
-);
+  await expect(
+    page.getByText('Authentication Provider created.')
+  ).toBeVisible();
+  await expectAt(page, PAGE);
+  await expect(field(page, 'Name')).toHaveValue(NAME);
+  await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
+  expect(authProviders()).toMatchObject([
+    {
+      name: NAME,
+      discovery_url: values.discoveryUrl,
+      client_id: 'client-id',
+    },
+  ]);
+});
 
 // @S03
 // Scenario: The redirect URI to register is shown as the form is filled
@@ -188,26 +179,22 @@ test(
 //   When I fill in every required field with name "acme-idp" and redirect host "https://lightning.example.org"
 //   Then the "Redirect URI" box shows "https://lightning.example.org/authenticate/acme-idp/callback"
 // "Greyed out" is how the box says it isn't final; the "…" says the same.
-test(
-  '@S03',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const idp = await noProviderYet();
-    await signedIn(page);
+test('@S03', { tag: ['@serial'] }, async ({ page }) => {
+  const idp = await noProviderYet();
+  await signedIn(page);
 
-    const host = await field(page, 'Redirect Host').inputValue();
-    await expect(page.getByText(`${host}…`, { exact: true })).toBeVisible();
+  const host = await field(page, 'Redirect Host').inputValue();
+  await expect(page.getByText(`${host}…`, { exact: true })).toBeVisible();
 
-    await fillValid(page, validValues(idp));
+  await fillValid(page, validValues(idp));
 
-    await expect(
-      page.getByText(
-        'https://lightning.example.org/authenticate/acme-idp/callback',
-        { exact: true }
-      )
-    ).toBeVisible();
-  }
-);
+  await expect(
+    page.getByText(
+      'https://lightning.example.org/authenticate/acme-idp/callback',
+      { exact: true }
+    )
+  ).toBeVisible();
+});
 
 // @S04
 // Scenario Outline: An incomplete or malformed provider can't be saved
@@ -222,11 +209,10 @@ test(
 //     | discovery URL "acme"   | Discovery URL | must be a valid HTTP/s URL                                                       |
 //     | an empty client secret | Client Secret | can't be blank                                                                   |
 // The Value is that nothing is stored, so the test presses Save (today's page
-// turns it off, the port checks on press) and then sends each save past the
-// form, and checks the database. The URL message may be either wording:
-// today's page shows the translation of "must be a valid HTTP/s URL", the
-// port shows it untranslated.
-test('@S04', { tag: ['@passing-new', '@serial'] }, async ({ page }) => {
+// turns it off) and then sends each save past the form, and checks the
+// database. The URL message may be either wording: the translation of
+// "must be a valid HTTP/s URL", or it untranslated.
+test('@S04', { tag: ['@serial'] }, async ({ page }) => {
   const idp = await noProviderYet();
   const examples: [Partial<ProviderValues>, string, string | RegExp][] = [
     [{ name: '' }, 'Name', "can't be blank"],
@@ -273,24 +259,20 @@ test('@S04', { tag: ['@passing-new', '@serial'] }, async ({ page }) => {
 //   Then the button shows "Success"
 //   When I change any field
 //   Then the button shows "Test" again
-test(
-  '@S05',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const idp = await noProviderYet();
-    await signedIn(page);
-    await fillValid(page, validValues(idp));
+test('@S05', { tag: ['@serial'] }, async ({ page }) => {
+  const idp = await noProviderYet();
+  await signedIn(page);
+  await fillValid(page, validValues(idp));
 
-    await testButton(page, 'Test').click();
+  await testButton(page, 'Test').click();
 
-    await expect(testButton(page, 'Success')).toBeVisible();
+  await expect(testButton(page, 'Success')).toBeVisible();
 
-    await field(page, 'Client ID').fill('another-client-id');
+  await field(page, 'Client ID').fill('another-client-id');
 
-    await expect(testButton(page, 'Test')).toBeVisible();
-    await expect(testButton(page, 'Success')).toHaveCount(0);
-  }
-);
+  await expect(testButton(page, 'Test')).toBeVisible();
+  await expect(testButton(page, 'Success')).toHaveCount(0);
+});
 
 // @S06
 // Scenario Outline: Testing a broken discovery URL says why it failed
@@ -307,32 +289,28 @@ test(
 //     | returns JSON with no authorization endpoint | Provider expects a WellKnown struct with a 'authorization_endpoint' key. |
 // Today the message also comes as a toast; under the field is where both
 // versions say it.
-test(
-  '@S06',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const idp = await noProviderYet();
-    const examples: [string, string][] = [
-      [idp.discovery('not-json'), 'error parsing .well-known'],
-      [idp.refused, 'could not connect to discovery endpoint'],
-      [
-        idp.discovery('no-authorization'),
-        "Provider expects a WellKnown struct with a 'authorization_endpoint' key.",
-      ],
-    ];
-    await signInAs(page, ME);
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
+  const idp = await noProviderYet();
+  const examples: [string, string][] = [
+    [idp.discovery('not-json'), 'error parsing .well-known'],
+    [idp.refused, 'could not connect to discovery endpoint'],
+    [
+      idp.discovery('no-authorization'),
+      "Provider expects a WellKnown struct with a 'authorization_endpoint' key.",
+    ],
+  ];
+  await signInAs(page, ME);
 
-    for (const [discoveryUrl, message] of examples) {
-      await open(page, NEW);
-      await fillValid(page, { ...validValues(idp), discoveryUrl });
+  for (const [discoveryUrl, message] of examples) {
+    await open(page, NEW);
+    await fillValid(page, { ...validValues(idp), discoveryUrl });
 
-      await testButton(page, 'Test').click();
+    await testButton(page, 'Test').click();
 
-      await expect(testButton(page, 'Failed')).toBeVisible();
-      await expect(fieldBlock(page, 'Discovery URL')).toContainText(message);
-    }
+    await expect(testButton(page, 'Failed')).toBeVisible();
+    await expect(fieldBlock(page, 'Discovery URL')).toContainText(message);
   }
-);
+});
 
 // @S07
 // Scenario: A plaintext discovery URL never passes the test
@@ -343,24 +321,20 @@ test(
 //   And no request is made to that URL
 // Read under the default variant: http to this machine is refused too, so the
 // stand-in provider can tell whether it was asked.
-test(
-  '@S07',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const idp = await noProviderYet();
-    cleanups.push(withFlag('auth_providers_allow_insecure_loopback', false));
-    await signedIn(page);
-    await fillValid(page, validValues(idp));
+test('@S07', { tag: ['@serial'] }, async ({ page }) => {
+  const idp = await noProviderYet();
+  cleanups.push(withFlag('auth_providers_allow_insecure_loopback', false));
+  await signedIn(page);
+  await fillValid(page, validValues(idp));
 
-    await testButton(page, 'Test').click();
+  await testButton(page, 'Test').click();
 
-    await expect(fieldBlock(page, 'Discovery URL')).toContainText(
-      'discovery endpoint must use https'
-    );
-    await expect(testButton(page, 'Failed')).toBeVisible();
-    expect(idp.requests).toEqual([]);
-  }
-);
+  await expect(fieldBlock(page, 'Discovery URL')).toContainText(
+    'discovery endpoint must use https'
+  );
+  await expect(testButton(page, 'Failed')).toBeVisible();
+  expect(idp.requests).toEqual([]);
+});
 
 // @S08
 // Scenario: Editing the provider takes effect for sign-ins
@@ -372,46 +346,38 @@ test(
 //   Then I see "Authentication Provider updated."
 //   And the "Redirect URI" box shows "http://localhost:3030/authenticate/acme-idp/callback"
 //   And sign-ins handled by this node in flow "flow-sso-login" use client ID "new-client-id" and that redirect URI
-// The secret is left alone: the port no longer shows it, and keeps it when
-// the field is blank.
-test(
-  '@S08',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page, request }) => {
-    const idp = await noProviderYet();
-    providerConfigured(idp, 'id');
-    await signedIn(page, PAGE);
+test('@S08', { tag: ['@serial'] }, async ({ page, request }) => {
+  const idp = await noProviderYet();
+  providerConfigured(idp, 'id');
+  await signedIn(page, PAGE);
 
-    await expect(field(page, 'Name')).toHaveValue(NAME);
-    await expect(field(page, 'Discovery URL')).toHaveValue(
-      idp.discovery('good')
-    );
-    await expect(field(page, 'Client ID')).toHaveValue('id');
-    await expect(field(page, 'Redirect Host')).toHaveValue(
-      /^https:\/\/old\.example\.org\/?$/
-    );
+  await expect(field(page, 'Name')).toHaveValue(NAME);
+  await expect(field(page, 'Discovery URL')).toHaveValue(idp.discovery('good'));
+  await expect(field(page, 'Client ID')).toHaveValue('id');
+  await expect(field(page, 'Redirect Host')).toHaveValue(
+    /^https:\/\/old\.example\.org\/?$/
+  );
 
-    await fillIn(page, {
-      clientId: 'new-client-id',
-      redirectHost: 'http://localhost:3030',
-    });
-    await submit(page, 'Save');
+  await fillIn(page, {
+    clientId: 'new-client-id',
+    redirectHost: 'http://localhost:3030',
+  });
+  await submit(page, 'Save');
 
-    await expect(
-      page.getByText('Authentication Provider updated.')
-    ).toBeVisible();
-    const callback = `http://localhost:3030/authenticate/${NAME}/callback`;
-    await expect(page.getByText(callback, { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Authentication Provider updated.')
+  ).toBeVisible();
+  const callback = `http://localhost:3030/authenticate/${NAME}/callback`;
+  await expect(page.getByText(callback, { exact: true })).toBeVisible();
 
-    const start = (await ssoStart(request, NAME)) ?? '';
-    expect(start, 'sign-in starts at the provider').toContain(
-      `${idp.authorizeUrl}?`
-    );
-    const params = new URL(start).searchParams;
-    expect(params.get('client_id')).toBe('new-client-id');
-    expect(params.get('redirect_uri')).toBe(callback);
-  }
-);
+  const start = (await ssoStart(request, NAME)) ?? '';
+  expect(start, 'sign-in starts at the provider').toContain(
+    `${idp.authorizeUrl}?`
+  );
+  const params = new URL(start).searchParams;
+  expect(params.get('client_id')).toBe('new-client-id');
+  expect(params.get('redirect_uri')).toBe(callback);
+});
 
 // @S09
 // Scenario: Unverified provider emails are not trusted unless an admin turns it on
@@ -422,32 +388,28 @@ test(
 //   Then the stored provider trusts unverified emails
 //   And flow "flow-sso-login" applies its trusted-provider rule (its S11) to sign-ins through it
 // The flow's rule is flow-sso-login's S11; here, the stored setting.
-test(
-  '@S09',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const idp = await noProviderYet();
-    await signedIn(page);
+test('@S09', { tag: ['@serial'] }, async ({ page }) => {
+  const idp = await noProviderYet();
+  await signedIn(page);
 
-    await expect(trustSwitch(page)).not.toBeChecked();
-    await expect(
-      page.getByText(
-        /Only enable for a provider you trust that doesn't assert\s*email_verified\s*\.\s*Off by default\./
-      )
-    ).toBeVisible();
+  await expect(trustSwitch(page)).not.toBeChecked();
+  await expect(
+    page.getByText(
+      /Only enable for a provider you trust that doesn't assert\s*email_verified\s*\.\s*Off by default\./
+    )
+  ).toBeVisible();
 
-    await fillValid(page, validValues(idp));
-    await trustSwitch(page).check();
-    await submit(page, 'Save');
+  await fillValid(page, validValues(idp));
+  await trustSwitch(page).check();
+  await submit(page, 'Save');
 
-    await expect(
-      page.getByText('Authentication Provider created.')
-    ).toBeVisible();
-    expect(authProviders()).toMatchObject([
-      { name: NAME, allow_unverified_email: true },
-    ]);
-  }
-);
+  await expect(
+    page.getByText('Authentication Provider created.')
+  ).toBeVisible();
+  expect(authProviders()).toMatchObject([
+    { name: NAME, allow_unverified_email: true },
+  ]);
+});
 
 // @S10
 // Scenario: Removing the provider turns off SSO
@@ -458,158 +420,115 @@ test(
 //   And I am on "/settings/authentication/new"
 //   And no provider is stored
 //   And flow "flow-sso-login" can no longer start through "acme-idp" on this node
-test(
-  '@S10',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page, request }) => {
-    const idp = await noProviderYet();
-    providerConfigured(idp);
-    // Sign-in starts through it now, so the node has it cached
-    expect(await ssoStart(request, NAME)).toContain(`${idp.authorizeUrl}?`);
-    await signedIn(page, PAGE);
+test('@S10', { tag: ['@serial'] }, async ({ page, request }) => {
+  const idp = await noProviderYet();
+  providerConfigured(idp);
+  // Sign-in starts through it now, so the node has it cached
+  expect(await ssoStart(request, NAME)).toContain(`${idp.authorizeUrl}?`);
+  await signedIn(page, PAGE);
 
-    await page.getByRole('button', { name: 'Remove' }).click();
+  await page.getByRole('button', { name: 'Remove' }).click();
 
-    await expect(
-      page.getByText('Authentication Provider removed')
-    ).toBeVisible();
-    await expectAt(page, NEW);
-    expect(authProviders()).toEqual([]);
-    expect((await ssoStart(request, NAME)) ?? '').not.toContain(
-      idp.authorizeUrl
-    );
-  }
-);
+  await expect(page.getByText('Authentication Provider removed')).toBeVisible();
+  await expectAt(page, NEW);
+  expect(authProviders()).toEqual([]);
+  expect((await ssoStart(request, NAME)) ?? '').not.toContain(idp.authorizeUrl);
+});
 
 // Inherited from shared-admin-space: the gate, and the settings layout and
 // side menu with "Authentication" current. The menu links to the blank form,
 // which is where the page is with no provider.
 test.describe('shared-admin-space', () => {
-  test(
-    'shared-admin-space@S01 on admin-auth-providers',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S01(page, NEW, ME, 'Authentication');
-    }
-  );
+  test('shared-admin-space@S01 on admin-auth-providers', async ({ page }) => {
+    await adminSpace.S01(page, NEW, ME, 'Authentication');
+  });
 
-  test(
-    'shared-admin-space@S02 on admin-auth-providers',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S02(page, PAGE, REGULAR);
-    }
-  );
+  test('shared-admin-space@S02 on admin-auth-providers', async ({ page }) => {
+    await adminSpace.S02(page, PAGE, REGULAR);
+  });
 
-  test(
-    'shared-admin-space@S03 on admin-auth-providers',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'needs a socket-only mount that skips the HTTP check, which no browser action produces'
-      );
-    }
-  );
+  test('shared-admin-space@S03 on admin-auth-providers', () => {
+    test.skip(
+      true,
+      'needs a socket-only mount that skips the HTTP check, which no browser action produces'
+    );
+  });
 
   for (const id of ['S04', 'S05'])
-    test(
-      `shared-admin-space@${id} on admin-auth-providers`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
-        );
-      }
-    );
-
-  test(
-    'shared-admin-space@S06 on admin-auth-providers',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await adminSpace.S06(page, browser, NEW, ME);
-    }
-  );
-
-  test(
-    'shared-admin-space@S07 on admin-auth-providers',
-    { tag: '@pending' },
-    () => {
+    test(`shared-admin-space@${id} on admin-auth-providers`, () => {
       test.skip(
         true,
-        'variant settings-menu-extension is not configured on this instance'
+        'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
       );
-    }
-  );
+    });
+
+  test('shared-admin-space@S06 on admin-auth-providers', async ({
+    page,
+    browser,
+  }) => {
+    await adminSpace.S06(page, browser, NEW, ME);
+  });
+
+  test('shared-admin-space@S07 on admin-auth-providers', () => {
+    test.skip(
+      true,
+      'variant settings-menu-extension is not configured on this instance'
+    );
+  });
 });
 
 // Inherited from shared-authenticated-session, on the blank form: with no
 // provider, "/settings/authentication" moves itself there.
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on admin-auth-providers',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, NEW, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on admin-auth-providers', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, NEW, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on admin-auth-providers',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, NEW, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on admin-auth-providers', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, NEW, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on admin-auth-providers',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, NEW, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on admin-auth-providers', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, NEW, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on admin-auth-providers',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      // The admin menu has no "Credentials"; "Audit" is a label it does have
-      await authenticatedSession.S07(
-        page,
-        browser,
-        NEW,
-        '/settings/audit',
-        ME,
-        'Audit'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on admin-auth-providers', async ({
+    page,
+    browser,
+  }) => {
+    // The admin menu has no "Credentials"; "Audit" is a label it does have
+    await authenticatedSession.S07(
+      page,
+      browser,
+      NEW,
+      '/settings/audit',
+      ME,
+      'Audit'
+    );
+  });
 
   for (const id of ['S04', 'S05', 'S06'])
-    test(
-      `shared-authenticated-session@${id} on admin-auth-providers`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'variant require-email-verification is not configured on this instance'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-auth-providers`, () => {
+      test.skip(
+        true,
+        'variant require-email-verification is not configured on this instance'
+      );
+    });
 
   for (const id of ['S08', 'S09', 'S10', 'S11'])
-    test(
-      `shared-authenticated-session@${id} on admin-auth-providers`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-auth-providers`, () => {
+      test.skip(
+        true,
+        'not reachable here: S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
+      );
+    });
 });
 
 // Inherited from shared-flash-messages: the inherits line takes S07, the
@@ -617,7 +536,7 @@ test.describe('shared-authenticated-session', () => {
 test.describe('shared-flash-messages', () => {
   test(
     'shared-flash-messages@S07 on admin-auth-providers',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const idp = await noProviderYet();
       providerConfigured(idp);
@@ -642,11 +561,7 @@ test.describe('shared-flash-messages', () => {
     ['S06', 'the inherits line takes only S07'],
     ['S08', 'it is about the sign-in and account forms'],
   ])
-    test(
-      `shared-flash-messages@${id} on admin-auth-providers`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(true, `not reachable here: ${why}`);
-      }
-    );
+    test(`shared-flash-messages@${id} on admin-auth-providers`, () => {
+      test.skip(true, `not reachable here: ${why}`);
+    });
 });

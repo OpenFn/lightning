@@ -44,8 +44,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const PROJECT = 'Malawi HIV';
 
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new'] };
-
 // The secret seedMfaFor stores, in base32
 const TOTP_SECRET = 'VOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5L';
 
@@ -128,7 +126,7 @@ const DELETE_TITLE = /Delete Authentication Method/i;
 //   When I open the project's settings on the "Webhook Security" tab
 //   Then I see "Kobo basic" with type "Basic"
 //   And I see "DHIS2 key" with type "API"
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const id = givenProject('viewer');
   givenBasic(id, 'Kobo basic');
   givenApi(id, 'DHIS2 key');
@@ -153,7 +151,7 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 //   And I see "Channels (1)" listing "Lab results"
 //   And "Intake" links to the workflow editor with the trigger selected
 //   And "Lab results" links to "/projects/<project_id>/channels/<channel_id>/edit"
-test('@S02', PASSING_BOTH, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const id = givenProject('viewer');
   givenBasic(id, 'Kobo basic', ['Intake']);
   const channel = seedChannel(
@@ -186,7 +184,7 @@ test('@S02', PASSING_BOTH, async ({ page }) => {
 //   When I open the "Webhook Security" tab as an owner
 //   Then the row for "Old key" shows "No associated triggers or channels..."
 //   And there is no usage link for "Old key"
-test('@S03', PASSING_BOTH, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const id = givenProject('owner');
   givenApi(id, 'Old key');
   await onWebhookSecurity(page, id);
@@ -203,7 +201,7 @@ test('@S03', PASSING_BOTH, async ({ page }) => {
 //   When I open the "Webhook Security" tab
 //   Then I see "No auth methods found."
 //   And I see an enabled "Create a new auth method" button
-test('@S04', PASSING_BOTH, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const id = givenProject('admin');
   await onWebhookSecurity(page, id);
 
@@ -228,7 +226,7 @@ test('@S04', PASSING_BOTH, async ({ page }) => {
 //   And the modal closes
 //   And "Kobo basic" appears in the list with type "Basic"
 //   And an audit event "created" is recorded for "Kobo basic"
-test('@S05', PASSING_BOTH, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const id = givenProject('admin');
   await onWebhookSecurity(page, id);
 
@@ -262,7 +260,7 @@ test('@S05', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Webhook auth method created successfully"
 //   And "DHIS2 key" appears in the list with type "API"
 //   And its stored key equals the key that was shown
-test('@S06', PASSING_BOTH, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const id = givenProject('admin');
   await onWebhookSecurity(page, id);
 
@@ -287,7 +285,7 @@ test('@S06', PASSING_BOTH, async ({ page }) => {
 //   When I fill "Password" with "short"
 //   Then I see a length error on "Password"
 //   And "Create auth method" is disabled
-test('@S07', PASSING_BOTH, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const id = givenProject('admin');
   await onWebhookSecurity(page, id);
 
@@ -308,7 +306,7 @@ test('@S07', PASSING_BOTH, async ({ page }) => {
 //   When I submit the name "Kobo basic" with a valid username and password
 //   Then I see "must be unique within the project"
 //   And the project still has one method named "Kobo basic"
-test('@S08', PASSING_BOTH, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const id = givenProject('admin');
   const existing = givenApi(id, 'Kobo basic');
   await onWebhookSecurity(page, id);
@@ -334,7 +332,7 @@ test('@S08', PASSING_BOTH, async ({ page }) => {
 //   And "Kobo intake" appears in the list
 //   And the method's username and password are unchanged
 //   And an audit event "updated" is recorded
-test('@S09', PASSING_BOTH, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const id = givenProject('admin');
   const method = givenBasic(id, 'Kobo basic');
   await onWebhookSecurity(page, id);
@@ -374,7 +372,7 @@ const S10 = [
   { type: 'basic', name: 'Kobo basic', label: 'Password' },
 ] as const;
 for (const row of S10) {
-  test(`@S10 ${row.type}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S10 ${row.type}`, async ({ page }) => {
     const id = givenProject('admin');
     if (row.type === 'API') givenApi(id, row.name);
     else givenBasic(id, row.name);
@@ -416,7 +414,7 @@ for (const row of S10) {
 //   And I am viewing API key method "DHIS2 key" and clicked "Show"
 //   When I submit a valid 6-digit code in "2FA Code" and leave "Password" empty
 //   Then the API key is displayed with a "Copy" button
-test('@S11', PASSING_BOTH, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const id = givenProject('admin');
   givenApi(id, 'DHIS2 key');
   const key = storedAuthMethod(id, 'DHIS2 key')!.api_key!;
@@ -449,7 +447,7 @@ test('@S11', PASSING_BOTH, async ({ page }) => {
 //   And "Old key" is no longer listed
 //   And "Old key" is no longer attached to any trigger or channel
 //   And an audit event "deleted" is recorded
-test('@S12', PASSING_BOTH, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const id = givenProject('owner');
   const method = givenBasic(id, 'Old key', ['Intake']);
   seedChannel(id, { name: 'Lab results', clients: ['Old key'] }, OTHER);
@@ -484,7 +482,7 @@ test('@S12', PASSING_BOTH, async ({ page }) => {
 //   And I see "1 channel will accept unauthenticated requests" listing "My Channel"
 //   And "My Channel" links to "/projects/<project_id>/channels/<channel_id>/edit"
 //   And I see "These channels stay enabled and keep forwarding requests to their destination with the project credential attached."
-test('@S13', PASSING_BOTH, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const id = givenProject('owner');
   givenBasic(id, 'Kobo basic', ['My Workflow']);
   const channel = seedChannel(
@@ -518,7 +516,7 @@ test('@S13', PASSING_BOTH, async ({ page }) => {
 //   When I click "Delete" on "Old key" as an owner
 //   Then I see "which is used by no workflows or channels"
 //   And I do not see "will accept unauthenticated requests"
-test('@S14', PASSING_BOTH, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const id = givenProject('owner');
   givenApi(id, 'Old key');
   await onWebhookSecurity(page, id);
@@ -552,7 +550,7 @@ const S15 = [
   ['viewer', 'delete'],
 ] as const;
 for (const [role, kind] of S15) {
-  test(`@S15 ${role} ${kind}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S15 ${role} ${kind}`, async ({ page }) => {
     const id = givenProject(role);
     const method = givenBasic(id, 'Kobo basic');
     const lv = await onWebhookSecurity(page, id);
@@ -586,7 +584,7 @@ for (const [role, kind] of S15) {
 //   Then I see "Webhook auth method not found"
 //   And I do not see "someone-elses-auth"
 for (const kind of ['rename', 'delete', 'usage'] as const) {
-  test(`@S16 ${kind}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S16 ${kind}`, async ({ page }) => {
     const id = givenProject('admin');
     const elsewhere = seedWorkspace(
       { name: 'elsewhere', members: { [OTHER]: 'owner' } },
@@ -617,7 +615,7 @@ for (const kind of ['rename', 'delete', 'usage'] as const) {
 //   Then I see "Webhook authentication is managed in the parent project"
 //   And I see "Manage them in the parent project (Malawi HIV)" linking to "/projects/<parent_id>/settings#webhook_security"
 //   And I do not see "New auth method" or an auth method table
-test('@S17', PASSING_BOTH, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const w = seedWorkspace(
     { name: PROJECT, members: { [ME]: 'owner' }, sandboxes: [{ name: 'dev' }] },
     ME
@@ -642,7 +640,7 @@ test('@S17', PASSING_BOTH, async ({ page }) => {
 //   Given I am an admin on project "Malawi HIV"
 //   When I create, rename or delete an auth method
 //   Then the flow "flow-webhook-auth-method-enforcement" reflects that method's current state
-test('@S18', PASSING_BOTH, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const id = givenProject('admin');
   givenBasic(id, 'Kobo basic', ['Intake']);
   const webhook = `/i/${webhookTriggerOf(id, 'Intake')}`;
@@ -694,22 +692,20 @@ test.describe('webhook-auth-method-form', () => {
   //   When I click "Cancel"
   //   Then the auth method form closes
   //   And project "Malawi HIV" has no method named "Draft"
-  test(
-    'shared-webhook-auth-method-form@S05 on project-settings-webhook-security',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const id = givenProject('admin');
-      await onWebhookSecurity(page, id);
+  test('shared-webhook-auth-method-form@S05 on project-settings-webhook-security', async ({
+    page,
+  }) => {
+    const id = givenProject('admin');
+    await onWebhookSecurity(page, id);
 
-      await createBasic(page, 'Draft');
-      await page
-        .getByRole('dialog')
-        .getByRole('button', { name: 'Cancel' })
-        .click();
+    await createBasic(page, 'Draft');
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Cancel' })
+      .click();
 
-      await expect(field(page, 'Auth method name')).toBeHidden();
-      await expect(authMethodRow(page, 'Draft')).toHaveCount(0);
-      expect(storedAuthMethod(id, 'Draft')).toBeUndefined();
-    }
-  );
+    await expect(field(page, 'Auth method name')).toBeHidden();
+    await expect(authMethodRow(page, 'Draft')).toHaveCount(0);
+    expect(storedAuthMethod(id, 'Draft')).toBeUndefined();
+  });
 });

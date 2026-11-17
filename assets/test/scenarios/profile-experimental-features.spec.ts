@@ -14,7 +14,6 @@ import {
   preferencesOf,
   setPreferences,
   signInAs,
-  tagFor,
 } from './steps';
 
 const ME = 'editor@openfn.org';
@@ -42,7 +41,7 @@ const enabled = () => preferencesOf(ME).experimental_features;
 //   Then I see the card "Experimental features"
 //   And I see "Enable access to new features and improvements before they're generally available"
 //   And the switch is off
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   await signedIn(page);
 
   await expect(page.getByText(/experimental features/i).first()).toBeVisible();
@@ -59,7 +58,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I have experimental features turned on
 //   When I open "/profile"
 //   Then the switch in "Experimental features" is on
-test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   await signedIn(page, { experimental_features: true });
 
   await expect(experimentalSwitch(page)).toBeChecked();
@@ -70,7 +69,7 @@ test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I am on "/profile" with experimental features off
 //   When I switch on "Experimental features"
 //   Then experimental features are on for my account
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   await signedIn(page, { experimental_features: false });
 
   await experimentalSwitch(page).click();
@@ -83,7 +82,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I am on "/profile" with experimental features on
 //   When I switch off "Experimental features"
 //   Then experimental features are off for my account
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   await signedIn(page, { experimental_features: true });
 
   await experimentalSwitch(page).click();
@@ -98,7 +97,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I switch on "Experimental features"
 //   Then my other saved preferences are unchanged
 //   And experimental features are on for my account
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const others = { sidebar_collapsed: true, run_log_level: 'debug' };
   await signedIn(page, others);
 
@@ -113,7 +112,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I switched on "Experimental features" on "/profile"
 //   When I next open a page in a project I belong to
 //   Then shared-project-header S16 applies to my account
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   await signedIn(page);
   await experimentalSwitch(page).click();
   await expect.poll(enabled).toBe(true);
@@ -125,37 +124,31 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 
 // Inherited from shared-authenticated-session, on "/profile".
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on profile-experimental-features',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on profile-experimental-features', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on profile-experimental-features',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on profile-experimental-features', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on profile-experimental-features',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on profile-experimental-features', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on profile-experimental-features',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S07(page, browser, PAGE, '/credentials', ME);
-    }
-  );
+  test('shared-authenticated-session@S07 on profile-experimental-features', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S07(page, browser, PAGE, '/credentials', ME);
+  });
 
   for (const [id, variant] of [
     ['S04', 'require-email-verification'],
@@ -166,16 +159,9 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on profile-experimental-features`,
-      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07']) },
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on profile-experimental-features`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 // Inherited from shared-project-header: the no-project parts only. S01-S03
@@ -192,75 +178,41 @@ test.describe('shared-project-header', () => {
     'S13',
     'S18',
   ] as const)
-    test(
-      `shared-project-header@${id} on profile-experimental-features`,
-      {
-        tag: tagFor(
-          id,
-          [
-            'S04',
-            'S05',
-            'S06',
-            'S07',
-            'S08',
-            'S11',
-            'S12',
-            'S13',
-            'S18',
-            'S09',
-            'S10',
-            'S17',
-            'S16',
-          ],
-          true
-        ),
-      },
-      async ({ page }) => {
-        await projectHeader[id](page, PAGE, ME);
-      }
-    );
+    test(`shared-project-header@${id} on profile-experimental-features`, async ({
+      page,
+    }) => {
+      await projectHeader[id](page, PAGE, ME);
+    });
 
-  test(
-    'shared-project-header@S09 on profile-experimental-features',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
+  test('shared-project-header@S09 on profile-experimental-features', async ({
+    page,
+  }) => {
+    await projectHeader.S09(page, ME);
+  });
 
   // The Examples row "the projects list or my profile | the workflows page"
-  test(
-    'shared-project-header@S10 on profile-experimental-features',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S10(page, PAGE, ME, '/w');
-    }
-  );
+  test('shared-project-header@S10 on profile-experimental-features', async ({
+    page,
+  }) => {
+    await projectHeader.S10(page, PAGE, ME, '/w');
+  });
 
-  test(
-    'shared-project-header@S17 on profile-experimental-features',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S17(page, PAGE);
-    }
-  );
+  test('shared-project-header@S17 on profile-experimental-features', async ({
+    page,
+  }) => {
+    await projectHeader.S17(page, PAGE);
+  });
 
-  test(
-    'shared-project-header@S16 on profile-experimental-features',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S16(page, PAGE, ME);
-    }
-  );
+  test('shared-project-header@S16 on profile-experimental-features', async ({
+    page,
+  }) => {
+    await projectHeader.S16(page, PAGE, ME);
+  });
 
-  test(
-    'shared-project-header@S14 on profile-experimental-features',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'variant require-email-verification is not configured on this instance'
-      );
-    }
-  );
+  test('shared-project-header@S14 on profile-experimental-features', () => {
+    test.skip(
+      true,
+      'variant require-email-verification is not configured on this instance'
+    );
+  });
 });

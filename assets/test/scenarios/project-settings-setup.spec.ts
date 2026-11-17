@@ -66,10 +66,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const THIRD = 'super@openfn.org';
 
-const PENDING = { tag: '@pending' };
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new'] };
-
 let cleanups: (() => void)[] = [];
 test.beforeEach(() => {
   cleanups = [];
@@ -165,7 +161,7 @@ async function deletionDialog(page: Page) {
 //   And I click "Save" in the identity section
 //   Then I see "Project updated successfully"
 //   And the project is named "somename" with description "some description"
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const p = givenProject('admin');
   await onSettings(page, p.id);
 
@@ -188,7 +184,7 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Your project will be named dep-burundi-datafi."
 //   When I click "Save" in the identity section
 //   Then the project is named "dep-burundi-datafi"
-test('@S02', PASSING_BOTH, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const p = givenProject('admin');
   await onSettings(page, p.id);
 
@@ -207,7 +203,7 @@ test('@S02', PASSING_BOTH, async ({ page }) => {
 //   When I submit the identity form with "Project name" set to "!!!"
 //   Then I see "can't be blank"
 //   And the project is still named "project-1"
-test('@S03', PASSING_BOTH, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const p = givenProject('admin');
   await onSettings(page, p.id);
 
@@ -229,9 +225,7 @@ test('@S03', PASSING_BOTH, async ({ page }) => {
 //   And the identity "Save" button is disabled
 // The message while typing is the Value; whether Save turns off or the save
 // is refused, the long description is not stored.
-// Old only: the design-system box stops at 240 characters, so there is
-// nothing to flag.
-test('@S04', PASSING_OLD, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const p = givenProject('admin');
   await onSettings(page, p.id);
 
@@ -253,7 +247,7 @@ test('@S04', PASSING_OLD, async ({ page }) => {
 //   Then I see "Project updated successfully"
 //   And the project environment is still "staging"
 // The save past the form is checked by its effect, not its message.
-test('@S05', PASSING_BOTH, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const p = givenProject('admin', 'project-1', { env: 'staging' });
   const lv = watchLiveView(page);
   await onSettings(page, p.id);
@@ -271,7 +265,7 @@ test('@S05', PASSING_BOTH, async ({ page }) => {
 //   When "save" is sent with "raw_name" "renamed", "requires_mfa" true, "allow_support_access" true, "scheduled_deletion" set and "parent_id" of another project
 //   Then the project is named "renamed"
 //   And it does not require MFA, does not allow support access, is not scheduled for deletion and has no parent
-test('@S06', PASSING_BOTH, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const p = givenProject('admin');
   const other = givenProject('admin', 'project-2');
   const lv = watchLiveView(page);
@@ -305,7 +299,7 @@ test('@S06', PASSING_BOTH, async ({ page }) => {
 //   Examples: viewer, editor
 // The save sent anyway is checked by its effect: the name doesn't change.
 for (const role of ['viewer', 'editor'] as const)
-  test(`@S07 (${role})`, PASSING_BOTH, async ({ page }) => {
+  test(`@S07 (${role})`, async ({ page }) => {
     const p = givenProject(role);
     const lv = watchLiveView(page);
     await onSettings(page, p.id);
@@ -336,25 +330,19 @@ for (const role of ['viewer', 'editor'] as const)
 //   When "save" is sent anyway
 //   Then I see "You are not authorized to perform this action."
 // A support user sees every project that allows support access
-test(
-  '@S08',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const p = givenProject(null, 'project-1', { allowSupportAccess: true });
-    cleanups.push(makeSupportUser(ME));
-    const lv = watchLiveView(page);
-    await onSettings(page, p.id);
+test('@S08', { tag: ['@serial'] }, async ({ page }) => {
+  const p = givenProject(null, 'project-1', { allowSupportAccess: true });
+  cleanups.push(makeSupportUser(ME));
+  const lv = watchLiveView(page);
+  await onSettings(page, p.id);
 
-    await expect(field(identityForm(page), 'Project name')).toBeDisabled();
-    await expect(
-      field(identityForm(page), 'Project description')
-    ).toBeDisabled();
+  await expect(field(identityForm(page), 'Project name')).toBeDisabled();
+  await expect(field(identityForm(page), 'Project description')).toBeDisabled();
 
-    await sendIdentitySave(page, lv, 'renamed');
-    expect(stored(p.id).name).toBe('project-1');
-    expect(lv.crashes()).toBe(0);
-  }
-);
+  await sendIdentitySave(page, lv, 'renamed');
+  expect(stored(p.id).name).toBe('project-1');
+  expect(lv.crashes()).toBe(0);
+});
 
 // @S09
 // Scenario: Admin disables parallel execution
@@ -364,7 +352,7 @@ test(
 //   When I click "Save" in the concurrency section
 //   Then I see "Project updated successfully"
 //   And the project concurrency is 1
-test('@S09', PASSING_BOTH, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const p = givenProject('admin');
   await onSettings(page, p.id);
 
@@ -386,7 +374,7 @@ test('@S09', PASSING_BOTH, async ({ page }) => {
 //   And I click "Save" in the concurrency section
 //   Then I see "Project updated successfully"
 //   And the project has no concurrency limit
-test('@S10', PASSING_BOTH, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const p = givenProject('admin');
   exec(`update projects set concurrency = 1 where id = '${p.id}'`);
   await onSettings(page, p.id);
@@ -408,7 +396,7 @@ test('@S10', PASSING_BOTH, async ({ page }) => {
 //   And "Export project" links to "/download/yaml?id=<project_id>" in a new tab
 //   And clicking it starts the flow "flow-export-project-yaml"
 // The flow has started when that address answers with the project as YAML.
-test('@S11', PASSING_BOTH, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const p = givenProject('viewer');
   await onSettings(page, p.id);
 
@@ -441,7 +429,7 @@ test('@S11', PASSING_BOTH, async ({ page }) => {
 //   And the flow "flow-schedule-project-deletion" has started for "project-1"
 // The flow has started when the project carries its deletion date and its
 // triggers are off; the members' emails are the flow's own scenarios.
-test('@S12', PASSING_BOTH, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const p = givenProject('owner', 'project-1', { workflows: ['wf-1'] });
   const days = Number(
     onNode('Lightning.Config.purge_deleted_after_days()')
@@ -486,7 +474,7 @@ test('@S12', PASSING_BOTH, async ({ page }) => {
 //   Then I see "doesn't match the project name"
 //   And the project is not scheduled for deletion
 // What the dialog does is shared-project-deletion-modal S02's.
-test('@S13', PASSING_BOTH, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const p = givenProject('owner');
   const lv = watchLiveView(page);
   await signInAs(page, ME);
@@ -505,7 +493,7 @@ test('@S13', PASSING_BOTH, async ({ page }) => {
 //   When I click "Cancel"
 //   Then I am on "/projects/<project_id>/settings"
 //   And the project is not scheduled for deletion
-test('@S14', PASSING_BOTH, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const p = givenProject('owner');
   await signInAs(page, ME);
 
@@ -528,7 +516,7 @@ test('@S14', PASSING_BOTH, async ({ page }) => {
 //   And I see "You are not authorize to perform this action"
 //   Examples: admin, editor, viewer
 for (const role of ['admin', 'editor', 'viewer'] as const)
-  test(`@S15 (${role})`, PASSING_BOTH, async ({ page }) => {
+  test(`@S15 (${role})`, async ({ page }) => {
     const p = givenProject(role);
     await onSettings(page, p.id);
 
@@ -548,7 +536,7 @@ for (const role of ['admin', 'editor', 'viewer'] as const)
 //   Then I am sent back to settings with "You don't have permission to delete this sandbox"
 //   And the project and its workflow still exist and it is not scheduled for deletion
 // Checked by its effect: the project and its workflow are still there.
-test('@S16', PASSING_BOTH, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const p = givenProject('admin', 'root-project', { workflows: ['wf-1'] });
   const lv = watchLiveView(page);
   await onSettings(page, p.id);
@@ -568,7 +556,7 @@ test('@S16', PASSING_BOTH, async ({ page }) => {
 //   And I see "Identifies this sandbox within its parent:" with a link to "parent-project" settings
 //   And I see "Changes you make here only apply to this sandbox and do not sync to the parent project on merge."
 //   And the danger zone button reads "Delete sandbox"
-test('@S17', PASSING_BOTH, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const s = givenSandbox();
   await onSettings(page, s.id);
 
@@ -604,7 +592,7 @@ test('@S17', PASSING_BOTH, async ({ page }) => {
 //   Then I am on "/projects/<parent_id>/w"
 //   And I see "Sandbox sandbox-test and all its associated descendants deleted"
 //   And the sandbox no longer exists
-test('@S18', PASSING_BOTH, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const s = givenSandbox();
   await signInAs(page, ME);
   await open(page, deletePath(s.id));
@@ -634,9 +622,7 @@ test('@S18', PASSING_BOTH, async ({ page }) => {
 //   Then I see "does not match the sandbox name"
 //   And the sandbox still exists
 // "Submit anyway" is sent past the dialog's own check; checked by its effect.
-// Old only: the design-system dialog keeps "Delete sandbox" off until the
-// name matches, with a tooltip, and shows no mismatch message.
-test('@S19', PASSING_OLD, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const s = givenSandbox();
   const lv = watchLiveView(page);
   await signInAs(page, ME);
@@ -658,7 +644,7 @@ test('@S19', PASSING_OLD, async ({ page }) => {
 //   Given I am the owner of sandbox "sandbox-test" on its delete modal
 //   When I click the close button
 //   Then I am on "/projects/<sandbox_id>/settings"
-test('@S20', PASSING_BOTH, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const s = givenSandbox();
   await signInAs(page, ME);
   await open(page, deletePath(s.id));
@@ -682,7 +668,7 @@ test('@S20', PASSING_BOTH, async ({ page }) => {
 // An owner's delete only fails when the deletion itself is stubbed to fail
 // (the old LiveView tests use Mimic); the e2e instance has no way to make it.
 for (const reason of ['unauthorized', 'another error'])
-  test(`@S21 (${reason})`, PENDING, () => {
+  test(`@S21 (${reason})`, () => {
     test.skip(true, 'needs a stubbed deletion failure on the server');
   });
 
@@ -714,107 +700,87 @@ const setupHeading = (page: Page) =>
   });
 
 test.describe('shared-project-settings-tab-chrome', () => {
-  test(
-    'shared-project-settings-tab-chrome@S01 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('editor', 'Malawi HIV');
-      await signInAs(page, ME);
-      await tabChrome.S01(page, p.id);
-    }
-  );
+  test('shared-project-settings-tab-chrome@S01 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('editor', 'Malawi HIV');
+    await signInAs(page, ME);
+    await tabChrome.S01(page, p.id);
+  });
 
-  test(
-    'shared-project-settings-tab-chrome@S02 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('admin', 'Malawi HIV');
-      await signInAs(page, ME);
-      await tabChrome.S02(page, p.id);
-    }
-  );
+  test('shared-project-settings-tab-chrome@S02 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('admin', 'Malawi HIV');
+    await signInAs(page, ME);
+    await tabChrome.S02(page, p.id);
+  });
 
-  test(
-    'shared-project-settings-tab-chrome@S03 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('editor', 'Malawi HIV');
-      await signInAs(page, ME);
-      await tabChrome.S03(page, p.id);
-    }
-  );
+  test('shared-project-settings-tab-chrome@S03 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('editor', 'Malawi HIV');
+    await signInAs(page, ME);
+    await tabChrome.S03(page, p.id);
+  });
 
-  test(
-    'shared-project-settings-tab-chrome@S04 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('admin', 'Malawi HIV');
-      await signInAs(page, ME);
-      await tabChrome.S04(page, p.id);
-    }
-  );
+  test('shared-project-settings-tab-chrome@S04 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('admin', 'Malawi HIV');
+    await signInAs(page, ME);
+    await tabChrome.S04(page, p.id);
+  });
 
-  test(
-    'shared-project-settings-tab-chrome@S05 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('viewer', 'Malawi HIV');
-      await signInAs(page, ME);
-      await tabChrome.S05(page, p.id);
-    }
-  );
+  test('shared-project-settings-tab-chrome@S05 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('viewer', 'Malawi HIV');
+    await signInAs(page, ME);
+    await tabChrome.S05(page, p.id);
+  });
 
   for (const [role, label, message] of tabChrome.S06_EXAMPLES)
-    test(
-      `shared-project-settings-tab-chrome@S06 (${role}, ${label}) on project-settings-setup`,
-      PASSING_BOTH,
-      async ({ page }) => {
-        const p = givenProject(role, 'Malawi HIV');
-        await signInAs(page, ME);
-        await tabChrome.S06(page, p.id, label, message);
-      }
-    );
-
-  test(
-    'shared-project-settings-tab-chrome@S07 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('admin', 'Malawi HIV');
+    test(`shared-project-settings-tab-chrome@S06 (${role}, ${label}) on project-settings-setup`, async ({
+      page,
+    }) => {
+      const p = givenProject(role, 'Malawi HIV');
       await signInAs(page, ME);
-      await tabChrome.S07(page, p.id);
-    }
-  );
+      await tabChrome.S06(page, p.id, label, message);
+    });
+
+  test('shared-project-settings-tab-chrome@S07 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('admin', 'Malawi HIV');
+    await signInAs(page, ME);
+    await tabChrome.S07(page, p.id);
+  });
 
   for (const [label, copy] of tabChrome.S08_EXAMPLES)
-    test(
-      `shared-project-settings-tab-chrome@S08 (${label}) on project-settings-setup`,
-      PASSING_BOTH,
-      async ({ page }) => {
-        const s = givenSandbox('dev', 'Malawi HIV');
-        await signInAs(page, ME);
-        await tabChrome.S08(page, s.id, label, copy);
-      }
-    );
-
-  test(
-    'shared-project-settings-tab-chrome@S09 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
+    test(`shared-project-settings-tab-chrome@S08 (${label}) on project-settings-setup`, async ({
+      page,
+    }) => {
       const s = givenSandbox('dev', 'Malawi HIV');
       await signInAs(page, ME);
-      await tabChrome.S09(page, s.id, { id: s.parentId, name: s.parent });
-    }
-  );
+      await tabChrome.S08(page, s.id, label, copy);
+    });
 
-  test(
-    'shared-project-settings-tab-chrome@S10 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('owner', 'Malawi HIV');
-      await signInAs(page, ME);
-      await tabChrome.S10(page, p.id);
-    }
-  );
+  test('shared-project-settings-tab-chrome@S09 on project-settings-setup', async ({
+    page,
+  }) => {
+    const s = givenSandbox('dev', 'Malawi HIV');
+    await signInAs(page, ME);
+    await tabChrome.S09(page, s.id, { id: s.parentId, name: s.parent });
+  });
+
+  test('shared-project-settings-tab-chrome@S10 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('owner', 'Malawi HIV');
+    await signInAs(page, ME);
+    await tabChrome.S10(page, p.id);
+  });
 });
 
 // Inherited from shared-project-deletion-modal, on this host: deleting lands
@@ -825,54 +791,46 @@ test.describe('shared-project-settings-tab-chrome', () => {
 test.describe('shared-project-deletion-modal', () => {
   const deletionOf = (page: Page) => (id: string) => open(page, deletePath(id));
 
-  test(
-    'shared-project-deletion-modal@S01 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('owner');
-      await signInAs(page, ME);
-      await projectDeletionModal.S01(page, p, deletionOf(page));
-    }
-  );
+  test('shared-project-deletion-modal@S01 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('owner');
+    await signInAs(page, ME);
+    await projectDeletionModal.S01(page, p, deletionOf(page));
+  });
 
-  test(
-    'shared-project-deletion-modal@S02 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('owner');
-      const lv = watchLiveView(page);
-      await signInAs(page, ME);
-      await projectDeletionModal.S02(page, p, deletionOf(page), typed =>
-        sendProjectDeletion(page, lv, typed)
-      );
-    }
-  );
+  test('shared-project-deletion-modal@S02 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('owner');
+    const lv = watchLiveView(page);
+    await signInAs(page, ME);
+    await projectDeletionModal.S02(page, p, deletionOf(page), typed =>
+      sendProjectDeletion(page, lv, typed)
+    );
+  });
 
-  test(
-    'shared-project-deletion-modal@S03 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('owner');
-      await signInAs(page, ME);
-      await projectDeletionModal.S03(page, p, deletionOf(page), '/projects');
-    }
-  );
+  test('shared-project-deletion-modal@S03 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('owner');
+    await signInAs(page, ME);
+    await projectDeletionModal.S03(page, p, deletionOf(page), '/projects');
+  });
 
-  test(
-    'shared-project-deletion-modal@S05 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('owner');
-      await signInAs(page, ME);
-      await projectDeletionModal.S05(
-        page,
-        p,
-        deletionOf(page),
-        'Cancel',
-        settingsPath(p.id)
-      );
-    }
-  );
+  test('shared-project-deletion-modal@S05 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('owner');
+    await signInAs(page, ME);
+    await projectDeletionModal.S05(
+      page,
+      p,
+      deletionOf(page),
+      'Cancel',
+      settingsPath(p.id)
+    );
+  });
 });
 
 test.describe('shared-authenticated-session', () => {
@@ -881,50 +839,39 @@ test.describe('shared-authenticated-session', () => {
     cleanups.push(keepAccount(ME));
   });
 
-  test(
-    'shared-authenticated-session@S01 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await authenticatedSession.S01(page, givenSettingsPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on project-settings-setup', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, givenSettingsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(
-        page,
-        browser,
-        givenSettingsPage().path,
-        ME
-      );
-    }
-  );
+  test('shared-authenticated-session@S02 on project-settings-setup', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, givenSettingsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await authenticatedSession.S03(page, givenSettingsPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on project-settings-setup', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, givenSettingsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page, browser }) => {
-      const h = givenSettingsPage();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        `/projects/${h.id}/history`,
-        ME,
-        'History'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on project-settings-setup', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenSettingsPage();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      `/projects/${h.id}/history`,
+      ME,
+      'History'
+    );
+  });
 
   // These variants are not configured on this instance
   for (const [id, variant] of [
@@ -936,16 +883,9 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on project-settings-setup`,
-      PENDING,
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on project-settings-setup`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 test.describe('shared-project-scope', () => {
@@ -954,62 +894,52 @@ test.describe('shared-project-scope', () => {
     cleanups.push(keepAccount(ME));
   });
 
-  test(
-    'shared-project-scope@S01 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await projectScope.S01(page, givenSettingsPage().path);
-    }
-  );
+  test('shared-project-scope@S01 on project-settings-setup', async ({
+    page,
+  }) => {
+    await projectScope.S01(page, givenSettingsPage().path);
+  });
 
-  test(
-    'shared-project-scope@S02 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await projectScope.S02(
-        page,
-        givenSettingsPage().path,
-        ME,
-        setupHeading(page)
-      );
-    }
-  );
+  test('shared-project-scope@S02 on project-settings-setup', async ({
+    page,
+  }) => {
+    await projectScope.S02(
+      page,
+      givenSettingsPage().path,
+      ME,
+      setupHeading(page)
+    );
+  });
 
-  test(
-    'shared-project-scope@S03 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await projectScope.S03(page, givenSettingsPage({}).path, ME);
-    }
-  );
+  test('shared-project-scope@S03 on project-settings-setup', async ({
+    page,
+  }) => {
+    await projectScope.S03(page, givenSettingsPage({}).path, ME);
+  });
 
-  test(
-    'shared-project-scope@S04 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage({});
-      exec(
-        `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
-      );
-      await projectScope.S04(page, h.path, OTHER);
-    }
-  );
+  test('shared-project-scope@S04 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage({});
+    exec(
+      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
+    );
+    await projectScope.S04(page, h.path, OTHER);
+  });
 
-  test(
-    'shared-project-scope@S05 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      exec(`update projects set requires_mfa = true where id = '${h.id}'`);
-      removeMfaOf(ME);
-      await projectScope.S05(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S05 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    exec(`update projects set requires_mfa = true where id = '${h.id}'`);
+    removeMfaOf(ME);
+    await projectScope.S05(page, h.path, ME);
+  });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-scope@S06 on project-settings-setup',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenSettingsPage({});
       exec(
@@ -1020,35 +950,31 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S07 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      await projectScope.S07(page, h.path, ME, () =>
-        removeMemberOnNode(h.id, ME, OTHER)
-      );
-    }
-  );
+  test('shared-project-scope@S07 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    await projectScope.S07(page, h.path, ME, () =>
+      removeMemberOnNode(h.id, ME, OTHER)
+    );
+  });
 
-  test(
-    'shared-project-scope@S08 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage({ [ME]: 'admin' });
-      await projectScope.S08(
-        page,
-        `${h.path}?x=1`,
-        ME,
-        () => changeRoleOnNode(h.id, ME, 'viewer'),
-        setupHeading(page)
-      );
-    }
-  );
+  test('shared-project-scope@S08 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage({ [ME]: 'admin' });
+    await projectScope.S08(
+      page,
+      `${h.path}?x=1`,
+      ME,
+      () => changeRoleOnNode(h.id, ME, 'viewer'),
+      setupHeading(page)
+    );
+  });
 
   test(
     'shared-project-scope@S09 on project-settings-setup',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenSettingsPage({});
       exec(
@@ -1061,16 +987,14 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S10 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      await projectScope.S10(page, h.path, ME, () =>
-        scheduleDeletionOnNode(h.id)
-      );
-    }
-  );
+  test('shared-project-scope@S10 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    await projectScope.S10(page, h.path, ME, () =>
+      scheduleDeletionOnNode(h.id)
+    );
+  });
 
   // shared-project-scope S11 and S12 are not run on this page: they are about
   // an open workflow editor (archived sandbox, deleted workflow), and this
@@ -1078,29 +1002,20 @@ test.describe('shared-project-scope', () => {
 });
 
 test.describe('shared-usage-limits-banner', () => {
-  test(
-    'shared-usage-limits-banner@S01 on project-settings-setup',
-    PENDING,
-    () => {
-      test.skip(
-        true,
-        'variant usage-limited is not configured on this instance'
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S01 on project-settings-setup', () => {
+    test.skip(true, 'variant usage-limited is not configured on this instance');
+  });
 
-  test(
-    'shared-usage-limits-banner@S02 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await usageLimitsBanner.S02(
-        page,
-        givenSettingsPage().path,
-        ME,
-        setupHeading(page)
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S02 on project-settings-setup', async ({
+    page,
+  }) => {
+    await usageLimitsBanner.S02(
+      page,
+      givenSettingsPage().path,
+      ME,
+      setupHeading(page)
+    );
+  });
 });
 
 // The picker scenarios seed their own "Malawi HIV", so this page's project
@@ -1113,61 +1028,53 @@ test.describe('shared-project-header', () => {
 
   const HOST = 'Settings host';
 
-  test(
-    'shared-project-header@S01 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      await projectHeader.S01(page, h.path, ME, HOST, [
-        { name: 'Project settings' },
-      ]);
-    }
-  );
+  test('shared-project-header@S01 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    await projectHeader.S01(page, h.path, ME, HOST, [
+      { name: 'Project settings' },
+    ]);
+  });
 
-  test(
-    'shared-project-header@S02 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      await projectHeader.S02(page, ME, { path: h.path, project: HOST });
-    }
-  );
+  test('shared-project-header@S02 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    await projectHeader.S02(page, ME, { path: h.path, project: HOST });
+  });
 
-  test(
-    'shared-project-header@S03 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const w = given(
-        {
-          name: HOST,
-          members: { [ME]: 'editor', [OTHER]: 'owner' },
-          sandboxes: [
-            { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
-          ],
-        },
-        OTHER
-      );
-      await projectHeader.S03(page, ME, {
-        path: settingsPath(w.id('dev')),
-        label: `${HOST}:dev`,
-      });
-    }
-  );
+  test('shared-project-header@S03 on project-settings-setup', async ({
+    page,
+  }) => {
+    const w = given(
+      {
+        name: HOST,
+        members: { [ME]: 'editor', [OTHER]: 'owner' },
+        sandboxes: [
+          { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
+        ],
+      },
+      OTHER
+    );
+    await projectHeader.S03(page, ME, {
+      path: settingsPath(w.id('dev')),
+      label: `${HOST}:dev`,
+    });
+  });
 
   for (const id of ['S04', 'S05', 'S06', 'S08'] as const)
-    test(
-      `shared-project-header@${id} on project-settings-setup`,
-      PASSING_BOTH,
-      async ({ page }) => {
-        const h = givenSettingsPage();
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on project-settings-setup`, async ({
+      page,
+    }) => {
+      const h = givenSettingsPage();
+      await projectHeader[id](page, h.path, ME);
+    });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-header@S07 on project-settings-setup',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenSettingsPage();
       await projectHeader.S07(page, h.path, ME);
@@ -1175,35 +1082,29 @@ test.describe('shared-project-header', () => {
   );
 
   // S09 starts on a project settings page, so this page is its host
-  test(
-    'shared-project-header@S09 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
+  test('shared-project-header@S09 on project-settings-setup', async ({
+    page,
+  }) => {
+    await projectHeader.S09(page, ME);
+  });
 
   // The picker lands on the other project's settings
-  test(
-    'shared-project-header@S10 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      await projectHeader.S10(page, h.path, ME, '/settings');
-    }
-  );
+  test('shared-project-header@S10 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    await projectHeader.S10(page, h.path, ME, '/settings');
+  });
 
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on project-settings-setup`,
-      PASSING_BOTH,
-      async ({ page }) => {
-        const h = givenSettingsPage();
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on project-settings-setup`, async ({
+      page,
+    }) => {
+      const h = givenSettingsPage();
+      await projectHeader[id](page, h.path, ME);
+    });
 
-  test('shared-project-header@S14 on project-settings-setup', PENDING, () => {
+  test('shared-project-header@S14 on project-settings-setup', () => {
     test.skip(
       true,
       'variant require-email-verification is not configured on this instance'
@@ -1211,33 +1112,27 @@ test.describe('shared-project-header', () => {
   });
 
   // This page highlights "Settings" in the side menu
-  test(
-    'shared-project-header@S15 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      await projectHeader.S15(page, h.path, ME, h.id, 'Settings');
-    }
-  );
+  test('shared-project-header@S15 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    await projectHeader.S15(page, h.path, ME, h.id, 'Settings');
+  });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test(
-    'shared-project-header@S16 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      await projectHeader.S16(page, h.path, ME, { channels: true });
-    }
-  );
+  test('shared-project-header@S16 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    await projectHeader.S16(page, h.path, ME, { channels: true });
+  });
 
-  test(
-    'shared-project-header@S17 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage({ [ME]: 'viewer', [THIRD]: 'viewer' });
-      await projectHeader.S17(page, h.path);
-    }
-  );
+  test('shared-project-header@S17 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage({ [ME]: 'viewer', [THIRD]: 'viewer' });
+    await projectHeader.S17(page, h.path);
+  });
 });
 
 // This page puts the info flash "Project updated successfully" (a save), the
@@ -1255,93 +1150,81 @@ test.describe('shared-flash-messages', () => {
     };
   }
 
-  test(
-    'shared-flash-messages@S01 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await flashMessages.S01(page, UPDATED, await givenRenamable(page));
-    }
-  );
+  test('shared-flash-messages@S01 on project-settings-setup', async ({
+    page,
+  }) => {
+    await flashMessages.S01(page, UPDATED, await givenRenamable(page));
+  });
 
-  test(
-    'shared-flash-messages@S02 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage({ [ME]: 'admin' });
-      await signInAs(page, ME);
-      await openSettings(page, h.id);
-      await flashMessages.S02(page, NOT_OWNER, () =>
-        open(page, deletePath(h.id))
-      );
-    }
-  );
+  test('shared-flash-messages@S02 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage({ [ME]: 'admin' });
+    await signInAs(page, ME);
+    await openSettings(page, h.id);
+    await flashMessages.S02(page, NOT_OWNER, () =>
+      open(page, deletePath(h.id))
+    );
+  });
 
-  test(
-    'shared-flash-messages@S03 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await flashMessages.S03(page, UPDATED, await givenRenamable(page));
-    }
-  );
+  test('shared-flash-messages@S03 on project-settings-setup', async ({
+    page,
+  }) => {
+    await flashMessages.S03(page, UPDATED, await givenRenamable(page));
+  });
 
-  test(
-    'shared-flash-messages@S04 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      await flashMessages.S04(
-        page,
-        UPDATED,
-        await givenRenamable(page),
-        async () => {
-          // Typing a description makes the page render again
-          await field(identityForm(page), 'Project description').fill('more');
-        }
-      );
-    }
-  );
+  test('shared-flash-messages@S04 on project-settings-setup', async ({
+    page,
+  }) => {
+    await flashMessages.S04(
+      page,
+      UPDATED,
+      await givenRenamable(page),
+      async () => {
+        // Typing a description makes the page render again
+        await field(identityForm(page), 'Project description').fill('more');
+      }
+    );
+  });
 
   // Scheduling the project for deletion redirects me to "/projects"
-  test(
-    'shared-flash-messages@S05 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const p = givenProject('owner');
-      await signInAs(page, ME);
-      await flashMessages.S05(
-        page,
-        'Project scheduled for deletion',
-        async () => {
-          await open(page, deletePath(p.id));
-          const d = await deletionDialog(page);
-          await field(d, 'Project name').fill(p.name);
-          await field(d, 'Project name').blur();
-          await submit(d, DELETE_PROJECT);
-        },
-        '/projects'
-      );
-    }
-  );
+  test('shared-flash-messages@S05 on project-settings-setup', async ({
+    page,
+  }) => {
+    const p = givenProject('owner');
+    await signInAs(page, ME);
+    await flashMessages.S05(
+      page,
+      'Project scheduled for deletion',
+      async () => {
+        await open(page, deletePath(p.id));
+        const d = await deletionDialog(page);
+        await field(d, 'Project name').fill(p.name);
+        await field(d, 'Project name').blur();
+        await submit(d, DELETE_PROJECT);
+      },
+      '/projects'
+    );
+  });
 
-  test(
-    'shared-flash-messages@S06 on project-settings-setup',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const h = givenSettingsPage();
-      const notMine = givenSettingsPage({}, 'Kenya TB');
-      await signInAs(page, ME);
-      await openSettings(page, h.id);
+  test('shared-flash-messages@S06 on project-settings-setup', async ({
+    page,
+  }) => {
+    const h = givenSettingsPage();
+    const notMine = givenSettingsPage({}, 'Kenya TB');
+    await signInAs(page, ME);
+    await openSettings(page, h.id);
 
-      await flashMessages.S06(
-        page,
-        () => open(page, notMine.path),
-        '/projects',
-        page.getByRole('cell', {
-          name: manifest().projects[0].name,
-          exact: true,
-        })
-      );
-    }
-  );
+    await flashMessages.S06(
+      page,
+      () => open(page, notMine.path),
+      '/projects',
+      page.getByRole('cell', {
+        name: manifest().projects[0].name,
+        exact: true,
+      })
+    );
+  });
 
   // shared-flash-messages S07 and S08 are not run on this page: S07 is on
   // admin pages (settings layout) and S08 on the sign-in and account forms.

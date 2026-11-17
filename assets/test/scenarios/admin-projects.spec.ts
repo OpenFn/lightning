@@ -41,7 +41,6 @@ import {
   signInAs,
   sql,
   submit,
-  tagFor,
   user,
   watchLiveView,
   type UserSeed,
@@ -180,7 +179,7 @@ const TWO_OWNERS = 'A project can have only one owner.';
 //   When I open "/settings/projects"
 //   Then I see a row for "malawi-hiv" with "03 Mar", "HIV programme" and "Amara Banda"
 //   And the row has an "Actions" menu with "Edit" and "Delete"
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const amara = person('Amara', 'Banda');
   const malawi = project(
     'malawi-hiv',
@@ -209,7 +208,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given project "legacy-sync" has members but none with role owner
 //   When I open "/settings/projects"
 //   Then the owner column for "legacy-sync" says "No owner"
-test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const bob = person('Bob', 'Jones');
   const legacy = project('legacy-sync', { [bob.id]: 'admin' });
 
@@ -228,7 +227,7 @@ test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "alpha-project" and not "beta-project"
 //   When I clear the filter
 //   Then I see both projects
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const john = person('John', 'Owner');
   const alpha = project(
     'alpha-project',
@@ -260,7 +259,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the projects are listed "alpha-project", "beta-project", "charlie-project"
 //   When I click the "Created at" header
 //   Then the oldest project is listed first
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   // Created in an order unlike either name order: beta, charlie, alpha
   const suffix = hex();
   const [alpha, beta, charlie] = (
@@ -300,7 +299,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And project "some-name" has exactly those two members and not me
 //   And the flow "flow-collaborator-added-email" has started for "1st user" and for "another person"
 // The flow has started when each member's access email is queued.
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const first = person('First', 'User');
   const another = person('Another', 'Person');
   const suffix = hex();
@@ -344,7 +343,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 // "Save" being off is how one version refuses; the other refuses on press.
 // What both keep is the message and that nothing is created, so the last
 // When also sends the save past the form.
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const amara = person('Amara', 'Banda');
   const bob = person('Bob', 'Jones');
   const name = `no-owner-${hex()}`;
@@ -377,7 +376,7 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Note that this project will be named: malawi-hiv-2025."
 //   When I type "!!!" as the name and save
 //   Then I see "can't be blank"
-test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   await signedIn(page, `${PAGE}/new`);
 
   await field(page, 'Name').fill('Malawi HIV 2025');
@@ -404,7 +403,7 @@ test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And the flow "flow-collaborator-added-email" has started for "Dana Ray" only
 //   And "Charlie Brown"'s and "Bob Jones"'s open pages on the project are handed to shared-project-scope S07 and S08
 // The last Then is shared-project-scope's to test, on the project's pages.
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const alice = person('Alice', 'Smith');
   const bob = person('Bob', 'Jones');
   const charlie = person('Charlie', 'Brown');
@@ -443,7 +442,7 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I set "Charlie Brown" to "No access" on the admin project form and save
 //   Then "DHIS2 play" is no longer shared with "malawi-hiv"
 //   And "DHIS2 play" still belongs to "Charlie Brown"
-test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const alice = person('Alice', 'Smith');
   const charlie = person('Charlie', 'Brown');
   const malawi = project('malawi-hiv', {
@@ -480,7 +479,7 @@ test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I am superuser "root@example.org"
 //   When I change "Bob Jones" from editor to admin on "malawi-hiv" and save
 //   Then an audit event "collaborator_role_changed" is recorded for "malawi-hiv" with actor "root@example.org", before role "editor" and after role "admin"
-test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const alice = person('Alice', 'Smith');
   const bob = person('Bob', 'Jones');
   const malawi = project('malawi-hiv', {
@@ -509,7 +508,7 @@ test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I set "Bob Jones" to "No access" and click "Cancel"
 //   Then I am on "/settings/projects"
 //   And "Bob Jones" is still a member of "malawi-hiv"
-test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const alice = person('Alice', 'Smith');
   const bob = person('Bob', 'Jones');
   const malawi = project('malawi-hiv', {
@@ -535,7 +534,7 @@ test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then "alpha-project" offers "Delete" and neither "Cancel deletion" nor "Delete now"
 //   And "beta-project" offers "Cancel deletion" and "Delete now" and not "Delete"
 //   And the scheduled deletion column for "beta-project" shows "21 Oct"
-test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const alpha = project('alpha-project');
   const beta = project('beta-project', {}, { scheduledDeletion: SCHEDULED });
 
@@ -566,7 +565,7 @@ test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am on "/settings/projects/<alpha-project id>/delete" with the deletion modal over the list
 //   And the flow "flow-schedule-project-deletion" has started (its S10)
 // What the dialog does is shared-project-deletion-modal's.
-test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const alpha = project('alpha-project');
   const other = project('other-project');
 
@@ -590,7 +589,7 @@ test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Project deletion canceled"
 //   And the row for "beta-project" offers "Delete" again
 //   And the rest is flow "flow-schedule-project-deletion" S11
-test('@S14', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const beta = project('beta-project', {}, { scheduledDeletion: SCHEDULED });
 
   await signedIn(page);
@@ -612,7 +611,7 @@ test('@S14', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I click "Delete now" on "beta-project"
 //   Then I am on "/settings/projects/<beta-project id>/delete"
 //   And the flow "flow-schedule-project-deletion" has started (its S12, through shared-project-deletion-modal S04)
-test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const beta = project('beta-project', {}, { scheduledDeletion: SCHEDULED });
 
   await signedIn(page);
@@ -627,23 +626,15 @@ test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 // Inherited from shared-admin-space: the gate, and the settings layout and
 // side menu with "Projects" current.
 test.describe('shared-admin-space', () => {
-  test(
-    'shared-admin-space@S01 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S01(page, PAGE, ME, 'Projects');
-    }
-  );
+  test('shared-admin-space@S01 on admin-projects', async ({ page }) => {
+    await adminSpace.S01(page, PAGE, ME, 'Projects');
+  });
 
-  test(
-    'shared-admin-space@S02 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await adminSpace.S02(page, PAGE, REGULAR);
-    }
-  );
+  test('shared-admin-space@S02 on admin-projects', async ({ page }) => {
+    await adminSpace.S02(page, PAGE, REGULAR);
+  });
 
-  test('shared-admin-space@S03 on admin-projects', { tag: '@pending' }, () => {
+  test('shared-admin-space@S03 on admin-projects', () => {
     test.skip(
       true,
       'needs a socket-only mount that skips the HTTP check, which no browser action produces'
@@ -651,26 +642,21 @@ test.describe('shared-admin-space', () => {
   });
 
   for (const id of ['S04', 'S05'])
-    test(
-      `shared-admin-space@${id} on admin-projects`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
-        );
-      }
-    );
+    test(`shared-admin-space@${id} on admin-projects`, () => {
+      test.skip(
+        true,
+        'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
+      );
+    });
 
-  test(
-    'shared-admin-space@S06 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await adminSpace.S06(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-admin-space@S06 on admin-projects', async ({
+    page,
+    browser,
+  }) => {
+    await adminSpace.S06(page, browser, PAGE, ME);
+  });
 
-  test('shared-admin-space@S07 on admin-projects', { tag: '@pending' }, () => {
+  test('shared-admin-space@S07 on admin-projects', () => {
     test.skip(
       true,
       'variant settings-menu-extension is not configured on this instance'
@@ -680,102 +666,76 @@ test.describe('shared-admin-space', () => {
 
 // Inherited from shared-authenticated-session, on "/settings/projects".
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on admin-projects', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on admin-projects', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on admin-projects', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      // The admin menu has no "Credentials"; "Audit" is a label it does have
-      await authenticatedSession.S07(
-        page,
-        browser,
-        PAGE,
-        '/settings/audit',
-        ME,
-        'Audit'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on admin-projects', async ({
+    page,
+    browser,
+  }) => {
+    // The admin menu has no "Credentials"; "Audit" is a label it does have
+    await authenticatedSession.S07(
+      page,
+      browser,
+      PAGE,
+      '/settings/audit',
+      ME,
+      'Audit'
+    );
+  });
 
   for (const id of ['S04', 'S05', 'S06'])
-    test(
-      `shared-authenticated-session@${id} on admin-projects`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'variant require-email-verification is not configured on this instance'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-projects`, () => {
+      test.skip(
+        true,
+        'variant require-email-verification is not configured on this instance'
+      );
+    });
 
   for (const id of ['S08', 'S09', 'S10', 'S11'])
-    test(
-      `shared-authenticated-session@${id} on admin-projects`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line says S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-projects`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line says S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
+      );
+    });
 });
 
 // Inherited from shared-project-header: the global picker, the confirmation
 // banner and the account menu (no-project parts).
 test.describe('shared-project-header', () => {
   for (const id of ['S04', 'S06', 'S08', 'S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on admin-projects`,
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        await projectHeader[id](page, PAGE, ME);
-      }
-    );
+    test(`shared-project-header@${id} on admin-projects`, async ({ page }) => {
+      await projectHeader[id](page, PAGE, ME);
+    });
 
   // The Examples row "the projects list or my profile | the workflows page"
-  test(
-    'shared-project-header@S10 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await projectHeader.S10(page, PAGE, ME, '/w');
-    }
-  );
+  test('shared-project-header@S10 on admin-projects', async ({ page }) => {
+    await projectHeader.S10(page, PAGE, ME, '/w');
+  });
 
-  test(
-    'shared-project-header@S14 on admin-projects',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'variant require-email-verification is not configured on this instance'
-      );
-    }
-  );
+  test('shared-project-header@S14 on admin-projects', () => {
+    test.skip(
+      true,
+      'variant require-email-verification is not configured on this instance'
+    );
+  });
 
   for (const id of [
     'S01',
@@ -788,16 +748,12 @@ test.describe('shared-project-header', () => {
     'S16',
     'S17',
   ])
-    test(
-      `shared-project-header@${id} on admin-projects`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
-        );
-      }
-    );
+    test(`shared-project-header@${id} on admin-projects`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
+      );
+    });
 });
 
 // Inherited from shared-project-deletion-modal, on the admin host:
@@ -810,101 +766,79 @@ test.describe('shared-project-deletion-modal', () => {
     await open(page, deletePath(id));
   };
 
-  test(
-    'shared-project-deletion-modal@S01 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const p = project('project');
-      await signInAs(page, ME);
-      await projectDeletionModal.S01(page, p, deletionOf(page));
-    }
-  );
+  test('shared-project-deletion-modal@S01 on admin-projects', async ({
+    page,
+  }) => {
+    const p = project('project');
+    await signInAs(page, ME);
+    await projectDeletionModal.S01(page, p, deletionOf(page));
+  });
 
-  test(
-    'shared-project-deletion-modal@S02 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const p = project('project');
-      const lv = watchLiveView(page);
-      await signInAs(page, ME);
-      await projectDeletionModal.S02(page, p, deletionOf(page), typed =>
-        sendProjectDeletion(page, lv, typed)
-      );
-    }
-  );
+  test('shared-project-deletion-modal@S02 on admin-projects', async ({
+    page,
+  }) => {
+    const p = project('project');
+    const lv = watchLiveView(page);
+    await signInAs(page, ME);
+    await projectDeletionModal.S02(page, p, deletionOf(page), typed =>
+      sendProjectDeletion(page, lv, typed)
+    );
+  });
 
-  test(
-    'shared-project-deletion-modal@S03 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const p = project('project');
-      await signInAs(page, ME);
-      await projectDeletionModal.S03(page, p, deletionOf(page), PAGE);
-    }
-  );
+  test('shared-project-deletion-modal@S03 on admin-projects', async ({
+    page,
+  }) => {
+    const p = project('project');
+    await signInAs(page, ME);
+    await projectDeletionModal.S03(page, p, deletionOf(page), PAGE);
+  });
 
-  test(
-    'shared-project-deletion-modal@S04 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const p = project('project', {}, { scheduledDeletion: SCHEDULED });
-      await signInAs(page, ME);
-      await projectDeletionModal.S04(page, p, deletionOf(page), PAGE);
-    }
-  );
+  test('shared-project-deletion-modal@S04 on admin-projects', async ({
+    page,
+  }) => {
+    const p = project('project', {}, { scheduledDeletion: SCHEDULED });
+    await signInAs(page, ME);
+    await projectDeletionModal.S04(page, p, deletionOf(page), PAGE);
+  });
 
-  test(
-    'shared-project-deletion-modal@S05 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const p = project('project');
-      await signInAs(page, ME);
-      await projectDeletionModal.S05(page, p, deletionOf(page), 'Close', PAGE);
-    }
-  );
+  test('shared-project-deletion-modal@S05 on admin-projects', async ({
+    page,
+  }) => {
+    const p = project('project');
+    await signInAs(page, ME);
+    await projectDeletionModal.S05(page, p, deletionOf(page), 'Close', PAGE);
+  });
 });
 
 // Inherited from shared-flash-messages. This page is on the settings layout,
 // whose toast is S07; the deletion dialog's redirect carries a flash (S05).
 test.describe('shared-flash-messages', () => {
-  test(
-    'shared-flash-messages@S05 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const p = project('project');
-      await signInAs(page, ME);
-      await flashMessages.S05(
-        page,
-        'Project scheduled for deletion',
-        async () => {
-          await open(page, deletePath(p.id));
-          const d = modal(page, 'Delete project');
-          await expect(modalTitle(page, 'Delete project')).toBeVisible();
-          await field(d, 'Project name').fill(p.name);
-          await field(d, 'Project name').blur();
-          await submit(d, 'Delete project');
-        },
-        PAGE
-      );
-    }
-  );
+  test('shared-flash-messages@S05 on admin-projects', async ({ page }) => {
+    const p = project('project');
+    await signInAs(page, ME);
+    await flashMessages.S05(
+      page,
+      'Project scheduled for deletion',
+      async () => {
+        await open(page, deletePath(p.id));
+        const d = modal(page, 'Delete project');
+        await expect(modalTitle(page, 'Delete project')).toBeVisible();
+        await field(d, 'Project name').fill(p.name);
+        await field(d, 'Project name').blur();
+        await submit(d, 'Delete project');
+      },
+      PAGE
+    );
+  });
 
-  test(
-    'shared-flash-messages@S07 on admin-projects',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const beta = project(
-        'beta-project',
-        {},
-        { scheduledDeletion: SCHEDULED }
-      );
-      await flashMessages.S07(page, 'Project deletion canceled', async () => {
-        await signedIn(page);
-        const menu = await openActions(page, beta.name);
-        await menuAction(menu, 'Cancel deletion').click();
-      });
-    }
-  );
+  test('shared-flash-messages@S07 on admin-projects', async ({ page }) => {
+    const beta = project('beta-project', {}, { scheduledDeletion: SCHEDULED });
+    await flashMessages.S07(page, 'Project deletion canceled', async () => {
+      await signedIn(page);
+      const menu = await openActions(page, beta.name);
+      await menuAction(menu, 'Cancel deletion').click();
+    });
+  });
 
   for (const [id, why] of [
     ['S01', 'it is about the live layout; the settings layout toast is S07'],
@@ -917,11 +851,7 @@ test.describe('shared-flash-messages', () => {
     ],
     ['S08', 'it is about the sign-in and account forms'],
   ])
-    test(
-      `shared-flash-messages@${id} on admin-projects`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(true, `not reachable here: ${why}`);
-      }
-    );
+    test(`shared-flash-messages@${id} on admin-projects`, () => {
+      test.skip(true, `not reachable here: ${why}`);
+    });
 });

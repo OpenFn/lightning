@@ -24,7 +24,6 @@ import {
   setSignUpTime,
   signInAs,
   sql,
-  tagFor,
   user,
   watchLiveView,
   type SeededUser,
@@ -73,7 +72,7 @@ const stateOf = (me: SeededUser) =>
 //   And I see a dialog "Delete user"
 //   And I see "Your account and credential data will be deleted. Please make sure none of these credentials are used in production workflows."
 //   And I see a "User email" field and the buttons "Delete account" and "Cancel"
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const me = await signedIn(page);
 
   await userDeletionModal.S01(page, me, deletionOf(page), 'Your');
@@ -94,7 +93,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 // Fails on Lightning: scheduling the deletion closes this browser's socket
 // before the redirect arrives, so the page stays on the delete page for about
 // ten seconds, then reloads to /users/log_in. The rest holds.
-test('@S02', { tag: '@pending' }, async ({ page, browser }) => {
+test('@S02', async ({ page, browser }) => {
   const me = await signedIn(page);
 
   await userDeletionModal.S04(
@@ -119,7 +118,7 @@ test('@S02', { tag: '@pending' }, async ({ page, browser }) => {
 //   And my account is not disabled
 //   And no email is sent
 // No email: nothing is scheduled, and the scheduling is what sends it.
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const lv = watchLiveView(page);
   const me = await signedIn(page);
 
@@ -137,7 +136,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am on "/profile"
 //   And I see "You can't perform this action"
 //   And I do not see the "Delete user" dialog
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   await signedIn(page);
   const bob = seedUser('bob', { firstName: 'Bob' });
   cleanups.push(bob.remove);
@@ -158,7 +157,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "You can't delete a superuser account."
 //   When I click "Delete account"
 //   Then my account is not disabled
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const root = await signedIn(page, { role: 'superuser' });
 
   await userDeletionModal.S03(page, root, deletionOf(page));
@@ -173,7 +172,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open "/profile/<my user id>/delete"
 //   Then I do not see that note
 // Two accounts, each signed in in turn: the page only opens for my own.
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const withRun = seedUser('amara');
   const withoutRun = seedUser('bob', { firstName: 'Bob' });
   cleanups.push(withoutRun.remove, withRun.remove, runStartedBy(withRun.id));
@@ -194,7 +193,7 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am on "/profile"
 //   And I do not see the "Delete user" dialog
 //   And my account is not disabled
-test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const me = await signedIn(page);
 
   await userDeletionModal.S09(page, me, deletionOf(page), 'Cancel', '/profile');
@@ -211,45 +210,31 @@ test.describe('inherited, as editor@openfn.org', () => {
 
   // Inherited from shared-authenticated-session, as profile-account.
   test.describe('shared-authenticated-session', () => {
-    test(
-      'shared-authenticated-session@S01 on profile-delete-account',
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        await authenticatedSession.S01(page, PAGE(), ME);
-      }
-    );
+    test('shared-authenticated-session@S01 on profile-delete-account', async ({
+      page,
+    }) => {
+      await authenticatedSession.S01(page, PAGE(), ME);
+    });
 
-    test(
-      'shared-authenticated-session@S02 on profile-delete-account',
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page, browser }) => {
-        await authenticatedSession.S02(page, browser, PAGE(), ME);
-      }
-    );
+    test('shared-authenticated-session@S02 on profile-delete-account', async ({
+      page,
+      browser,
+    }) => {
+      await authenticatedSession.S02(page, browser, PAGE(), ME);
+    });
 
-    test(
-      'shared-authenticated-session@S03 on profile-delete-account',
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        await authenticatedSession.S03(page, PAGE(), ME);
-      }
-    );
+    test('shared-authenticated-session@S03 on profile-delete-account', async ({
+      page,
+    }) => {
+      await authenticatedSession.S03(page, PAGE(), ME);
+    });
 
-    // On the port the open dialog is modal: the navigation behind it can't
-    // be reached until it closes.
-    test(
-      'shared-authenticated-session@S07 on profile-delete-account',
-      { tag: '@passing-old' },
-      async ({ page, browser }) => {
-        await authenticatedSession.S07(
-          page,
-          browser,
-          PAGE(),
-          '/credentials',
-          ME
-        );
-      }
-    );
+    test('shared-authenticated-session@S07 on profile-delete-account', async ({
+      page,
+      browser,
+    }) => {
+      await authenticatedSession.S07(page, browser, PAGE(), '/credentials', ME);
+    });
 
     for (const [id, variant] of [
       ['S04', 'require-email-verification'],
@@ -259,62 +244,42 @@ test.describe('inherited, as editor@openfn.org', () => {
       ['S09', 'book-demo-banner'],
       ['S10', 'gdpr-banner'],
     ])
-      test(
-        `shared-authenticated-session@${id} on profile-delete-account`,
-        { tag: tagFor(id, []) },
-        () => {
-          test.skip(
-            true,
-            `variant ${variant} is not configured on this instance`
-          );
-        }
-      );
+      test(`shared-authenticated-session@${id} on profile-delete-account`, () => {
+        test.skip(
+          true,
+          `variant ${variant} is not configured on this instance`
+        );
+      });
   });
 
   // Inherited from shared-project-header: the no-project header only.
   // S12 fails on Lightning: the open dialog keeps the keyboard, so the
   // project picker shortcut does nothing here. It passes on profile-account.
-  // On the port the open dialog is modal, so only S13 (nothing to click)
-  // passes; S11, S17 and S18 pass on profile-account.
   test.describe('shared-project-header', () => {
     for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-      test(
-        `shared-project-header@${id} on profile-delete-account`,
-        {
-          tag:
-            id === 'S13'
-              ? ['@passing-old', '@passing-new']
-              : tagFor(id, ['S11', 'S13', 'S18']),
-        },
-        async ({ page }) => {
-          await projectHeader[id](page, PAGE(), ME);
-        }
+      test(`shared-project-header@${id} on profile-delete-account`, async ({
+        page,
+      }) => {
+        await projectHeader[id](page, PAGE(), ME);
+      });
+
+    test('shared-project-header@S17 on profile-delete-account', async ({
+      page,
+    }) => {
+      await projectHeader.S17(page, PAGE());
+    });
+
+    test('shared-project-header@S14 on profile-delete-account', () => {
+      test.skip(
+        true,
+        'variant require-email-verification is not configured on this instance'
       );
-
-    test(
-      'shared-project-header@S17 on profile-delete-account',
-      { tag: '@passing-old' },
-      async ({ page }) => {
-        await projectHeader.S17(page, PAGE());
-      }
-    );
-
-    test(
-      'shared-project-header@S14 on profile-delete-account',
-      { tag: '@pending' },
-      () => {
-        test.skip(
-          true,
-          'variant require-email-verification is not configured on this instance'
-        );
-      }
-    );
+    });
   });
 
   // Inherited from shared-local-datetime: "Created:" on the profile behind
   // the dialog shows my sign-up time. S04 and S05 fail on Lightning: the
-  // dialog covers the timestamp, so it can't be hovered or clicked. The same
-  // on the port.
+  // dialog covers the timestamp, so it can't be hovered or clicked.
   test.describe('shared-local-datetime', () => {
     // Given my account was created at <utc>, and today is <today>
     async function created(
@@ -330,29 +295,25 @@ test.describe('inherited, as editor@openfn.org', () => {
 
     test.describe(() => {
       test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-      test(
-        'shared-local-datetime@S01 on profile-delete-account',
-        { tag: ['@passing-old', '@passing-new'] },
-        async ({ page }) => {
-          await localDatetime.S01(
-            page,
-            await created(page, localDatetime.given.S01)
-          );
-        }
-      );
+      test('shared-local-datetime@S01 on profile-delete-account', async ({
+        page,
+      }) => {
+        await localDatetime.S01(
+          page,
+          await created(page, localDatetime.given.S01)
+        );
+      });
     });
 
     for (const id of ['S04', 'S05'] as const)
-      test(
-        `shared-local-datetime@${id} on profile-delete-account`,
-        { tag: tagFor(id, []) },
-        async ({ page }) => {
-          await localDatetime[id](
-            page,
-            await created(page, localDatetime.given[id])
-          );
-        }
-      );
+      test(`shared-local-datetime@${id} on profile-delete-account`, async ({
+        page,
+      }) => {
+        await localDatetime[id](
+          page,
+          await created(page, localDatetime.given[id])
+        );
+      });
   });
 
   // Inherited from shared-flash-messages: opening someone else's deletion
@@ -362,18 +323,16 @@ test.describe('inherited, as editor@openfn.org', () => {
       await page.goto(deletePath(user('owner@openfn.org').id));
     };
 
-    test(
-      'shared-flash-messages@S02 on profile-delete-account',
-      { tag: ['@passing-old', '@passing-new'] },
-      async ({ page }) => {
-        await signInAs(page, ME);
-        await flashMessages.S02(
-          page,
-          "You can't perform this action",
-          someoneElse(page)
-        );
-      }
-    );
+    test('shared-flash-messages@S02 on profile-delete-account', async ({
+      page,
+    }) => {
+      await signInAs(page, ME);
+      await flashMessages.S02(
+        page,
+        "You can't perform this action",
+        someoneElse(page)
+      );
+    });
 
     // S05 is an info flash carried by a redirect; this page's redirect
     // carries an error, which is S02.

@@ -132,10 +132,6 @@ const THIRD = 'super@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-const PENDING = { tag: '@pending' };
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_OLD_SERIAL = { tag: ['@passing-old', '@serial'] };
-
 // A page that has to react to something done elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 
@@ -280,7 +276,7 @@ const flat = (s: string) => s.replace(/\s+/g, ' ').trim();
 //   And the IDE shows "Send to DHIS2" in the job selector and that step's code
 //   When I return to the canvas and press Ctrl+E with the step selected
 //   Then the IDE opens on "Send to DHIS2" again
-test('@S01', PASSING_OLD, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { wf } = givenIntake();
   setJobBody(wf.steps[SEND], '// sends to DHIS2\nfn(s => s);');
   await signInAs(page, ME);
@@ -316,7 +312,7 @@ test('@S01', PASSING_OLD, async ({ page }) => {
 //   When I press Escape again
 //   Then the IDE closes and the canvas shows "Send to DHIS2" selected in its inspector
 //   And clicking "Close IDE" from a reopened IDE does the same
-test('@S02', PASSING_OLD, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, SEND);
   const backOnCanvas = async () => {
@@ -346,7 +342,7 @@ test('@S02', PASSING_OLD, async ({ page }) => {
 //   Given the IDE is open and the adaptor configuration modal is open
 //   When I press Escape
 //   Then the IDE is still open
-test('@S03', PASSING_OLD, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const { wf } = givenIntake();
   adaptorConfig.jobUses(wf.steps[SEND], DHIS2);
   await openAs(page, wf, SEND);
@@ -367,7 +363,7 @@ test('@S03', PASSING_OLD, async ({ page }) => {
 //   Then I see "The job you're trying to view didn't exist in this version of the workflow."
 //   And I see "You can change versions or select another job."
 //   And the job selector still lists the jobs of version 3
-test('@S07', PASSING_OLD, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { wf } = givenIntake();
   const pinned = storedWorkflow(wf.id).lock_version;
   const newStep = addStepOnNode(wf.id, 'New step', OWNER);
@@ -397,7 +393,7 @@ test('@S07', PASSING_OLD, async ({ page }) => {
 //   When I pick "Transform"
 //   Then the URL job becomes "<Transform id>" and the IDE shows "Transform"'s code
 // Seeded in another order, so the list's order comes from the paths.
-test('@S08', PASSING_OLD, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const { wf } = givenIntake(
     { [ME]: 'editor' },
     {
@@ -432,7 +428,7 @@ test('@S08', PASSING_OLD, async ({ page }) => {
 //   Then the URL step becomes "R"'s step for "Transform"
 //   And the run viewer selects that step
 // The run viewer shows its selected step by marking that step's log lines.
-test('@S09', PASSING_OLD, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const { id, run } = givenRun(
     { [ME]: 'editor' },
     {
@@ -465,7 +461,7 @@ test('@S09', PASSING_OLD, async ({ page }) => {
 //   Given I am in sandbox "staging-fix" of project "Malawi HIV"
 //   When I open the IDE
 //   Then I see "You are currently working in the sandbox staging-fix" above the IDE header
-test('@S21', PASSING_OLD, async ({ page }) => {
+test('@S21', async ({ page }) => {
   const { w } = givenProject(
     { [ME]: 'editor' },
     { sandboxes: [{ name: 'staging-fix' }] }
@@ -498,7 +494,7 @@ test('@S21', PASSING_OLD, async ({ page }) => {
 //   And "Joe" sees a cursor labelled "Amara" in "Amara"'s colour at that position
 // Amara is super@openfn.org, Joe is me. The cursor is checked by its label
 // and line; its colour is how it is drawn, not what it protects.
-test('@S04', PASSING_OLD, async ({ page, browser }) => {
+test('@S04', async ({ page, browser }) => {
   const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
   setJobBody(wf.steps[SEND], '// sends to DHIS2\nfn(s => s);\n');
   await openAs(page, wf, SEND);
@@ -522,7 +518,7 @@ test('@S04', PASSING_OLD, async ({ page, browser }) => {
 //   When I replace the code with "get('/api/me');"
 //   And I save the workflow
 //   Then job "Send to DHIS2" has body "get('/api/me');" after reload
-test('@S05', PASSING_OLD, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, SEND);
 
@@ -548,7 +544,7 @@ test('@S05', PASSING_OLD, async ({ page }) => {
 //     | I am an editor viewing version 3 from the version picker             |
 //     | I am an editor who followed a run link to the version that run used  |
 // One step per example; soft, so every example is checked.
-test('@S06', PASSING_OLD, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const h = givenIntake({ [ME]: 'viewer' });
   setJobBody(h.wf.steps[SEND], '// sends to DHIS2');
   const run = seedRun(
@@ -617,7 +613,7 @@ test('@S06', PASSING_OLD, async ({ page }) => {
 //   Then "Send to DHIS2" uses the new credential and the adaptor configuration modal is shown again
 // Same as shared-adaptor-credential-config S01 ("Connect") and S11, on the
 // IDE's adaptor box. The OAuth flow is its own.
-test('@S16', PASSING_OLD, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const { id, wf } = givenIntake();
   cleanups.push(() => removeCredentialsNamed(ME, ['DHIS2 test']));
   adaptorConfig.jobUses(wf.steps[SEND], DHIS2);
@@ -646,8 +642,7 @@ test('@S16', PASSING_OLD, async ({ page }) => {
 //   When I am an editor and click "ADD" on an example with my cursor on line 4
 //   Then the example is inserted below line 4 and the cursor moves past it
 // "latest" is whatever the instance's adaptor catalogue says it is.
-// Still pending, old: "ADD" puts the example at the end of the code, as its title says, not at my cursor (unconfirmed: clicking it may lose the cursor)
-test('@S10', PENDING, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const { wf } = givenIntake();
   adaptorConfig.jobUses(wf.steps[SEND], DHIS2);
   const code = ['// one', '// two', '// three', '// four', '// five'];
@@ -687,8 +682,7 @@ test('@S10', PENDING, async ({ page }) => {
 //   Then suggestions from that metadata appear first
 // Stand-in: no DHIS2 instance is reachable, so the page's metadata request is
 // answered by the test, as the metadata service would answer it.
-// Still pending, old: Ctrl+Space in the code shows "No suggestions." on the e2e instance, even after the types load (unconfirmed: may be the test browser)
-test('@S11', PENDING, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const { id, wf } = givenIntake();
   const credentialId = givenCredential(id, 'DHIS2 prod');
   adaptorConfig.jobUses(wf.steps[SEND], DHIS2, { projectId: id, credentialId });
@@ -726,8 +720,7 @@ test('@S11', PENDING, async ({ page }) => {
 //   Then suggestions switch to the http adaptor
 // The adaptors' latest versions; the downloads are held so "Loading types"
 // can be seen.
-// Still pending, old: the code editor offers no suggestions or signature help on the e2e instance, even after the types load (unconfirmed: may be the test browser)
-test('@S12', PENDING, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const { wf } = givenIntake();
   adaptorConfig.jobUses(wf.steps[SEND], DHIS2);
   const release = await holdAdaptorDownloads(page);
@@ -760,8 +753,7 @@ test('@S12', PENDING, async ({ page }) => {
 //   Then the panel reopens on the "Metadata" tab
 //   When I click "Toggle panel orientation"
 //   Then the docs panel moves below the code
-// Still pending, old: after "Toggle panel orientation" the docs stay beside the code here, though a single earlier run saw them move below (unconfirmed)
-test('@S13', PENDING, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, SEND);
   await expect(docsTab(page, 'Docs')).toBeVisible();
@@ -790,7 +782,7 @@ test('@S13', PENDING, async ({ page }) => {
 //   Given the IDE is open on "Send to DHIS2" and the AI assistant panel is open
 //   Then the assistant's context is job "Send to DHIS2" with its code and adaptor
 //   And a suggested change can be previewed as a diff over the code and closed with "Close diff preview"
-test('@S20', PENDING, () => {
+test('@S20', () => {
   test.skip(true, 'needs an AI assistant service configured on the instance');
 });
 
@@ -808,7 +800,7 @@ test('@S20', PENDING, () => {
 //   When I close "R"'s run chip
 //   Then the URL has no run and the right panel closes
 // Ctrl+H first, then "History" once the panel has closed.
-test('@S14', PASSING_OLD, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const { id, run } = givenRun();
   await signInAs(page, ME);
   await openIde(page, id, run.workflowId, jobIdOf(run.workflowId, 'Fetch'));
@@ -837,7 +829,7 @@ test('@S14', PASSING_OLD, async ({ page }) => {
 //   And the canvas header's run button is disabled while the IDE is open
 //   When I pick an input and press Ctrl+Enter again
 //   Then a run starts and the IDE follows it in the run viewer
-test('@S15', PASSING_OLD, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, SEND);
 
@@ -864,7 +856,7 @@ test('@S15', PASSING_OLD, async ({ page }) => {
 //   Then the input "R" gave "Transform" is selected without my choosing it
 //   And the run button reads "Retry"
 // "Retry" is only offered when the chosen input is the one the step had.
-test('@S17', PASSING_OLD, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const { id, run } = givenRun(
     { [ME]: 'editor' },
     {
@@ -899,8 +891,7 @@ test('@S17', PASSING_OLD, async ({ page }) => {
 //   When I pick "Load" in the job selector
 //   Then the run chip shows a warning with "Load was not part of this run. Pick another job or deselect the run."
 //   And "Run" is disabled with "Selected job was not part of this run"
-// Still pending, old: hovering the warning run chip shows no tooltip; the chip does not pass the tooltip's hover handlers on
-test('@S18', PENDING, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const { id, run } = givenRun(
     { [ME]: 'editor' },
     { steps: [{ name: 'Fetch' }, { name: 'Transform' }], jobs: ['Load'] }
@@ -934,7 +925,7 @@ test('@S18', PENDING, async ({ page }) => {
 //   Then the IDE is open on "Send to DHIS2"
 //   And the right panel shows "R" in the run viewer with the log tab
 // The link is followed from History.
-test('@S19', PASSING_OLD, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const { id, run } = givenRun(
     { [ME]: 'editor' },
     { steps: [{ name: 'Fetch' }, { name: SEND }] }
@@ -959,7 +950,7 @@ test('@S19', PASSING_OLD, async ({ page }) => {
 //   Given the IDE is on version 7 and following run "R", which ran on version 3
 //   Then the run panel shows "This run took place on version 3."
 // Without experimental features, which load the run's own version instead.
-test('@S22', PASSING_OLD, async ({ page }) => {
+test('@S22', async ({ page }) => {
   setPreferences(ME, { experimental_features: false });
   const { id, by, run } = givenRun();
   renameStepOnNode(run.workflowId, 'Load', 'Load v2', by);
@@ -986,7 +977,7 @@ test.describe('shared-adaptor-credential-config', () => {
   const name = (id: string) =>
     `shared-adaptor-credential-config@${id} on workflow-editor-ide`;
 
-  test(name('S03'), PASSING_OLD, async ({ page }) => {
+  test(name('S03'), async ({ page }) => {
     const { id, wf } = givenIntake();
     adaptorConfig.jobUses(wf.steps.Fetch, DHIS2);
     givenCredential(id, 'DHIS2 prod');
@@ -1002,7 +993,7 @@ test.describe('shared-adaptor-credential-config', () => {
   });
 
   // The adaptor catalogue is instance-wide
-  test(name('S07'), PASSING_OLD_SERIAL, async ({ page }) => {
+  test(name('S07'), { tag: ['@serial'] }, async ({ page }) => {
     cleanups.push(adaptorConfig.withAdaptorVersions());
     const { wf } = givenIntake();
     adaptorConfig.jobUses(wf.steps.Fetch, DHIS2);
@@ -1011,14 +1002,13 @@ test.describe('shared-adaptor-credential-config', () => {
     await adaptorConfig.S07(page, adaptorBox(page));
   });
 
-  // Still pending, old: after Escape closes the adaptor picker, the IDE header's adaptor box is gone (unconfirmed)
-  test(name('S17'), PENDING, async ({ page }) => {
+  test(name('S17'), async ({ page }) => {
     await givenStepOnDhis2(page);
     await adaptorConfig.S17(page, adaptorBox(page));
     await expect(closeIdeButton(page)).toBeVisible();
   });
 
-  test(name('S18'), PASSING_OLD, async ({ page }) => {
+  test(name('S18'), async ({ page }) => {
     await givenStepOnDhis2(page, 'viewer');
     await adaptorConfig.S18(page, adaptorBox(page));
   });
@@ -1046,7 +1036,7 @@ test.describe('shared-run-retry-controls', () => {
     });
 
   // Given I wipe the input, or not
-  test(name('S04'), PASSING_OLD, async ({ page }) => {
+  test(name('S04'), async ({ page }) => {
     const { id, run } = givenRun();
     await signInAs(page, ME);
     await followIn(page, id, run, 'Fetch');
@@ -1057,8 +1047,7 @@ test.describe('shared-run-retry-controls', () => {
     });
   });
 
-  // Still pending, old: "Run (New Work Order)" from the IDE runs with an empty input, not the input the retry used (unconfirmed)
-  test(name('S05'), PENDING, async ({ page }) => {
+  test(name('S05'), async ({ page }) => {
     const { id, run } = givenRun(
       { [ME]: 'editor' },
       { steps: [{ name: 'Fetch', output: { patients: 3 } }, { name: 'Load' }] }
@@ -1076,7 +1065,7 @@ test.describe('shared-run-retry-controls', () => {
     );
   });
 
-  test(name('S06'), PASSING_OLD, async ({ page }) => {
+  test(name('S06'), async ({ page }) => {
     const { id, run } = givenRun();
     await signInAs(page, ME);
     await followIn(page, id, run, 'Fetch');
@@ -1086,7 +1075,7 @@ test.describe('shared-run-retry-controls', () => {
   });
 
   // Stand-in: a step with a blank name, written into the shared document
-  test(name('S08'), PASSING_OLD, async ({ page }) => {
+  test(name('S08'), async ({ page }) => {
     const { wf } = givenIntake();
     const sock = await watchEditorSocket(page);
     await openAs(page, wf, 'Fetch');
@@ -1096,7 +1085,7 @@ test.describe('shared-run-retry-controls', () => {
     await runRetry.S08(page, ideHeader(page), wf.id);
   });
 
-  test(name('S09'), PASSING_OLD, async ({ page }) => {
+  test(name('S09'), async ({ page }) => {
     setPreferences(ME, { experimental_features: true });
     const { wf, by } = givenIntake({ [ME]: 'editor' }, { enabled: false });
     goLiveOnNode(wf.id, by);
@@ -1109,7 +1098,7 @@ test.describe('shared-run-retry-controls', () => {
   // Examples, one step each; the pinned row comes after the others, since
   // its new version is saved outside the editor. The deleted row is its own
   // test.
-  test(name('S10'), PASSING_OLD, async ({ page }) => {
+  test(name('S10'), async ({ page }) => {
     const why = runRetry.given.S10;
     const h = givenIntake({ [ME]: 'viewer' });
     const sock = await watchEditorSocket(page);
@@ -1134,16 +1123,14 @@ test.describe('shared-run-retry-controls', () => {
     });
   });
 
-  // Still pending, old: an open editor leaves for the workflow list when its workflow is deleted, so no reason is shown
-  test(`${name('S10')}, deleted`, PENDING, async ({ page }) => {
+  test(`${name('S10')}, deleted`, async ({ page }) => {
     const { wf } = givenIntake();
     await openAs(page, wf, 'Fetch');
     deleteWorkflowOnNode(wf.id, OWNER);
     await runRetry.S10(page, ideHeader(page), runRetry.given.S10.deleted);
   });
 
-  // Still pending, old: the run button's text still holds "Processing" after the run has finished (unconfirmed: may be hidden text)
-  test(name('S13'), PENDING, async ({ page }) => {
+  test(name('S13'), async ({ page }) => {
     const { wf } = givenIntake();
     // The e2e worker finishes a run at once; a slow first step keeps it
     // processing long enough to see

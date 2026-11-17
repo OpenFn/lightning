@@ -1,9 +1,5 @@
 // Steps shared by annotation scenarios. They drive the real pages and read and
 // seed the e2e database that the verify-lightning instance runs on.
-//
-// TARGET=demo runs the same specs against the openfn-ia-demo replica instead:
-// hash routes, one fixed signed-in user, static fixtures and no server. A
-// step it can't honour skips the test and says why.
 import { execFileSync, spawn } from 'node:child_process';
 import { createHmac, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -21,15 +17,6 @@ import {
 } from '@playwright/test';
 
 import { forWorker, WORKER, workerManifest } from './workers';
-
-const onDemo = process.env.TARGET === 'demo';
-
-/** Skips the running test on the demo, which has no database or server. */
-function lightningOnly(reason: string) {
-  if (!onDemo) return;
-  console.log(`skipped on demo: ${reason}`);
-  test.skip(true, reason);
-}
 
 const MANIFEST = process.env.LIGHTNING_MANIFEST || workerManifest(WORKER);
 const DB =
@@ -64,7 +51,6 @@ export function user(email: string): ManifestUser {
 
 /** Runs a query and returns its rows. Values must not come from user input. */
 export function sql<T = Record<string, unknown>>(query: string): T[] {
-  lightningOnly('needs the database');
   const out = execFileSync(
     PSQL,
     [
@@ -82,7 +68,6 @@ export function sql<T = Record<string, unknown>>(query: string): T[] {
 
 /** Runs a statement that changes the database (Given steps only). */
 export function exec(statement: string) {
-  lightningOnly('needs the database');
   execFileSync(PSQL, [DB, '-AtX', '-v', 'ON_ERROR_STOP=1', '-c', statement], {
     encoding: 'utf8',
   });
@@ -90,7 +75,6 @@ export function exec(statement: string) {
 
 // Given I am signed in as "<email>"
 export async function signInAs(page: Page, email: string, password = PASSWORD) {
-  if (onDemo) return; // the demo is always signed in as its one user
   await page.goto('/users/log_in');
   // Signed in already, as someone: the form is skipped, so sign out first
   if (!new URL(page.url()).pathname.startsWith('/users/log_in')) {
@@ -120,24 +104,19 @@ export async function liveViewJoined(page: Page) {
 
 // When I open "<path>" — waits for the LiveView socket to join
 export async function open(page: Page, path: string) {
-  if (onDemo) return void (await page.goto(`#${path}`));
   await page.goto(path);
   await liveViewJoined(page);
 }
 
 // When I reload the page
 export async function reload(page: Page) {
-  lightningOnly('needs a reload that keeps state: demo tokens live in memory');
   await page.reload();
   await liveViewJoined(page);
 }
 
 // Then I am on "<path>"
 export async function expectAt(page: Page, path: string | RegExp) {
-  const at = () => {
-    const url = new URL(page.url());
-    return onDemo ? url.hash.slice(1) : url.pathname;
-  };
+  const at = () => new URL(page.url()).pathname;
   if (typeof path === 'string') await expect.poll(at).toBe(path);
   else await expect.poll(at).toMatch(path);
 }
@@ -150,7 +129,6 @@ export type ApiToken = {
 };
 
 export function apiTokensOf(email: string): ApiToken[] {
-  lightningOnly('needs the database: user_tokens');
   return sql<ApiToken>(
     `select id, convert_from(token, 'UTF8') as token, inserted_at, last_used_at
      from user_tokens where context = 'api' and user_id = '${user(email).id}'
@@ -160,7 +138,6 @@ export function apiTokensOf(email: string): ApiToken[] {
 
 // Given "<email>" has no API tokens
 export function removeApiTokensOf(email: string) {
-  lightningOnly('needs seeded state: no API tokens');
   exec(
     `delete from user_tokens where context = 'api' and user_id = '${user(email).id}'`
   );
@@ -168,7 +145,6 @@ export function removeApiTokensOf(email: string) {
 
 // Given "<email>" has an API token
 export function seededApiTokenOf(email: string) {
-  lightningOnly("needs seeded state: another user's API token");
   const [token] = apiTokensOf(email);
   expect(token, `${email} should have the seeded API token`).toBeTruthy();
   return token;
@@ -180,7 +156,6 @@ export function setApiTokenTimes(
   token: string,
   times: { inserted_at?: string; last_used_at?: string }
 ) {
-  lightningOnly('needs seeded state: token created and last-used times');
   const set = Object.entries(times).map(
     ([column, at]) => `${column} = '${at}'`
   );
@@ -195,7 +170,6 @@ export function setApiTokenTimes(
 // A modal without one gets the page's delete event sent straight down the
 // LiveView socket.
 export async function confirmDeletionNaming(page: Page, id: string) {
-  lightningOnly('needs a server: the delete has nothing to reach');
   const yes = page.getByRole('button', { name: 'Yes' });
   await expect(yes).toBeVisible();
   if (await yes.getAttribute('phx-value-id')) {
@@ -223,7 +197,6 @@ const passwordHashOf = (email: string) =>
 
 // Captures "<email>"'s password now; the returned function puts it back.
 export function keepPassword(email: string) {
-  lightningOnly('needs the database: a password change');
   const hash = passwordHashOf(email);
   return () =>
     exec(
@@ -335,7 +308,6 @@ export function getWithBearer(
   path: string,
   token: string
 ) {
-  lightningOnly('needs a server: the API');
   return request.get(path, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -412,7 +384,6 @@ const literal = (v: string | boolean | null) =>
 // preference, sign-up time, disabled flag and MFA state; the returned
 // function puts them back and drops any pending email change.
 export function keepAccount(email: string) {
-  if (onDemo) return () => {};
   const { id } = user(email);
   const columns = [
     'first_name',
@@ -479,7 +450,6 @@ export type Mail = { to: string[]; subject: string; text: string | null };
 
 // The mail the instance has sent, newest first, from Swoosh's dev mailbox
 export async function mailbox(request: APIRequestContext): Promise<Mail[]> {
-  lightningOnly('needs a server: the dev mailbox');
   const res = await request.get('/dev/mailbox/json');
   expect(res.ok(), '/dev/mailbox/json should answer').toBe(true);
   const { data } = (await res.json()) as {
@@ -497,7 +467,6 @@ export async function mailbox(request: APIRequestContext): Promise<Mail[]> {
 // result. The node shares ~/.erlang.cookie with this machine. The code goes in
 // as an Elixir string literal, so its own `#{` is escaped to reach the node.
 export function onNode(expr: string) {
-  lightningOnly('needs a server: the Lightning node');
   const node = process.env.LIGHTNING_NODE || 'lightning_e2e@127.0.0.1';
   const literal = JSON.stringify(expr).replace(/#\{/g, '\\#{');
   return execFileSync(
@@ -668,7 +637,6 @@ export async function sortByColumnNamed(
   header: string,
   column: string
 ) {
-  lightningOnly('needs a server: the event has nothing to reach');
   await clickable(page.getByRole('columnheader'), header).evaluate(
     (el, by) =>
       (window as unknown as { liveSocket: LiveSocket }).liveSocket.execJS(
@@ -730,7 +698,6 @@ export async function submittingExtraField(
   name: string,
   value: string
 ) {
-  lightningOnly('needs a server: the request has nothing to reach');
   let armed = false;
   let added = 0;
   // [join_ref, ref, topic, "event", { type, event, value }]
@@ -801,7 +768,6 @@ export function experimentalSwitch(page: Page) {
 // "false", which the rendered form never does: the checkbox under the switch
 // is repointed, then the switch is clicked.
 export async function switchSendingValue(page: Page, value: string) {
-  lightningOnly('needs a server: the event has nothing to reach');
   await page
     .locator('form[phx-change="update_preferences"] input[type="checkbox"]')
     .evaluate((el, value) => ((el as HTMLInputElement).value = value), value);
@@ -878,24 +844,6 @@ export function seedAuditEvent(seed: AuditEventSeed) {
           ${json(seed.metadata ?? {})},
           ${seed.insertedAt ? `'${seed.insertedAt}'` : "now() at time zone 'utc'"})`);
   return { itemId, actorId };
-}
-
-// The status tag of a shared test generated in a loop: @passing-old for the
-// ids that passed on this page (and @passing-new when they pass on the port
-// too), @pending for the rest.
-export function tagFor(id: string, passing: readonly string[]): string;
-export function tagFor(
-  id: string,
-  passing: readonly string[],
-  onPort: true
-): string | string[];
-export function tagFor(
-  id: string,
-  passing: readonly string[],
-  onPort = false
-): string | string[] {
-  if (!passing.includes(id)) return '@pending';
-  return onPort ? ['@passing-old', '@passing-new'] : '@passing-old';
 }
 
 // ---------------------------------------------------------------------------
@@ -1476,7 +1424,6 @@ export async function sendEventFrom(
   event: string,
   values: Record<string, string> = {}
 ) {
-  lightningOnly('needs a server: the event has nothing to reach');
   const link = page
     .getByRole('columnheader')
     .getByRole('link', { name: header });
@@ -1499,7 +1446,6 @@ export async function sendingValues(
   page: Page,
   values: Record<string, string>
 ) {
-  lightningOnly('needs a server: the event has nothing to reach');
   let armed = false;
   let changed = 0;
   // [join_ref, ref, topic, "event", { type, event, value }]
@@ -1734,7 +1680,6 @@ export function connectJobs(wf: SeededWorkflow, order: string[]) {
 // When a webhook request reaches the workflow's trigger (connectJobs made it),
 // which makes a new work order. Returns once Lightning has accepted it.
 export async function postWebhook(page: Page, wf: SeededWorkflow) {
-  lightningOnly('needs a server: a webhook has nothing to reach');
   const [trigger] = sql<{ id: string }>(
     `select id from triggers where workflow_id = '${wf.id}' and type = 'webhook'`
   );
@@ -1748,7 +1693,6 @@ export async function postWebhook(page: Page, wf: SeededWorkflow) {
 // run logs waits for it. Returns the function that lets go. Nothing else may
 // read log lines meanwhile: the test using this is @serial.
 export async function lockLogLines(): Promise<() => void> {
-  lightningOnly('needs the database');
   const holder = spawn(PSQL, [DB, '-AtX', '-v', 'ON_ERROR_STOP=1'], {
     stdio: ['pipe', 'pipe', 'inherit'],
   });
@@ -2066,7 +2010,6 @@ export async function pushEvent(
   value: Record<string, unknown>,
   target?: string
 ) {
-  lightningOnly('needs a server: the request has nothing to reach');
   const before = lv.events();
   await page
     .locator('[data-phx-main]')
@@ -2649,7 +2592,6 @@ export async function sendSandboxRequest(
   lv: ReturnType<typeof watchLiveView>,
   request: SandboxRequest
 ) {
-  lightningOnly('needs a server: the request has nothing to reach');
   // The page's LiveView root: a modal hides the rest of the page from the
   // accessibility tree
   const from = page.locator('[data-phx-main]');
@@ -4729,7 +4671,6 @@ export function putWithBearer(
   token: string,
   body: Record<string, unknown>
 ) {
-  lightningOnly('needs a server: the API');
   return request.put(path, {
     headers: { Authorization: `Bearer ${token}` },
     data: body,

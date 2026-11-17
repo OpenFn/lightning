@@ -44,15 +44,6 @@ const ME = 'editor@openfn.org';
 const OWNER = 'owner@openfn.org';
 const AMARA = 'super@openfn.org';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {};
-const tags = (key: string, serial = false) => ({
-  tag: [
-    key in STILL_PENDING ? '@pending' : '@passing-old',
-    ...(serial ? ['@serial'] : []),
-  ],
-});
-
 // A page that has to react to something happening elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 
@@ -100,7 +91,7 @@ async function amaraOpens(
 //   Then I see "Workflow updated"
 //   And eventually the second tab's workflow switch is <after>
 //   Examples: enabled -> off; disabled -> on
-test('@S01', tags('S01'), async ({ page, browser }) => {
+test('@S01', async ({ page, browser }) => {
   await signInAs(page, ME);
   for (const enabled of [true, false])
     await test.step(`trigger ${enabled ? 'enabled' : 'disabled'}`, async () => {
@@ -130,7 +121,7 @@ test('@S01', tags('S01'), async ({ page, browser }) => {
 //   When I switch "Intake" off on the workflows list
 //   And "amara@example.org" renames a job and saves
 //   Then "Intake" still has its trigger disabled
-test('@S02', tags('S02'), async ({ page, browser }) => {
+test('@S02', async ({ page, browser }) => {
   const wf = givenIntake({ enabled: true });
   goLiveOnNode(wf.id, OWNER);
   const amara = await amaraOpens(browser, wf);
@@ -157,7 +148,7 @@ test('@S02', tags('S02'), async ({ page, browser }) => {
 // The version she reads is the one saved before a later rename, trigger on.
 // A version view draws no switch, so the trigger is read from the copy of the
 // workflow the server sent her page.
-test('@S03', tags('S03'), async ({ page, browser }) => {
+test('@S03', async ({ page, browser }) => {
   const wf = givenIntake({ enabled: true });
   const older = storedWorkflow(wf.id).lock_version;
   renameStepOnNode(wf.id, 'Load', 'Load v2', OWNER);
@@ -188,7 +179,7 @@ test('@S03', tags('S03'), async ({ page, browser }) => {
 //   Then I see "No more workflows"
 //   And the editor's workflow switch stays off
 // The limiter is instance-wide, so this runs alone.
-test('@S04', tags('S04', true), async ({ page, browser }) => {
+test('@S04', { tag: ['@serial'] }, async ({ page, browser }) => {
   cleanups.push(withRefusingLimiter('No more workflows'));
   const wf = givenIntake({ enabled: false });
   const amara = await amaraOpens(browser, wf);

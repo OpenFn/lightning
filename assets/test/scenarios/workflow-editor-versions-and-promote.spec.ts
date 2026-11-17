@@ -166,10 +166,6 @@ const BEN = 'super@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-const PENDING = { tag: '@pending' };
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_OLD_SERIAL = { tag: ['@passing-old', '@serial'] };
-
 const LIMIT = 'Your plan allows no more sandboxes.';
 
 let cleanups: (() => void)[] = [];
@@ -252,7 +248,7 @@ const copyPath = (projectId: string, name = 'Intake') =>
 //   When I pick "latest"
 //   Then the pin is removed and I am back on the editable workflow
 // The chip's colour is not checked: it says the same as its label.
-test('@S01', PASSING_OLD, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { wf, by } = givenIntake();
   saveRenameOnNode(wf.id, 'Load', 'Load b', by);
   saveRenameOnNode(wf.id, 'Load b', 'Load c', by);
@@ -290,7 +286,7 @@ test('@S01', PASSING_OLD, async ({ page }) => {
 //   And ordinary saves are not listed
 // The green pill (which publish is live) is not checked by colour; v4 being
 // first under "Latest" says the same.
-test('@S02', PASSING_OLD, async ({ page }) => {
+test('@S02', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   const fixDates = provisionSandboxOnNode(id, 'fix-dates', by);
@@ -336,7 +332,7 @@ test('@S02', PASSING_OLD, async ({ page }) => {
 //   When I pick "Latest"
 //   Then the pin is removed
 // The row's mark is a check icon; the chip reading "v1" says the same.
-test('@S03', PASSING_OLD, async ({ page }) => {
+test('@S03', async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake();
   givenTwoPublishes(wf, by);
@@ -372,7 +368,7 @@ test('@S03', PASSING_OLD, async ({ page }) => {
 //     | draft | in an ordinary project | saves     |
 //     | live  | in a sandbox           | saves     |
 // Each list is told apart by its numbers: publish numbers or save numbers.
-test('@S04', PASSING_OLD, async ({ page }) => {
+test('@S04', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   const sandbox = provisionSandboxOnNode(id, 'dev', by);
@@ -401,7 +397,7 @@ test('@S04', PASSING_OLD, async ({ page }) => {
 //   Then "v=5" is removed from the URL without adding a history entry
 // The link names save 1, which exists: a save that doesn't exist leaves the
 // editor with no workflow to read the state from.
-test('@S05', PASSING_OLD, async ({ page }) => {
+test('@S05', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -429,7 +425,7 @@ test('@S05', PASSING_OLD, async ({ page }) => {
 // features). The failing save is tried first, so the same edit is then saved;
 // saves fail while the adaptor catalogue is unavailable, which is
 // instance-wide.
-test('@S06', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake();
   saveRenameOnNode(wf.id, 'Load', 'Load b', by);
@@ -470,7 +466,7 @@ test('@S06', PASSING_OLD_SERIAL, async ({ page }) => {
 //   And I open the version chip again
 //   Then the list is fetched again and includes the new save
 // Also shared-editor-session S07 in this view's terms.
-test('@S07', PASSING_OLD, async ({ page, browser }) => {
+test('@S07', async ({ page, browser }) => {
   const { wf } = givenIntake({ [ME]: 'editor', [BEN]: 'editor' });
   await openAs(page, wf);
   await openVersions(page);
@@ -503,7 +499,7 @@ test('@S07', PASSING_OLD, async ({ page, browser }) => {
 //   When I close and reopen the chip
 //   Then the versions are requested again
 // Stand-in: the server's refusal of the version list is given in its place.
-test('@S08', PASSING_OLD, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const { wf } = givenIntake();
   const room = await standInRoom(page);
   room.refuse('versions');
@@ -536,8 +532,7 @@ test('@S08', PASSING_OLD, async ({ page }) => {
 //   And "Intake" is still live with v1's job bodies
 //   And the version list shows a new v3 "Restored v1"
 //   And choosing "Restore" did not also pin v1
-// Still pending, old: the version list doesn't show the restore's new publish v3, even reopened (unconfirmed)
-test('@S09', PENDING, async ({ page }) => {
+test('@S09', async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake();
   givenTwoPublishes(wf, by);
@@ -573,7 +568,7 @@ test('@S09', PENDING, async ({ page }) => {
 //   And I see "One trigger comes back switched off" naming "a scheduled trigger", explaining that a version does not record its authentication
 // Stand-in: the check's answer is held back until the first Then is read.
 // Webhook paths are unique on the instance, so "payments" carries a suffix.
-test('@S10', PASSING_OLD, async ({ page }) => {
+test('@S10', async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake({ [ME]: 'editor' }, { trigger: 'cron' });
   goLiveOnNode(wf.id, by);
@@ -610,7 +605,7 @@ test('@S10', PASSING_OLD, async ({ page }) => {
 //   Then no row offers "Restore"
 //   And a restore request sent anyway is refused with a permission message
 // The request sent anyway is checked by its effect: nothing restored.
-test('@S11', PASSING_OLD, async ({ page }) => {
+test('@S11', async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake({ [ME]: 'viewer' });
   givenTwoPublishes(wf, by);
@@ -641,7 +636,7 @@ test('@S11', PASSING_OLD, async ({ page }) => {
 // Stand-in for the first row: a save landing in the middle of the restore is
 // a race no browser can time, so the server's refusal for it is given in its
 // place. The second row is real: v1's publish is removed before I confirm.
-test('@S12', PASSING_OLD, async ({ page }) => {
+test('@S12', async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake();
   givenTwoPublishes(wf, by);
@@ -681,7 +676,7 @@ test('@S12', PASSING_OLD, async ({ page }) => {
 //   And the panel stays expanded or collapsed the next time I open the editor
 // "When" and "how long" are relative texts that change by the minute; the
 // order says when.
-test('@S13', PASSING_OLD, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const { id, wf } = givenIntake({ [ME]: 'viewer' });
   const older = seedRunOn(wf, {
     inputId: anInput(id),
@@ -723,7 +718,7 @@ test('@S13', PASSING_OLD, async ({ page }) => {
 //     | loading history failed   | Failed to load history, with a "Retry" button that asks again |
 // Stand-in: the history request's answer is held back, then refused, in the
 // server's place. The panel stays expanded across reloads.
-test('@S14', PASSING_OLD, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const { wf } = givenIntake();
   const room = await standInRoom(page);
   await openAs(page, wf);
@@ -757,7 +752,7 @@ test('@S14', PASSING_OLD, async ({ page }) => {
 //   Then the pin is removed and "run" names that run
 //   And picking a work order with a single run picks that run
 // Each work order here has a single run, so expanding it picks it.
-test('@S15', PASSING_OLD, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const { id, wf, by } = givenIntake();
   const ran = seedRunOn(wf, { inputId: anInput(id), minutesAgo: 10 });
   saveRenameOnNode(wf.id, 'Load', 'Load b', by);
@@ -787,8 +782,7 @@ test('@S15', PASSING_OLD, async ({ page }) => {
 //   When I have unsaved changes in a sandbox or draft and pick a run of older content there
 //   Then I am asked before my edits are thrown away
 // The last two lines are tried on a draft, "Billing".
-// Still pending, old: on a draft, picking a run of older content only selects the run, so nothing is asked
-test('@S16', PENDING, async ({ page }) => {
+test('@S16', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -830,7 +824,7 @@ test('@S16', PENDING, async ({ page }) => {
 //   Then the canvas switches to save 3, asking first if I have unsaved changes
 // Without experimental features the switch never asks (6.2), so only the
 // switch is checked.
-test('@S17', PASSING_OLD, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const { id, wf, by } = givenIntake();
   const ran = seedRunOn(wf, { inputId: anInput(id) });
   saveRenameOnNode(wf.id, 'Load', 'Load b', by);
@@ -851,7 +845,7 @@ test('@S17', PASSING_OLD, async ({ page }) => {
 //   Given "Intake" has runs on v1 and on v2
 //   When I open v1 from the version chip
 //   Then the history panel lists only the work orders with runs on v1
-test('@S18', PASSING_OLD, async ({ page }) => {
+test('@S18', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -877,7 +871,7 @@ test('@S18', PASSING_OLD, async ({ page }) => {
 //   Then runs read "v2" or "unpublished" before the run id
 //   And on a draft they read the save number instead
 //   And without experimental features no tag is shown
-test('@S19', PASSING_OLD, async ({ page }) => {
+test('@S19', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   givenTwoPublishes(wf, by);
@@ -921,7 +915,7 @@ test('@S19', PASSING_OLD, async ({ page }) => {
 //   When I choose the run id
 //   Then I am taken to that run's page
 // Each link leaves the editor, which is opened again for the next one.
-test('@S20', PASSING_OLD, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const { id, wf } = givenIntake({ [ME]: 'viewer' });
   const r1 = seedRunOn(wf, { inputId: anInput(id) });
   const at = () => new URL(page.url());
@@ -959,7 +953,7 @@ test('@S20', PASSING_OLD, async ({ page }) => {
 //   Then a sandbox is created from the parent with this workflow's copy as a disabled draft
 //   And the flow "flow-edit-in-sandbox" has started for that sandbox's copy of "Intake"
 // A name is needed: checked by trying without one and seeing nothing made.
-test('@S21', PASSING_OLD, async ({ page }) => {
+test('@S21', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -997,7 +991,7 @@ test('@S21', PASSING_OLD, async ({ page }) => {
 //   When I instead edit it into something that is not a JSON object
 //   Then I see "This needs to be a JSON object." or "This isn't valid JSON." and nothing is created
 // The refused edits are tried first: the good one leaves the page.
-test('@S22', PASSING_OLD, async ({ page }) => {
+test('@S22', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -1047,7 +1041,7 @@ test('@S22', PASSING_OLD, async ({ page }) => {
 //   When I choose "This run's input" and "Continue"
 //   Then I see "This run's input was not kept, so there is nothing to copy." and "Continue" is disabled
 // That nothing can start from it is checked by trying again.
-test('@S23', PASSING_OLD, async ({ page }) => {
+test('@S23', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -1077,7 +1071,7 @@ test('@S23', PASSING_OLD, async ({ page }) => {
 //   Given the open run ran on v2 and v3 is live
 //   When I choose "This run's input"
 //   Then I see "This run used v2. The sandbox starts from v3, the version live now"
-test('@S24', PASSING_OLD, async ({ page }) => {
+test('@S24', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   givenTwoPublishes(wf, by);
@@ -1105,7 +1099,7 @@ test('@S24', PASSING_OLD, async ({ page }) => {
 //   Then I see "That saved input is no longer available in this project."
 // Stand-in for "removed": the input loses its name, which takes it out of
 // the project's named inputs. Tried before the create that leaves the page.
-test('@S25', PASSING_OLD, async ({ page }) => {
+test('@S25', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -1160,7 +1154,7 @@ test('@S25', PASSING_OLD, async ({ page }) => {
 //   And the section is hidden when no sandbox qualifies
 // The last line is checked first, on live workflow "Billing", which no
 // sandbox holds.
-test('@S26', PASSING_OLD, async ({ page }) => {
+test('@S26', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -1202,7 +1196,7 @@ test('@S26', PASSING_OLD, async ({ page }) => {
 //   Given the project already has a sandbox "trying-dates"
 //   When I create a sandbox named "Trying dates"
 //   Then I see "A sandbox with this name exists already." under the name field
-test('@S27', PASSING_OLD, async ({ page }) => {
+test('@S27', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -1229,7 +1223,7 @@ test('@S27', PASSING_OLD, async ({ page }) => {
 //   And I can still join a listed sandbox
 // The limiter is instance-wide. The lock is an icon; the tooltip says why.
 // The request sent anyway is checked by its effect: nothing made.
-test('@S28', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S28', { tag: ['@serial'] }, async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -1260,7 +1254,7 @@ test('@S28', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then "Edit in sandbox" is disabled with "You do not have permission to create a sandbox in this project."
 //   And listing or creating sandboxes is refused by the server
 //   And while I read an older publish as an editor, "Edit in sandbox" is disabled too
-test('@S29', PASSING_OLD, async ({ page }) => {
+test('@S29', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake({ [ME]: 'viewer' });
   givenTwoPublishes(wf, by);
@@ -1292,8 +1286,7 @@ test('@S29', PASSING_OLD, async ({ page }) => {
 // Experimental features lock a live workflow for me, so the unsaved change
 // is made by Ben (without them) in the shared copy, as shared-editor-session
 // S20 does. Also S20 in this view's terms.
-// Still pending, old: "Save and switch" on a live workflow with experimental features didn't save the colleague's edits, so the page stayed (unconfirmed)
-test('@S30', PENDING, async ({ page, browser }) => {
+test('@S30', async ({ page, browser }) => {
   experimental();
   experimental(BEN, false);
   const { id, wf, by } = givenIntake({ [ME]: 'editor', [BEN]: 'editor' });
@@ -1335,7 +1328,7 @@ test('@S30', PENDING, async ({ page, browser }) => {
 //   And the flow "flow-github-sync-actions" has started when I confirm
 // Confirming reaches GitHub, which the flow's own checks cover; this stops at
 // the dialog.
-test('@S31', PASSING_OLD, async ({ page }) => {
+test('@S31', async ({ page }) => {
   const { id, wf } = givenIntake();
   connectRepoOnNode(id, {
     repo: 'openfn/malawi-hiv',
@@ -1357,7 +1350,7 @@ test('@S31', PASSING_OLD, async ({ page }) => {
 //   Then the flow "flow-sandbox-merge" has started
 //   When I am reading an older save of it instead
 //   Then "Promote" is disabled with "You are reading the past. Promote acts on the current workflow."
-test('@S32', PASSING_OLD, async ({ page }) => {
+test('@S32', async ({ page }) => {
   experimental();
   const { id, by } = givenIntake();
   const sandbox = provisionSandboxOnNode(id, 'dev', by);
@@ -1383,7 +1376,7 @@ test('@S32', PASSING_OLD, async ({ page }) => {
 // Scenario: Any open view of the workflow counts as open for API writes
 //   Given I have "Intake" open on an older save
 //   Then the flow "flow-workflow-api-edit-conflict" treats "Intake" as open in the editor
-test('@S33', PASSING_OLD, async ({ page, request }) => {
+test('@S33', async ({ page, request }) => {
   const { id, wf, by } = givenIntake({ [ME]: 'viewer' });
   const older = storedWorkflow(wf.id).lock_version;
   saveRenameOnNode(wf.id, 'Load', 'Load b', by);
@@ -1407,8 +1400,7 @@ test('@S33', PASSING_OLD, async ({ page, request }) => {
 //   When I restore v1
 //   Then the flow "flow-restore-version-open-editor" has started for "Ben"
 // Ben, without experimental features, sees v1's content on his canvas.
-// Still pending, old: a colleague's canvas showed the restored content in one of three runs (unconfirmed)
-test('@S34', PENDING, async ({ page, browser }) => {
+test('@S34', async ({ page, browser }) => {
   experimental();
   experimental(BEN, false);
   const { wf, by } = givenIntake({ [ME]: 'editor', [BEN]: 'editor' });
@@ -1435,7 +1427,7 @@ const ON = 'on workflow-editor-versions-and-promote';
 
 // @S14 Non-members can't join the room, here the rooms of a publish and of a
 // run shown as it executed
-test(`shared-editor-session@S14 ${ON}`, PASSING_OLD, async ({ page }) => {
+test(`shared-editor-session@S14 ${ON}`, async ({ page }) => {
   const { id, wf, by } = givenIntake({ [OWNER]: 'owner' });
   goLiveOnNode(wf.id, by);
   const run = seedRunOn(wf, { inputId: anInput(id) });
@@ -1455,7 +1447,7 @@ test(`shared-editor-session@S14 ${ON}`, PASSING_OLD, async ({ page }) => {
 });
 
 // @S03 Joining a sandbox I'm not a member of says the project was not found
-test(`shared-project-scope@S03 ${ON}`, PASSING_OLD, async ({ page }) => {
+test(`shared-project-scope@S03 ${ON}`, async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -1472,7 +1464,7 @@ test(`shared-project-scope@S03 ${ON}`, PASSING_OLD, async ({ page }) => {
 
 // @S05 The run input "Edit in sandbox" loads is refused for a run and a
 // dataclip of a project I'm not on
-test(`shared-dataclip-body-viewer@S05 ${ON}`, PASSING_OLD, async ({ page }) => {
+test(`shared-dataclip-body-viewer@S05 ${ON}`, async ({ page }) => {
   const { id } = givenIntake();
   const kenya = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   const theirs = seedEditorWorkflow(kenya.id, kenya.by);

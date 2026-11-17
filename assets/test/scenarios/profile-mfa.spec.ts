@@ -106,7 +106,7 @@ async function nextSignInAsksForCode(page: Page, me: SeededUser) {
 //   And I do not see "You have configured an authentication app to get two-factor authentication codes"
 //   And I do not see "Scan the QR code"
 //   And I do not see "Recovery codes"
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   await signedIn(page);
   await open(page, PAGE);
 
@@ -132,7 +132,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Your two-factor secret" and a secret in base32
 // Fails on Lightning: the switch is drawn on but tells assistive technology
 // nothing (a bare aria-checked), so it reads as off.
-test('@S02', { tag: '@passing-new' }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   await signedIn(page);
   await startSetup(page);
 
@@ -152,7 +152,7 @@ test('@S02', { tag: '@passing-new' }, async ({ page }) => {
 //   And I am on the two-factor backup codes page with a sudo token
 //   And my next sign-in asks for a two-factor code, as in flow "flow-login-return-to" S02
 //   And the flow "flow-require-project-mfa" continues to its exit if a project had stopped me
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const me = await signedIn(page);
   await startSetup(page);
 
@@ -174,7 +174,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "invalid code" under "Verify the code from the app"
 //   And I still see "Scan the QR code"
 //   And my account does not have MFA enabled
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const me = await signedIn(page);
   await startSetup(page);
   const secret = await secretKey(page);
@@ -199,7 +199,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I do not see "Scan the QR code"
 //   And the "Enable multi-factor authentication" switch is off
 //   And my account does not have MFA enabled
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const me = await signedIn(page);
   await startSetup(page);
 
@@ -221,7 +221,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And I do not see "Scan the QR code"
 // Fails on Lightning: the switch is drawn on but tells assistive technology
 // nothing (a bare aria-checked), so it reads as off.
-test('@S06', { tag: '@passing-new' }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const me = await signedIn(page);
   seedMfa(me);
   await open(page, PAGE);
@@ -255,7 +255,7 @@ test('@S06', { tag: '@passing-new' }, async ({ page }) => {
 //   And I see "MFA Setup"
 //   And codes from my old phone are no longer accepted
 //   And my recovery codes are unchanged
-test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const me = await signedIn(page);
   seedMfa(me);
   const codes = mfaOf(me).codes;
@@ -288,7 +288,7 @@ test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And the switch is off
 //   And I do not see "You have configured an authentication app to get two-factor authentication codes"
 //   And my next sign-in no longer asks for a two-factor code
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const me = await signedIn(page);
   seedMfa(me);
   await open(page, PAGE);
@@ -324,7 +324,7 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And my account still has MFA enabled
 // Fails on Lightning: the switch is drawn on but tells assistive technology
 // nothing (a bare aria-checked), so it reads as off.
-test('@S09', { tag: '@passing-new' }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const me = await signedIn(page);
   seedMfa(me);
   await open(page, PAGE);
@@ -345,7 +345,7 @@ test('@S09', { tag: '@passing-new' }, async ({ page }) => {
 //   When I click "View" under "Recovery codes"
 //   Then the flow "flow-reauth-backup-codes" has started
 // The flow starts by asking who I am, when no recent confirmation is held.
-test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const me = await signedIn(page);
   seedMfa(me);
   // Given no recent confirmation of who I am
@@ -369,24 +369,20 @@ test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 
 // Inherited from shared-flash-messages: the card's own messages.
 test.describe('shared-flash-messages', () => {
-  test(
-    'shared-flash-messages@S05 on profile-mfa',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      const me = await signedIn(page);
-      seedMfa(me);
-      await open(page, PAGE);
-      await flashMessages.S05(
-        page,
-        'MFA Disabled',
-        async () => {
-          await mfaSwitch(page).click();
-          await (await dialog(page, 'Disable MFA'))
-            .getByRole('button', { name: 'Disable', exact: true })
-            .click();
-        },
-        PAGE
-      );
-    }
-  );
+  test('shared-flash-messages@S05 on profile-mfa', async ({ page }) => {
+    const me = await signedIn(page);
+    seedMfa(me);
+    await open(page, PAGE);
+    await flashMessages.S05(
+      page,
+      'MFA Disabled',
+      async () => {
+        await mfaSwitch(page).click();
+        await (await dialog(page, 'Disable MFA'))
+          .getByRole('button', { name: 'Disable', exact: true })
+          .click();
+      },
+      PAGE
+    );
+  });
 });

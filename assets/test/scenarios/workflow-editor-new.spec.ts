@@ -114,10 +114,6 @@ const OWNER = 'owner@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-const PENDING = { tag: '@pending' };
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_OLD_SERIAL = { tag: ['@passing-old', '@serial'] };
-
 // A page that has to react to something done elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 // A save with the adaptor catalogue unavailable fails only once the server
@@ -252,7 +248,7 @@ const KOBO_SYNC = YAML.stringify({
 //   And I see a "Build from scratch" card and a "Browse templates" card
 //   And I see a link "import a YAML file manually"
 //   And the workflow header and canvas are not shown
-test('@S01', PASSING_OLD, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const id = givenProject();
 
   await openAs(page, id);
@@ -273,7 +269,7 @@ test('@S01', PASSING_OLD, async ({ page }) => {
 //   Then I am on "/projects/<Malawi HIV id>/w"
 //   And I see "You are not authorized to perform this action."
 // The flash is this mount's own, so shared-flash-messages S02 runs here.
-test('@S02', PASSING_OLD, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const id = givenProject({ [ME]: 'viewer' });
   await signInAs(page, ME);
 
@@ -290,7 +286,7 @@ test('@S02', PASSING_OLD, async ({ page }) => {
 //   And workflow "Lab results" with id "<lab id>" belongs to project "Kenya TB"
 //   When my editor joins the new workflow room for id "<lab id>" in project "Malawi HIV"
 //   Then the join is refused with "workflow not found"
-test('@S03', PASSING_OLD, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const malawi = givenProject();
   const kenya = givenProject({}, { name: 'Kenya TB' });
   const lab = seedEditorWorkflow(kenya, OWNER, { name: 'Lab results' });
@@ -317,8 +313,7 @@ test('@S03', PASSING_OLD, async ({ page }) => {
 //   And "Lab results" is not shown, and no settings, code, run or AI panel is open
 // A brand new workflow: building from it creates a workflow of its own and
 // leaves "Lab results" as it was.
-// Still pending, old: the settings panel named in the link is in the page under the landing screen (unconfirmed whether it can be seen)
-test('@S24', PENDING, async ({ page }) => {
+test('@S24', async ({ page }) => {
   const id = givenProject();
   const run = seedRun(
     id,
@@ -360,7 +355,7 @@ test('@S24', PENDING, async ({ page }) => {
 //   Then a workflow named "Untitled workflow" is saved with a webhook trigger, a step "Untitled step" on "@openfn/language-common@latest" and an always edge between them
 //   And the address becomes "/projects/<Malawi HIV id>/w/<new id>"
 //   And the landing screen is gone and the workflow editor (workflow-editor-canvas) shows the new workflow
-test('@S04', PASSING_OLD, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const id = givenProject();
   await openAs(page, id);
 
@@ -390,7 +385,7 @@ test('@S04', PASSING_OLD, async ({ page }) => {
 //   Then the "Build from scratch" card is disabled until the save finishes
 //   And exactly one workflow is created
 // The second click is forced: a user's click lands on a disabled card too.
-test('@S05', PASSING_OLD, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const id = givenProject();
   const sock = await watchEditorSocket(page);
   await openAs(page, id);
@@ -420,8 +415,7 @@ test('@S05', PASSING_OLD, async ({ page }) => {
 //     | still connecting     | Still connecting |
 // Still connecting first: the server's answer to the join is held back.
 // Then it is let through, and the connection dropped.
-// Still pending, old: says "Not connected" while the first join is still waiting, not "Still connecting"
-test('@S06', PENDING, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const id = givenProject();
   const sock = await watchEditorSocket(page);
   await signInAs(page, ME);
@@ -457,7 +451,7 @@ test('@S06', PENDING, async ({ page }) => {
 //   When the server recovers and I click "Retry"
 //   Then the workflow is saved and the editor shows it at "/projects/<Malawi HIV id>/w/<new id>"
 // The adaptor catalogue is instance-wide
-test('@S07', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S07', { tag: ['@serial'] }, async ({ page }) => {
   test.setTimeout(240000);
   const id = givenProject();
   await openAs(page, id);
@@ -488,7 +482,7 @@ test('@S07', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then the new workflow is named "Event-based workflow 1"
 //   When I go back to the landing screen and click "Build from scratch"
 //   Then the new workflow is named "Untitled workflow 1"
-test('@S08', PASSING_OLD, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const id = givenProject();
   seedEditorWorkflow(id, OWNER, { name: 'Event-based workflow' });
   seedEditorWorkflow(id, OWNER, { name: 'Untitled workflow' });
@@ -513,7 +507,7 @@ test('@S08', PASSING_OLD, async ({ page }) => {
 //   Then the workflow is created
 //   And its webhook trigger is saved disabled
 // The usage limiter is instance-wide
-test('@S27', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S27', { tag: ['@serial'] }, async ({ page }) => {
   const id = givenProject();
   cleanups.push(withRefusingLimiter());
   await openAs(page, id);
@@ -537,7 +531,7 @@ test('@S27', PASSING_OLD_SERIAL, async ({ page }) => {
 //   And then "Appointment reminders" and "Kobo to DHIS2"
 //   And "Event-based workflow" is previewed as a diagram with its name and description
 // Templates are listed from the whole instance
-test('@S09', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S09', { tag: ['@serial'] }, async ({ page }) => {
   const id = givenProject();
   givenTemplate(id, { name: 'Kobo to DHIS2' });
   givenTemplate(id, { name: 'Appointment reminders' });
@@ -571,7 +565,7 @@ test('@S09', PASSING_OLD_SERIAL, async ({ page }) => {
 //   When I click "Scheduled workflow"
 //   Then the preview shows "Scheduled workflow" and its description
 //   And no workflow has been created
-test('@S10', PASSING_OLD, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const id = givenProject();
   await openAs(page, id);
   await browseTemplates(page);
@@ -595,7 +589,7 @@ test('@S10', PASSING_OLD, async ({ page }) => {
 //   When I search for "zzz"
 //   Then I see "No saved templates match your search."
 // Templates are listed from the whole instance
-test('@S11', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S11', { tag: ['@serial'] }, async ({ page }) => {
   const id = givenProject();
   givenTemplate(id, { name: 'Kobo to DHIS2', tags: ['survey'] });
   givenTemplate(id, { name: 'Appointment reminders' });
@@ -629,7 +623,7 @@ test('@S11', PASSING_OLD_SERIAL, async ({ page }) => {
 //   But if the save fails the dialog stays open and "Create" is enabled again
 // The save is held back to see it running; the failing save makes the
 // adaptor catalogue (instance-wide) unavailable.
-test('@S12', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S12', { tag: ['@serial'] }, async ({ page }) => {
   test.setTimeout(240000);
   const id = givenProject();
   const sock = await watchEditorSocket(page);
@@ -675,7 +669,7 @@ test('@S12', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then the preview says "This template can't be previewed." with the parse error
 //   And "Create" is disabled with the tooltip "This template can't be read."
 // Templates are listed from the whole instance
-test('@S13', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
   const id = givenProject();
   givenTemplate(id, { name: 'Broken', code: 'name: Broken\njobs: [' });
   await openAs(page, id);
@@ -702,7 +696,7 @@ test('@S13', PASSING_OLD_SERIAL, async ({ page }) => {
 //   When I open the template browser
 //   Then I see an alert "Failed to load templates" with "Please check your connection and try again."
 //   And "Event-based workflow" and "Scheduled workflow" are listed and can be created
-test('@S14', PASSING_OLD, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const id = givenProject();
   await failTemplateLoading(page);
   await openAs(page, id);
@@ -739,7 +733,7 @@ test('@S14', PASSING_OLD, async ({ page }) => {
 //   When I click "Create"
 //   Then a workflow "Kobo sync" is saved with the file's steps, triggers and edges
 //   And the dialog and the landing screen close and the editor shows the new workflow
-test('@S15', PASSING_OLD, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const id = givenProject();
   await openAs(page, id);
 
@@ -784,7 +778,7 @@ test('@S15', PASSING_OLD, async ({ page }) => {
 //     | "workflow.json"          | File must be .yml or .yaml format          |
 //     | a 9MB file "big.yaml"    | File size 9.0MB exceeds maximum of 8MB     |
 // One step per example; soft, so both are checked.
-test('@S16', PASSING_OLD, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const id = givenProject();
   await openAs(page, id);
   await importLink(page).click();
@@ -821,7 +815,7 @@ test('@S16', PASSING_OLD, async ({ page }) => {
 //   When I paste YAML whose edge refers to a step "load-data" that does not exist
 //   Then I see "Validation Error" with the code "JOB_NOT_FOUND" and "Job reference error: The job 'load-data' referenced in edge"
 //   And "Create" is disabled with the tooltip "Fix validation errors to continue"
-test('@S17', PASSING_OLD, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const id = givenProject();
   await openAs(page, id);
   await importLink(page).click();
@@ -866,7 +860,7 @@ test('@S17', PASSING_OLD, async ({ page }) => {
 //     | v1 (jobs, triggers, edges maps)          |
 //     | v2 (steps list)                          |
 // This is shared-workflow-yaml-format S01, run here for both formats.
-test('@S18', PASSING_OLD, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const id = givenProject();
   await signInAs(page, ME);
 
@@ -885,7 +879,7 @@ test('@S18', PASSING_OLD, async ({ page }) => {
 //   And afterwards the dialog is still open with my YAML and "Create" is enabled
 //   And the landing screen is still shown
 // The adaptor catalogue is instance-wide
-test('@S19', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   test.setTimeout(240000);
   const id = givenProject();
   await openAs(page, id);
@@ -918,7 +912,7 @@ test('@S19', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then the template browser is closed
 // With the template browser over the landing screen, the import dialog can
 // only be opened from the keyboard.
-test('@S25', PASSING_OLD, async ({ page }) => {
+test('@S25', async ({ page }) => {
   const id = givenProject();
   await openAs(page, id);
   await browseTemplates(page);
@@ -935,7 +929,7 @@ test('@S25', PASSING_OLD, async ({ page }) => {
 //   When I click "Cancel"
 //   Then the dialog closes and the landing screen is shown
 //   And the same happens when I press Escape or click "Close" on the template browser
-test('@S26', PASSING_OLD, async ({ page }) => {
+test('@S26', async ({ page }) => {
   const id = givenProject();
   await openAs(page, id);
   const backOnLanding = async () => {
@@ -979,7 +973,7 @@ test('@S26', PASSING_OLD, async ({ page }) => {
 //   Then the landing screen closes
 //   And the AI assistant panel opens and sends "Sync new KoboToolbox submissions into Postgres" (handoff to workflow-editor-ai-assistant)
 // The AI configuration is instance-wide
-test('@S20', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S20', { tag: ['@serial'] }, async ({ page }) => {
   const id = givenProject();
   cleanups.push(withAiAssistant());
   const goal = 'Sync new KoboToolbox submissions into Postgres';
@@ -1006,7 +1000,7 @@ test('@S20', PASSING_OLD_SERIAL, async ({ page }) => {
 //   When I type a first line and press Shift+Enter or Alt+Enter
 //   Then a new line is added and nothing is sent
 // The AI configuration is instance-wide
-test('@S21', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S21', { tag: ['@serial'] }, async ({ page }) => {
   const id = givenProject();
   cleanups.push(withAiAssistant());
   await openAs(page, id);
@@ -1042,7 +1036,7 @@ test('@S21', PASSING_OLD_SERIAL, async ({ page }) => {
 //   And I see "Build from scratch", "Browse templates" and "import a YAML file manually"
 // The e2e instance has no AI assistant; the tests that configure one are
 // @serial and run after this.
-test('@S22', PASSING_OLD, async ({ page }) => {
+test('@S22', async ({ page }) => {
   const id = givenProject();
 
   await openAs(page, id);
@@ -1063,7 +1057,7 @@ test('@S22', PASSING_OLD, async ({ page }) => {
 //   And hovering the prompt shows "AI usage limit reached for this month"
 //   And "Build from scratch" is enabled
 // The AI configuration and the usage limiter are instance-wide
-test('@S23', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S23', { tag: ['@serial'] }, async ({ page }) => {
   const limit = 'AI usage limit reached for this month';
   const id = givenProject();
   cleanups.push(withAiAssistant());
@@ -1088,12 +1082,12 @@ test.describe('shared-workflow-yaml-format', () => {
     `shared-workflow-yaml-format@${id} on workflow-editor-new`;
 
   // Page S18 calls it, for both formats
-  test(name('S01'), PENDING, () => {
+  test(name('S01'), () => {
     test.skip(true, 'run by page scenario S18');
   });
 
   // The code view of the seeded workflow gives the exported YAML
-  test(name('S02'), PASSING_OLD, async ({ page }) => {
+  test(name('S02'), async ({ page }) => {
     const id = givenProject();
     const original = yamlFormat.seedCanonicalWorkflow(id, OWNER);
     await signInAs(page, ME);
@@ -1104,7 +1098,7 @@ test.describe('shared-workflow-yaml-format', () => {
   });
 
   // Examples, one step each
-  test(name('S03'), PASSING_OLD, async ({ page }) => {
+  test(name('S03'), async ({ page }) => {
     const id = givenProject();
     await signInAs(page, ME);
     for (const example of yamlFormat.given.S03)
@@ -1113,13 +1107,13 @@ test.describe('shared-workflow-yaml-format', () => {
       );
   });
 
-  test(name('S04'), PASSING_OLD, async ({ page }) => {
+  test(name('S04'), async ({ page }) => {
     const id = givenProject();
     await signInAs(page, ME);
     await yamlFormat.S04(page, importOpener(page, id), id);
   });
 
-  test(name('S05'), PASSING_OLD, async ({ page }) => {
+  test(name('S05'), async ({ page }) => {
     const id = givenProject();
     await signInAs(page, ME);
     for (const example of yamlFormat.given.S05)
@@ -1128,7 +1122,7 @@ test.describe('shared-workflow-yaml-format', () => {
       );
   });
 
-  test(name('S06'), PASSING_OLD, async ({ page }) => {
+  test(name('S06'), async ({ page }) => {
     const id = givenProject();
     await signInAs(page, ME);
     for (const format of ['v1', 'v2'] as const)
@@ -1137,19 +1131,19 @@ test.describe('shared-workflow-yaml-format', () => {
       );
   });
 
-  test(name('S07'), PASSING_OLD, async ({ page }) => {
+  test(name('S07'), async ({ page }) => {
     const id = givenProject();
     await signInAs(page, ME);
     await yamlFormat.S07(page, importOpener(page, id), id);
   });
 
-  test(name('S08'), PASSING_OLD, async ({ page }) => {
+  test(name('S08'), async ({ page }) => {
     const id = givenProject();
     await signInAs(page, ME);
     await yamlFormat.S08(page, importOpener(page, id), id);
   });
 
-  test(name('S09'), PASSING_OLD, async ({ page }) => {
+  test(name('S09'), async ({ page }) => {
     const id = givenProject();
     await signInAs(page, ME);
     for (const example of yamlFormat.given.S09)
@@ -1157,7 +1151,7 @@ test.describe('shared-workflow-yaml-format', () => {
         yamlFormat.S09(page, importOpener(page, id), id, example));
   });
 
-  test(name('S10'), PASSING_OLD, async ({ page }) => {
+  test(name('S10'), async ({ page }) => {
     const id = givenProject();
     const lab = yamlFormat.seedCanonicalWorkflow(id, OWNER, {
       name: 'Lab results',
@@ -1177,7 +1171,7 @@ test.describe('shared-project-scope', () => {
   // Support users are instance-wide
   test(
     'shared-project-scope@S06 on workflow-editor-new',
-    PASSING_OLD_SERIAL,
+    { tag: ['@serial'] },
     async ({ page }) => {
       const id = givenProject(
         { [OWNER]: 'owner' },

@@ -144,11 +144,6 @@ const THIRD = 'super@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-const PENDING = { tag: '@pending' };
-const PENDING_SERIAL = { tag: ['@pending', '@serial'] };
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_OLD_SERIAL = { tag: ['@passing-old', '@serial'] };
-
 // A page that has to react to something done elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 
@@ -267,7 +262,7 @@ async function saveWorkflow(page: Page) {
 //   And hovering it shows "Your instance does not have build-time AI enabled. Contact your administrator or support@openfn.org to configure it."
 //   And Cmd/Ctrl+K does nothing
 // The key is taken off the running instance for this test, so it runs alone.
-test('@S01', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S01', { tag: ['@serial'] }, async ({ page }) => {
   cleanups.push(withoutAssistant());
   const { wf } = givenIntake();
   await signInAs(page, ME);
@@ -294,7 +289,7 @@ test('@S01', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then the panel closes and "chat", "w-chat" and "j-chat" leave the URL
 //   When I open "/projects/<id>/w/<Intake id>?chat=true"
 //   Then the panel is open on load
-test('@S02', PASSING_OLD, async ({ page }) => {
+test('@S02', async ({ page }) => {
   needsAssistant();
   const { wf } = givenIntake();
   await signInAs(page, ME);
@@ -330,7 +325,7 @@ test('@S02', PASSING_OLD, async ({ page }) => {
 //   Then the panel closes and its conversation is cleared from the URL
 //   And the AI button is disabled with "Switch to the latest version of this workflow to use the AI Assistant."
 // "Version 3" is the version before a later save.
-test('@S03', PASSING_OLD, async ({ page }) => {
+test('@S03', async ({ page }) => {
   needsAssistant();
   const { wf, by } = givenIntake();
   const pinned = storedWorkflow(wf.id).lock_version;
@@ -356,7 +351,7 @@ test('@S03', PASSING_OLD, async ({ page }) => {
 //   When I choose "About the AI Assistant" from the menu
 //   Then I see that messages are saved unencrypted, kept by Anthropic up to 30 days, not used for training, and shared with project collaborators
 //   And the menu links to "Responsible AI Policy"
-test('@S31', PASSING_OLD, async ({ page }) => {
+test('@S31', async ({ page }) => {
   needsAssistant();
   const { wf } = givenIntake();
   await openAs(page, wf);
@@ -396,7 +391,7 @@ test('@S31', PASSING_OLD, async ({ page }) => {
 //   And my message shows "Sent by <my name>"
 //   And the URL has "w-chat=<conversation id>"
 // The reply itself is not looked at: no stand-in answers it here.
-test('@S04', PASSING_OLD, async ({ page }) => {
+test('@S04', async ({ page }) => {
   needsAssistant();
   const { id, wf } = givenIntake();
   await openAs(page, wf);
@@ -424,7 +419,7 @@ test('@S04', PASSING_OLD, async ({ page }) => {
 //   And with the code editor open on "Clean data", the page sent is "workflows/Intake/Clean data"
 // The unsaved edit is "Fetch" renamed to "Clean data". The code editor half
 // opens the saved step "Load", since a reload starts from what is saved.
-test('@S05', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S05', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   const { wf } = givenIntake();
   await openAs(page, wf);
@@ -451,7 +446,7 @@ test('@S05', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then I see a status such as "Thinking..." while the assistant works
 //   And the reply text appears as it arrives and stays once complete
 //   And the message box is disabled until the reply is in
-test('@S06', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   const [first, second] = [gate(), gate()];
   apollo.replyWith([
@@ -490,7 +485,7 @@ test('@S06', PASSING_OLD_SERIAL, async ({ page }) => {
 //   When I click "Try again"
 //   Then the question is sent again and the button disappears
 // The stand-in drops the connection before any text.
-test('@S15', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S15', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(['cut'], answer('It loads patient records.'));
   const { wf } = givenIntake();
@@ -521,7 +516,7 @@ test('@S15', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Given the assistant's reply stops partway through
 //   Then the text that arrived stays on screen with the failure reason below it
 //   And it is still there after reload
-test('@S16', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S16', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith([chunk('Intake receives patient records and'), 'cut']);
   const { wf } = givenIntake();
@@ -553,7 +548,7 @@ test('@S16', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Given the assistant answers but could not apply its edit to a step's code
 //   Then the reply shows "I tried to update the code but couldn't apply the change." with "Try again"
 //   And "Try again" re-runs my question, and disappears once a later reply arrives
-test('@S17', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S17', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(
     answer('I updated Fetch.', { codeEditFailed: true }),
@@ -588,7 +583,7 @@ test('@S17', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then the message shows "The assistant was interrupted before it finished." with "Try again"
 //   And the message box is enabled again
 // The sweep runs over the whole instance.
-test('@S18', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S18', { tag: ['@serial'] }, async ({ page }) => {
   needsAssistant();
   const { wf } = givenIntake();
   const session = givenConversation(wf, 'What does Intake do?', ME, {
@@ -625,7 +620,7 @@ test('@S18', PASSING_OLD_SERIAL, async ({ page }) => {
 //   And the YAML is parsed and written as shared-workflow-yaml-format describes
 // How the YAML is parsed and written is shared-workflow-yaml-format's; its
 // S11 runs below on this apply.
-test('@S07', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S07', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   const held = gate();
   apollo.replyWith(req => {
@@ -654,7 +649,7 @@ test('@S07', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Given step "Send to DHIS2" uses credential "DHIS2 prod"
 //   When an applied reply rewrites "Send to DHIS2"
 //   Then "Send to DHIS2" still uses "DHIS2 prod"
-test('@S08', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S08', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(req =>
     answer(`I rewrote "${SEND}".`, {
@@ -699,7 +694,7 @@ test('@S08', PASSING_OLD_SERIAL, async ({ page }) => {
 //   When the reply carries a workflow
 //   Then it is applied and saved with errors only reported
 //   And a validation failure appears as an assistant message instead of a toast
-test('@S09', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S09', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(
     answer('Here is a workflow for patient intake.', {
@@ -738,7 +733,7 @@ test('@S09', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then I see "Not connected" with "Connect to the server before creating a workflow."
 //   And while the editor is still joining I see "Still connecting" instead
 //   And once I reconnect the workflow is applied and saved
-test('@S10', PENDING, () => {
+test('@S10', () => {
   test.skip(
     true,
     'the editor and the assistant share one connection, so a reply cannot arrive while the editor is offline'
@@ -757,7 +752,7 @@ test('@S10', PENDING, () => {
 //   Then the notice is gone and the server forgets the failure
 // The workflow cannot be applied because a step has no code. Before the
 // reload the stored reply's workflow is fixed, so the retry can succeed.
-test('@S11', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S11', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   let fixed = '';
   apollo.replyWith(req => {
@@ -808,7 +803,7 @@ test('@S11', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then I see "Reverting replaces the whole workflow" with "Revert anyway"
 //   And only the last settled reply offers "Revert changes"
 // Two replies, each adding a step; the second is the one reverted.
-test('@S12', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S12', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(
     req =>
@@ -858,7 +853,7 @@ test('@S12', PASSING_OLD_SERIAL, async ({ page }) => {
 //   When I click "Send to DHIS2" in the reply
 //   Then the code editor opens on "Send to DHIS2" (handoff to workflow-editor-ide)
 // Today the reply's step has an "Open" link beside its name.
-test('@S32', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S32', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(req =>
     answer(`I rewrote "${SEND}".`, {
@@ -893,8 +888,7 @@ test('@S32', PASSING_OLD_SERIAL, async ({ page }) => {
 //   And no reply is applied to the canvas
 //   And "Apply" is disabled with "Cannot apply workflow in readonly mode"
 //   And a job context update I send is refused with "unauthorized"
-// Still pending, old: the reply has no "Apply"; it lists its changes as made though the canvas is unchanged
-test('@S13', PENDING_SERIAL, async ({ page }) => {
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(req =>
     answer(`I added "${SEND}".`, { yaml: edited(req, addStep(SEND, 'Load')) })
@@ -930,7 +924,7 @@ test('@S13', PENDING_SERIAL, async ({ page }) => {
 //   When I click "Switch to draft"
 //   Then I see "This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."
 // Switching to draft itself is workflow-editor-canvas's; it is not confirmed.
-test('@S14', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S14', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(req =>
     answer(`I added "${SEND}".`, { yaml: edited(req, addStep(SEND, 'Load')) })
@@ -965,7 +959,7 @@ test('@S14', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then I see "AI usage limit reached for this month" at the top of the panel
 //   And the message box is disabled and hovering it shows the same text
 // The usage limiter is instance-wide.
-test('@S19', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   needsAssistant();
   const limit = 'AI usage limit reached for this month';
   cleanups.push(withLimiterRefusing('ai_usage', limit));
@@ -988,7 +982,7 @@ test('@S19', PASSING_OLD_SERIAL, async ({ page }) => {
 //   And my message is shown as failed and is not sent to the assistant
 //   And "Try again" checks the quota again before sending
 // In a conversation already open; the quota is still spent at "Try again".
-test('@S20', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S20', { tag: ['@serial'] }, async ({ page }) => {
   needsAssistant();
   const limit = 'AI usage limit reached for this month';
   const { wf } = givenIntake();
@@ -1023,7 +1017,7 @@ test('@S20', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then I see "9,500 / 10,000"
 //   When I type past 10,000 characters
 //   Then the counter says it is too long to send and "Send" is disabled
-test('@S26', PASSING_OLD, async ({ page }) => {
+test('@S26', async ({ page }) => {
   needsAssistant();
   const { wf } = givenIntake();
   await openAs(page, wf);
@@ -1056,7 +1050,7 @@ test('@S26', PASSING_OLD, async ({ page }) => {
 //   Then its messages load and the URL has its id
 //   And conversations from other workflows are not listed
 // Three of the 25 mention DHIS2; "Discharge" has one of its own.
-test('@S21', PASSING_OLD, async ({ page }) => {
+test('@S21', async ({ page }) => {
   needsAssistant();
   const { wf } = givenIntake();
   const discharge = seedEditorWorkflow(wf.projectId, OWNER, {
@@ -1106,7 +1100,7 @@ test('@S21', PASSING_OLD, async ({ page }) => {
 //   When viewer "Ben" opens its link
 //   Then "Ben" sees every message, each attributed to who sent it
 // The owner joined Amara's conversation, so two people sent messages in it.
-test('@S22', PASSING_OLD, async ({ page }) => {
+test('@S22', async ({ page }) => {
   needsAssistant();
   const { wf } = givenIntake({ [ME]: 'viewer', [THIRD]: 'editor' });
   const session = givenConversation(wf, 'How do I post to DHIS2?', THIRD, {
@@ -1146,7 +1140,7 @@ test('@S22', PASSING_OLD, async ({ page }) => {
 //     | an editor who has not enrolled in MFA, on an MFA project |
 // One step per example, each on a project of its own; soft, so every
 // example is checked. The support example comes last: I keep the flag.
-test('@S23', PASSING_OLD, async ({ page }) => {
+test('@S23', async ({ page }) => {
   needsAssistant();
   await signInAs(page, ME);
 
@@ -1191,7 +1185,7 @@ test('@S23', PASSING_OLD, async ({ page }) => {
 //   And the next time I open "Intake" "Send run data" is still ticked
 //   And with no run open neither box is offered
 // "Fetch" output 3 patients; the number must not reach the assistant.
-test('@S24', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S24', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   const { id } = givenProject();
   const run = seedRun(
@@ -1247,7 +1241,7 @@ test('@S24', PASSING_OLD_SERIAL, async ({ page }) => {
 //   Then run "X" is dropped and nothing from it is attached
 // Sent from a second connection, as the panel would send them, with both
 // boxes ticked.
-test('@S25', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S25', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   const { id, wf } = givenIntake();
   const other = givenProject({}, { name: 'Malawi TB' });
@@ -1293,7 +1287,7 @@ test('@S25', PASSING_OLD_SERIAL, async ({ page }) => {
 //   When the workflow is saved for the first time
 //   Then the conversation is listed under the saved workflow
 // The first save is the one the assistant's workflow gets (S09).
-test('@S27', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S27', { tag: ['@serial'] }, async ({ page }) => {
   const apollo = await givenApollo();
   apollo.replyWith(
     answer('Here is a workflow for patient intake.', {
@@ -1331,7 +1325,7 @@ test('@S27', PASSING_OLD_SERIAL, async ({ page }) => {
 //     | a support user with no role | an owner turns support access off      |
 // "Further messages" are a new join of the same conversation. The editor
 // page itself reacts too (shared-project-scope S07, S09).
-test('@S28', PASSING_OLD, async ({ page }) => {
+test('@S28', async ({ page }) => {
   needsAssistant();
   await signInAs(page, ME);
 
@@ -1369,7 +1363,7 @@ test('@S28', PASSING_OLD, async ({ page }) => {
 //   When my role changes to viewer
 //   Then my assistant channel stays open and I can still list conversations and send messages
 //   And a job context update I send is refused
-test('@S29', PASSING_OLD, async ({ page }) => {
+test('@S29', async ({ page }) => {
   needsAssistant();
   const { id, wf } = givenIntake();
   const session = givenConversation(wf, 'What does Intake do?', ME);
@@ -1402,7 +1396,7 @@ test('@S29', PASSING_OLD, async ({ page }) => {
 //   When instead the project is scheduled for deletion
 //   Then the flow "flow-schedule-project-deletion" ends here: my assistant channel closes (its S04)
 // The second half uses a conversation on "Discharge", since "Intake" is gone.
-test('@S30', PASSING_OLD, async ({ page }) => {
+test('@S30', async ({ page }) => {
   needsAssistant();
   const { id, wf } = givenIntake();
   const discharge = seedEditorWorkflow(id, OWNER, { name: 'Discharge' });
@@ -1437,7 +1431,7 @@ test.describe('shared-workflow-yaml-format', () => {
 
   // The assistant answers each question with the file it is given, which the
   // panel applies to the open "Intake"
-  test(name('S11'), PASSING_OLD_SERIAL, async ({ page }) => {
+  test(name('S11'), { tag: ['@serial'] }, async ({ page }) => {
     const apollo = await givenApollo();
     const { id } = givenProject();
     const intake = yamlFormat.seedCanonicalWorkflow(id, OWNER, {

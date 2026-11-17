@@ -20,7 +20,6 @@ import {
   seededApiTokenOf,
   setApiTokenTimes,
   signInAs,
-  tagFor,
 } from './steps';
 
 const ME = 'editor@openfn.org';
@@ -75,7 +74,7 @@ function stored(token: string) {
 //   And I see "No Personal Access Tokens" and "Get started by creating a new access token."
 //   And I see a "Generate New Token" button
 //   And the side menu marks "API Tokens" as current
-test('@S01', { tag: '@passing-old' }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   await signedInWithNoTokens(page);
 
   await expect(page).toHaveTitle(/Personal Access Tokens/);
@@ -103,7 +102,7 @@ test('@S01', { tag: '@passing-old' }, async ({ page }) => {
 //   And I see "Make sure to copy your token now as you will not be able to see it again."
 //   And the token field shows the full token
 //   And the token list has a new row showing "..." followed by the token's last 10 characters
-test('@S02', { tag: '@passing-old' }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   await signedIn(page);
   const rowsBefore = await tokenRows(page).count();
 
@@ -127,7 +126,7 @@ test('@S02', { tag: '@passing-old' }, async ({ page }) => {
 //   When I reload "/profile/tokens"
 //   Then I do not see the token field
 //   And the token's row shows only "..." followed by its last 10 characters
-test('@S03', { tag: '@passing-old' }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   await signedIn(page);
   const token = await generateToken(page);
 
@@ -146,7 +145,7 @@ test('@S03', { tag: '@passing-old' }, async ({ page }) => {
 //   When I click "Copy to clipboard"
 //   Then my clipboard holds the full token
 //   And I briefly see "Copied!"
-test('@S04', { tag: '@passing-old' }, async ({ page, context }) => {
+test('@S04', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await signedIn(page);
   const token = await generateToken(page);
@@ -166,7 +165,7 @@ test('@S04', { tag: '@passing-old' }, async ({ page, context }) => {
 //   When I open "/profile/tokens"
 //   Then the first token shows its "Created on" and "Last Used at" dates
 //   And the second token shows "Never used" under "Last Used at"
-test('@S05', { tag: '@passing-old' }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   await signedIn(page);
   const used = await generateToken(page);
   setApiTokenTimes(used, {
@@ -192,7 +191,7 @@ test('@S05', { tag: '@passing-old' }, async ({ page }) => {
 //   And I am signed in as "bob@example.org" with one API token
 //   When I open "/profile/tokens"
 //   Then the list has exactly one row, for my token
-test('@S06', { tag: '@passing-old' }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const amaras = seededApiTokenOf(AMARA);
   await signedInWithNoTokens(page);
   const mine = await generateToken(page);
@@ -216,7 +215,7 @@ test('@S06', { tag: '@passing-old' }, async ({ page }) => {
 //   And I see "Token deleted successfully"
 //   And the token's row is gone
 //   And the flow "flow-personal-access-token-use" refuses that token from now on
-test('@S07', { tag: '@passing-old' }, async ({ page, request }) => {
+test('@S07', async ({ page, request }) => {
   await signedIn(page);
   const token = await generateToken(page);
   expect((await getWithBearer(request, '/api/projects', token)).status()).toBe(
@@ -253,7 +252,7 @@ test('@S07', { tag: '@passing-old' }, async ({ page, request }) => {
 //   When I click "Cancel"
 //   Then I am on "/profile/tokens"
 //   And the token's row is still listed
-test('@S08', { tag: '@passing-old' }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   await signedIn(page);
   const token = await generateToken(page);
   await tokenRow(page, token).getByRole('link').click();
@@ -275,7 +274,7 @@ test('@S08', { tag: '@passing-old' }, async ({ page }) => {
 //   Then I am on "/profile/tokens"
 //   And I see "You can't perform this action"
 //   And I do not see "Delete API Access Token"
-test('@S09', { tag: '@passing-old' }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const amaras = seededApiTokenOf(AMARA);
   await signInAs(page, ME);
 
@@ -295,7 +294,7 @@ test('@S09', { tag: '@passing-old' }, async ({ page }) => {
 //   Then I am on "/profile/tokens"
 //   And I see "You can't perform this action"
 //   And both tokens still exist
-test('@S10', { tag: '@passing-old' }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   await signedIn(page);
   const mine = await generateToken(page);
   await tokenRow(page, mine).getByRole('link').click();
@@ -315,7 +314,7 @@ test('@S10', { tag: '@passing-old' }, async ({ page }) => {
 //   When the flow "flow-account-revocation-teardown" has run for my own password change
 //   And I open "/profile/tokens" again
 //   Then I see "No Personal Access Tokens"
-test('@S11', { tag: '@passing-old' }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const restorePassword = keepPassword(ME);
   try {
     await signedIn(page);
@@ -359,33 +358,27 @@ for (const column of Object.keys(columns) as (keyof typeof columns)[]) {
   test.describe(column, () => {
     test.describe(() => {
       test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-      test(
-        'shared-local-datetime@S01 on profile-tokens',
-        { tag: '@passing-old' },
-        async ({ page }) => {
-          const cell = await tokenTimestamp(
-            page,
-            column,
-            localDatetime.given.S01
-          );
-          await localDatetime.S01(page, cell);
-        }
-      );
+      test('shared-local-datetime@S01 on profile-tokens', async ({ page }) => {
+        const cell = await tokenTimestamp(
+          page,
+          column,
+          localDatetime.given.S01
+        );
+        await localDatetime.S01(page, cell);
+      });
     });
 
     for (const id of ['S02', 'S04', 'S05'] as const) {
-      test(
-        `shared-local-datetime@${id} on profile-tokens`,
-        { tag: tagFor(id, ['S01', 'S02', 'S04', 'S05']) },
-        async ({ page }) => {
-          const cell = await tokenTimestamp(
-            page,
-            column,
-            localDatetime.given[id]
-          );
-          await localDatetime[id](page, cell);
-        }
-      );
+      test(`shared-local-datetime@${id} on profile-tokens`, async ({
+        page,
+      }) => {
+        const cell = await tokenTimestamp(
+          page,
+          column,
+          localDatetime.given[id]
+        );
+        await localDatetime[id](page, cell);
+      });
     }
   });
 }

@@ -169,7 +169,7 @@ const NOT_AUTHORIZED = 'You are not authorized to perform this action.';
 //   Then I see a row for "lab-results" with destination "https://destination.example.com/data", requests "2" and a last activity time
 //   And I see a row for "idle" with requests "0" and last activity "Never"
 //   And each row shows whether the channel is enabled
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { id } = givenProject();
   givenChannel(id, {
     name: 'lab-results',
@@ -203,7 +203,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the channels page
 //   Then "Total channels" shows 2
 //   And "Total requests" shows 3
-test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const { id } = givenProject();
   givenChannel(id, {
     name: 'one',
@@ -224,7 +224,7 @@ test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the channels page on "Malawi HIV"
 //   Then I see "mine"
 //   And I do not see "theirs"
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const { id } = givenProject();
   const other = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   givenChannel(id, { name: 'mine' });
@@ -242,7 +242,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I click the proxy URL under "lab-results"
 //   Then my clipboard holds "<endpoint url>/channels/<lab-results id>"
 //   And the tooltip says "Copied!"
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const { id } = givenProject();
   const lab = givenChannel(id, { name: 'lab-results' });
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -262,7 +262,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I click the request count for "lab-results"
 //   Then I am on the channel logs with filters[channel_id] set to "lab-results"
 // The filtered list is owned by history-channel-logs.
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const { id } = givenProject();
   const lab = givenChannel(id, {
     name: 'lab-results',
@@ -283,7 +283,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 // Scenario: View all opens the channel logs for every channel
 //   When I click "View all" on the total requests card
 //   Then I am on the channel logs for project "Malawi HIV" with no channel filter
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const { id } = givenProject();
   givenChannel(id, { name: 'lab-results' });
 
@@ -302,7 +302,7 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the channels page
 //   Then "lab-results" shows requests "2" and a last activity time
 // The requests are seeded as already wiped; the wiping is owned by the flow.
-test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { id } = givenProject();
   givenChannel(id, {
     name: 'lab-results',
@@ -328,7 +328,7 @@ test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am back on the channels list with "Channel created successfully."
 //   And "new-channel" is listed and enabled
 //   And an audit event "created" is recorded for the channel with me as actor
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const { id } = givenProject();
 
   await onChannels(page, id);
@@ -349,7 +349,7 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I save with an empty name and an empty destination URL
 //   Then the form stays open with "can't be blank"
 //   And no channel is created
-test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const { id } = givenProject();
 
   await onChannels(page, id);
@@ -366,7 +366,7 @@ test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I am on the new channel form
 //   When I save with destination URL "ftp://example.com"
 //   Then the form stays open with "must be either a http or https URL"
-test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const { id } = givenProject();
 
   await onChannels(page, id);
@@ -385,7 +385,7 @@ test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given project "Malawi HIV" has channel "existing"
 //   When I create another channel named "existing"
 //   Then the form stays open with "A channel with this name already exists in this project"
-test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const { id } = givenProject();
   givenChannel(id, { name: 'existing' });
 
@@ -410,7 +410,7 @@ test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And an audit event "auth_method_added" is recorded
 //   When I create a channel with "None"
 //   Then that channel has no destination auth method
-test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const { id } = givenProject(
     { [ME]: 'editor' },
     { credentials: ['My API Key', 'OAuth Token'] }
@@ -453,7 +453,7 @@ test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the channel has one client auth method for "API Key Auth"
 //   And the flow "flow-channel-proxy-request" applies "API Key Auth" to requests on that channel
 // The last Then is owned by flow-channel-proxy-request.
-test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const { id } = givenProject();
   givenAuthMethod(id, 'API Key Auth');
   givenAuthMethod(id, 'Basic Auth');
@@ -496,7 +496,7 @@ function givenEditable() {
 //   Then the form shows name "edit-me" and destination URL "https://old.example.com"
 //   And "API Key Auth" is checked and "My API Key" is selected
 //   And the form shows the channel's proxy URL, which copies on click
-test('@S14', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const { id, channel } = givenEditable();
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
 
@@ -528,7 +528,7 @@ test('@S14', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am back on the list with "Channel updated successfully."
 //   And "updated-name" is listed
 //   And an audit event "updated" is recorded
-test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const { id, channel } = givenEditable();
 
   await onChannels(page, id);
@@ -551,7 +551,7 @@ test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I select "None" and save
 //   Then "c" has no destination auth method
 //   And an audit event "auth_method_removed" is recorded
-test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const { id } = givenProject(
     { [ME]: 'editor' },
     { credentials: ['Key A', 'Key B'] }
@@ -581,7 +581,7 @@ test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then "c" has only client method "New"
 //   And "c" still uses destination credential "Key A"
 //   And audit events "auth_method_removed" and "auth_method_added" are recorded
-test('@S17', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const { id } = givenProject({ [ME]: 'editor' }, { credentials: ['Key A'] });
   givenAuthMethod(id, 'Old');
   givenAuthMethod(id, 'New');
@@ -613,7 +613,7 @@ test('@S17', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I submit a channel whose destination credential id is "other-project-cred", with a value the dropdown does not offer
 //   Then the form stays open
 //   And no channel is created, or the existing destination credential is unchanged
-test('@S18', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const { id } = givenProject();
   const other = givenProject(
     { [OWNER]: 'owner' },
@@ -643,7 +643,7 @@ test('@S18', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I submit a channel with "other-project-method" checked, though the list does not offer it
 //   Then "other-project-method" is attached to no channel
 //   And the channel's existing client methods are unchanged
-test('@S19', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const { id } = givenProject();
   const other = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   const otherMethod = givenAuthMethod(other.id, 'other-project-method');
@@ -680,7 +680,7 @@ test('@S19', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am sent to my project's channels list with "Channel not found"
 // Only the direct visit is driven: a client-side patch lands on the same
 // server check.
-test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const { id } = givenProject();
   const other = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   const theirs = givenChannel(other.id, { name: 'theirs' });
@@ -704,7 +704,7 @@ test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I switch it back on
 //   Then "toggle-me" is enabled
 // Forwarding is owned by flow-channel-proxy-request.
-test('@S21', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S21', async ({ page }) => {
   const { id } = givenProject();
   const toggled = givenChannel(id, { name: 'toggle-me' });
   givenChannel(id, { name: 'stays-on' });
@@ -738,7 +738,7 @@ test('@S21', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Channel deleted."
 //   And "delete-me" is no longer listed
 //   And an audit event "deleted" is recorded with me as actor
-test('@S22', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S22', async ({ page }) => {
   const { id } = givenProject();
   const doomed = givenChannel(id, { name: 'delete-me' });
 
@@ -759,7 +759,7 @@ test('@S22', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then "New channel" is disabled with tooltip "You are not authorized to perform this action."
 //   And there is no "Edit" or "Delete" on "viewer-channel"
 //   And the enabled column shows "Enabled" or "Disabled" as text, not a toggle
-test('@S23', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S23', async ({ page }) => {
   const { id } = givenProject({ [ME]: 'viewer' });
   givenChannel(id, { name: 'viewer-channel' });
   givenChannel(id, { name: 'off-channel', enabled: false });
@@ -784,7 +784,7 @@ test('@S23', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am on the channels list with "You are not authorized to create channels."
 //   When I open /projects/<id>/channels/<channel id>/edit
 //   Then I am on the channels list with "You are not authorized to edit channels."
-test('@S24', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S24', async ({ page }) => {
   const { id } = givenProject({ [ME]: 'viewer' });
   const c = givenChannel(id, { name: 'c' });
 
@@ -811,7 +811,7 @@ test('@S24', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "You are not authorized to perform this action."
 //   And "c" is unchanged
 // An out-of-page request's refusal is checked by its effect, not its message.
-test('@S25', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S25', async ({ page }) => {
   const { id } = givenProject({ [ME]: 'viewer' });
   const c = givenChannel(id, { name: 'c' });
   const lv = watchLiveView(page);
@@ -834,7 +834,7 @@ test('@S25', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Channel not found"
 //   And "theirs" is unchanged
 // An out-of-page request's refusal is checked by its effect, not its message.
-test('@S26', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S26', async ({ page }) => {
   const { id } = givenProject();
   const other = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   const theirs = givenChannel(other.id, { name: 'theirs' });
@@ -857,7 +857,7 @@ test('@S26', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And the client credentials "Add new" link opens project settings at #webhook_security in a new tab
 // Tab selection is owned by shared-project-settings-tab-chrome. The
 // destination credential's link comes first in both versions.
-test('@S27', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S27', async ({ page }) => {
   const { id } = givenProject();
 
   await onChannels(page, id);
@@ -888,7 +888,7 @@ test('@S27', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open any page in project "Malawi HIV"
 //   Then the side menu shows "Channels", marked active on this page
 // The preference is data, so the variant is seeded rather than skipped.
-test('@S28', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S28', async ({ page }) => {
   const { id } = givenProject();
   cleanups.push(keepAccount(ME));
   setPreferences(ME, { experimental_features: true });
@@ -904,8 +904,6 @@ test('@S28', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 });
 
 // Inherited shared annotations, run on the channels page
-const PENDING = { tag: '@pending' };
-const PASSING = { tag: ['@passing-old', '@passing-new'] };
 
 // Given project "Malawi HIV" (or <name>) with these members and a channel
 function givenChannelsPage(
@@ -926,50 +924,39 @@ test.describe('shared-authenticated-session', () => {
     cleanups.push(keepAccount(ME));
   });
 
-  test(
-    'shared-authenticated-session@S01 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S01(page, givenChannelsPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on channels-index', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, givenChannelsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on channels-index',
-    PASSING,
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(
-        page,
-        browser,
-        givenChannelsPage().path,
-        ME
-      );
-    }
-  );
+  test('shared-authenticated-session@S02 on channels-index', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, givenChannelsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S03(page, givenChannelsPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on channels-index', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, givenChannelsPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on channels-index',
-    PASSING,
-    async ({ page, browser }) => {
-      const h = givenChannelsPage();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        `/projects/${h.id}/history`,
-        ME,
-        'History'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on channels-index', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenChannelsPage();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      `/projects/${h.id}/history`,
+      ME,
+      'History'
+    );
+  });
 
   // These variants are not configured on this instance
   for (const [id, variant] of [
@@ -981,16 +968,9 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on channels-index`,
-      PENDING,
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on channels-index`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 test.describe('shared-project-scope', () => {
@@ -999,66 +979,46 @@ test.describe('shared-project-scope', () => {
     cleanups.push(keepAccount(ME));
   });
 
-  test(
-    'shared-project-scope@S01 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S01(page, givenChannelsPage().path);
-    }
-  );
+  test('shared-project-scope@S01 on channels-index', async ({ page }) => {
+    await projectScope.S01(page, givenChannelsPage().path);
+  });
 
-  test(
-    'shared-project-scope@S02 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S02(
-        page,
-        givenChannelsPage().path,
-        ME,
-        channelsHeading(page)
-      );
-    }
-  );
+  test('shared-project-scope@S02 on channels-index', async ({ page }) => {
+    await projectScope.S02(
+      page,
+      givenChannelsPage().path,
+      ME,
+      channelsHeading(page)
+    );
+  });
 
-  test(
-    'shared-project-scope@S03 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S03(
-        page,
-        givenChannelsPage({ [OWNER]: 'owner' }).path,
-        ME
-      );
-    }
-  );
+  test('shared-project-scope@S03 on channels-index', async ({ page }) => {
+    await projectScope.S03(
+      page,
+      givenChannelsPage({ [OWNER]: 'owner' }).path,
+      ME
+    );
+  });
 
-  test(
-    'shared-project-scope@S04 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [OWNER]: 'owner' });
-      exec(
-        `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
-      );
-      await projectScope.S04(page, h.path, OWNER);
-    }
-  );
+  test('shared-project-scope@S04 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [OWNER]: 'owner' });
+    exec(
+      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
+    );
+    await projectScope.S04(page, h.path, OWNER);
+  });
 
-  test(
-    'shared-project-scope@S05 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage();
-      exec(`update projects set requires_mfa = true where id = '${h.id}'`);
-      removeMfaOf(ME);
-      await projectScope.S05(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S05 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage();
+    exec(`update projects set requires_mfa = true where id = '${h.id}'`);
+    removeMfaOf(ME);
+    await projectScope.S05(page, h.path, ME);
+  });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-scope@S06 on channels-index',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenChannelsPage({ [OWNER]: 'owner' });
       exec(
@@ -1069,35 +1029,27 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S07 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'editor', [OWNER]: 'owner' });
-      await projectScope.S07(page, h.path, ME, () =>
-        removeMemberOnNode(h.id, ME, OWNER)
-      );
-    }
-  );
+  test('shared-project-scope@S07 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'editor', [OWNER]: 'owner' });
+    await projectScope.S07(page, h.path, ME, () =>
+      removeMemberOnNode(h.id, ME, OWNER)
+    );
+  });
 
-  test(
-    'shared-project-scope@S08 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'admin', [OWNER]: 'owner' });
-      await projectScope.S08(
-        page,
-        `${h.path}?x=1`,
-        ME,
-        () => changeRoleOnNode(h.id, ME, 'viewer'),
-        channelsHeading(page)
-      );
-    }
-  );
+  test('shared-project-scope@S08 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'admin', [OWNER]: 'owner' });
+    await projectScope.S08(
+      page,
+      `${h.path}?x=1`,
+      ME,
+      () => changeRoleOnNode(h.id, ME, 'viewer'),
+      channelsHeading(page)
+    );
+  });
 
   test(
     'shared-project-scope@S09 on channels-index',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenChannelsPage({ [OWNER]: 'owner' });
       exec(
@@ -1110,16 +1062,12 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S10 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'editor', [OWNER]: 'owner' });
-      await projectScope.S10(page, h.path, ME, () =>
-        scheduleDeletionOnNode(h.id)
-      );
-    }
-  );
+  test('shared-project-scope@S10 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'editor', [OWNER]: 'owner' });
+    await projectScope.S10(page, h.path, ME, () =>
+      scheduleDeletionOnNode(h.id)
+    );
+  });
 
   // shared-project-scope S11 and S12 are not run on this page: they are about
   // an open workflow editor (archived sandbox, deleted workflow), and this
@@ -1127,22 +1075,18 @@ test.describe('shared-project-scope', () => {
 });
 
 test.describe('shared-usage-limits-banner', () => {
-  test('shared-usage-limits-banner@S01 on channels-index', PENDING, () => {
+  test('shared-usage-limits-banner@S01 on channels-index', () => {
     test.skip(true, 'variant usage-limited is not configured on this instance');
   });
 
-  test(
-    'shared-usage-limits-banner@S02 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await usageLimitsBanner.S02(
-        page,
-        givenChannelsPage().path,
-        ME,
-        channelsHeading(page)
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S02 on channels-index', async ({ page }) => {
+    await usageLimitsBanner.S02(
+      page,
+      givenChannelsPage().path,
+      ME,
+      channelsHeading(page)
+    );
+  });
 });
 
 // The picker scenarios seed their own "Malawi HIV", so this page's project
@@ -1155,60 +1099,44 @@ test.describe('shared-project-header', () => {
 
   const HOST = 'Channels host';
 
-  test(
-    'shared-project-header@S01 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S01(page, h.path, ME, HOST, [{ name: 'Channels' }]);
-    }
-  );
+  test('shared-project-header@S01 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S01(page, h.path, ME, HOST, [{ name: 'Channels' }]);
+  });
 
-  test(
-    'shared-project-header@S02 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S02(page, ME, { path: h.path, project: HOST });
-    }
-  );
+  test('shared-project-header@S02 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S02(page, ME, { path: h.path, project: HOST });
+  });
 
-  test(
-    'shared-project-header@S03 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const w = seedWorkspace(
-        {
-          name: HOST,
-          members: { [ME]: 'editor', [OWNER]: 'owner' },
-          sandboxes: [
-            { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
-          ],
-        },
-        OWNER
-      );
-      cleanups.push(w.remove);
-      await projectHeader.S03(page, ME, {
-        path: channelsPath(w.id('dev')),
-        label: `${HOST}:dev`,
-      });
-    }
-  );
+  test('shared-project-header@S03 on channels-index', async ({ page }) => {
+    const w = seedWorkspace(
+      {
+        name: HOST,
+        members: { [ME]: 'editor', [OWNER]: 'owner' },
+        sandboxes: [
+          { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
+        ],
+      },
+      OWNER
+    );
+    cleanups.push(w.remove);
+    await projectHeader.S03(page, ME, {
+      path: channelsPath(w.id('dev')),
+      label: `${HOST}:dev`,
+    });
+  });
 
   for (const id of ['S04', 'S05', 'S06', 'S08'] as const)
-    test(
-      `shared-project-header@${id} on channels-index`,
-      PASSING,
-      async ({ page }) => {
-        const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on channels-index`, async ({ page }) => {
+      const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-header@S07 on channels-index',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
       await projectHeader.S07(page, h.path, ME);
@@ -1216,36 +1144,24 @@ test.describe('shared-project-header', () => {
   );
 
   // S09 starts on a project settings page, whatever page hosts the header
-  test(
-    'shared-project-header@S09 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
+  test('shared-project-header@S09 on channels-index', async ({ page }) => {
+    await projectHeader.S09(page, ME);
+  });
 
   // This page is the channels page, and the picker lands on the other
   // project's
-  test(
-    'shared-project-header@S10 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S10(page, h.path, ME, '/channels');
-    }
-  );
+  test('shared-project-header@S10 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S10(page, h.path, ME, '/channels');
+  });
 
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on channels-index`,
-      PASSING,
-      async ({ page }) => {
-        const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on channels-index`, async ({ page }) => {
+      const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
-  test('shared-project-header@S14 on channels-index', PENDING, () => {
+  test('shared-project-header@S14 on channels-index', () => {
     test.skip(
       true,
       'variant require-email-verification is not configured on this instance'
@@ -1254,33 +1170,21 @@ test.describe('shared-project-header', () => {
 
   // Channels is in the menu only with experimental features on (S28), so
   // none of the four areas S15 checks is marked current here
-  test(
-    'shared-project-header@S15 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'viewer' }, HOST);
-      await projectHeader.S15(page, h.path, ME, h.id, 'Channels');
-    }
-  );
+  test('shared-project-header@S15 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'viewer' }, HOST);
+    await projectHeader.S15(page, h.path, ME, h.id, 'Channels');
+  });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test(
-    'shared-project-header@S16 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S16(page, h.path, ME, { channels: true });
-    }
-  );
+  test('shared-project-header@S16 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S16(page, h.path, ME, { channels: true });
+  });
 
-  test(
-    'shared-project-header@S17 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
-      await projectHeader.S17(page, h.path);
-    }
-  );
+  test('shared-project-header@S17 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
+    await projectHeader.S17(page, h.path);
+  });
 });
 
 // Inherited from shared-local-datetime: the "Last Activity" column.
@@ -1300,29 +1204,21 @@ test.describe('shared-local-datetime', () => {
 
   test.describe(() => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-    test(
-      'shared-local-datetime@S01 on channels-index',
-      PASSING,
-      async ({ page }) => {
-        await localDatetime.S01(
-          page,
-          await lastActivity(page, localDatetime.given.S01)
-        );
-      }
-    );
+    test('shared-local-datetime@S01 on channels-index', async ({ page }) => {
+      await localDatetime.S01(
+        page,
+        await lastActivity(page, localDatetime.given.S01)
+      );
+    });
   });
 
   for (const id of ['S02', 'S04', 'S05', 'S06'] as const)
-    test(
-      `shared-local-datetime@${id} on channels-index`,
-      PASSING,
-      async ({ page }) => {
-        await localDatetime[id](
-          page,
-          await lastActivity(page, localDatetime.given[id])
-        );
-      }
-    );
+    test(`shared-local-datetime@${id} on channels-index`, async ({ page }) => {
+      await localDatetime[id](
+        page,
+        await lastActivity(page, localDatetime.given[id])
+      );
+    });
 
   // shared-local-datetime S03 and S07 are not run on this page:
   // not_reachable_here does not exclude them, but the Last Activity column
@@ -1354,65 +1250,45 @@ test.describe('shared-flash-messages', () => {
     };
   }
 
-  test(
-    'shared-flash-messages@S01 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await flashMessages.S01(page, INFO, await givenDeletable(page));
-    }
-  );
+  test('shared-flash-messages@S01 on channels-index', async ({ page }) => {
+    await flashMessages.S01(page, INFO, await givenDeletable(page));
+  });
 
-  test(
-    'shared-flash-messages@S02 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await flashMessages.S02(page, DENIED, await givenViewer(page));
-    }
-  );
+  test('shared-flash-messages@S02 on channels-index', async ({ page }) => {
+    await flashMessages.S02(page, DENIED, await givenViewer(page));
+  });
 
-  test(
-    'shared-flash-messages@S03 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await flashMessages.S03(page, INFO, await givenDeletable(page));
-    }
-  );
+  test('shared-flash-messages@S03 on channels-index', async ({ page }) => {
+    await flashMessages.S03(page, INFO, await givenDeletable(page));
+  });
 
-  test(
-    'shared-flash-messages@S04 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      await flashMessages.S04(
-        page,
-        INFO,
-        await givenDeletable(page),
-        async () => {
-          // Opening the new channel form makes the page render again
-          await openNewForm(page);
-        }
-      );
-    }
-  );
+  test('shared-flash-messages@S04 on channels-index', async ({ page }) => {
+    await flashMessages.S04(
+      page,
+      INFO,
+      await givenDeletable(page),
+      async () => {
+        // Opening the new channel form makes the page render again
+        await openNewForm(page);
+      }
+    );
+  });
 
-  test(
-    'shared-flash-messages@S06 on channels-index',
-    PASSING,
-    async ({ page }) => {
-      const h = givenChannelsPage();
-      const notMine = givenChannelsPage({ [OWNER]: 'owner' }, 'Kenya TB');
-      await onChannels(page, h.id);
+  test('shared-flash-messages@S06 on channels-index', async ({ page }) => {
+    const h = givenChannelsPage();
+    const notMine = givenChannelsPage({ [OWNER]: 'owner' }, 'Kenya TB');
+    await onChannels(page, h.id);
 
-      await flashMessages.S06(
-        page,
-        () => open(page, notMine.path),
-        '/projects',
-        page.getByRole('cell', {
-          name: manifest().projects[0].name,
-          exact: true,
-        })
-      );
-    }
-  );
+    await flashMessages.S06(
+      page,
+      () => open(page, notMine.path),
+      '/projects',
+      page.getByRole('cell', {
+        name: manifest().projects[0].name,
+        exact: true,
+      })
+    );
+  });
 
   // shared-flash-messages S05, S07 and S08 are not run on this page: no
   // action here puts an info flash and redirects (save, switch and delete

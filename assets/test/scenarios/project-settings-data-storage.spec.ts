@@ -39,10 +39,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const PROJECT = 'Malawi HIV';
 
-const PENDING = { tag: '@pending' };
-const NEW_ONLY = { tag: '@passing-new' };
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new'] };
-
 let cleanups: (() => unknown)[] = [];
 test.beforeEach(() => {
   cleanups = [];
@@ -108,7 +104,7 @@ const audited = (id: string, event: string) =>
 //   And the "History Retention Period" select shows "Select Period"
 //   And the "Input/Output Data Retention Period" select is disabled
 //   And I do not see "Heads Up!"
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const id = givenProject('admin');
   await onDataStorage(page, id);
 
@@ -130,33 +126,29 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 //   And an audit event "history_retention_period_updated" is recorded with me as the actor
 //   And the flow "flow-data-retention-change-email" has started for "amara@example.org"
 // Serial: it reads the mailbox.
-test(
-  '@S02',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const id = givenProject('admin');
-    await onDataStorage(page, id);
+test('@S02', { tag: ['@serial'] }, async ({ page }) => {
+  const id = givenProject('admin');
+  await onDataStorage(page, id);
 
-    await choosePeriod(historySelect(page), '7 Days');
-    await submit(tab(page), 'Save');
+  await choosePeriod(historySelect(page), '7 Days');
+  await submit(tab(page), 'Save');
 
-    await expect(toast(page, SAVED)).toBeVisible();
-    expect(retentionOf(id).history_retention_period).toBe(7);
-    expect(audited(id, 'history_retention_period_updated')).toEqual([
-      user(ME).id,
-    ]);
-    const owner = user(OTHER).email;
-    await expect
-      .poll(async () =>
-        (await mailbox(page.request)).some(
-          m =>
-            m.to.includes(owner) &&
-            /data retention policy .* has been modified/.test(m.subject)
-        )
+  await expect(toast(page, SAVED)).toBeVisible();
+  expect(retentionOf(id).history_retention_period).toBe(7);
+  expect(audited(id, 'history_retention_period_updated')).toEqual([
+    user(ME).id,
+  ]);
+  const owner = user(OTHER).email;
+  await expect
+    .poll(async () =>
+      (await mailbox(page.request)).some(
+        m =>
+          m.to.includes(owner) &&
+          /data retention policy .* has been modified/.test(m.subject)
       )
-      .toBe(true);
-  }
-);
+    )
+    .toBe(true);
+});
 
 // @S03
 // Scenario: Admin sets the I/O retention period once a history period is chosen
@@ -170,7 +162,7 @@ test(
 //   Then I see "Project updated successfully"
 //   And project "Malawi HIV" keeps I/O data for 7 days
 //   And an audit event "dataclip_retention_period_updated" is recorded with me as the actor
-test('@S03', PASSING_BOTH, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const id = givenProject('admin');
   await onDataStorage(page, id);
 
@@ -200,7 +192,7 @@ test('@S03', PASSING_BOTH, async ({ page }) => {
 //   And the "Save" button is disabled
 // Checks that nothing is saved rather than the button: one version turns
 // Save off, another refuses on save.
-test('@S04', PASSING_BOTH, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const id = givenProject('admin');
   await onDataStorage(page, id);
 
@@ -227,7 +219,7 @@ test('@S04', PASSING_BOTH, async ({ page }) => {
 //   And project "Malawi HIV" still keeps history for 30 days
 // Fails on today's Lightning: Save turns off but no message shows until
 // the I/O period is touched.
-test('@S05', NEW_ONLY, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const id = givenProject('admin', {
     history_retention_period: 30,
     dataclip_retention_period: 30,
@@ -256,7 +248,7 @@ test('@S05', NEW_ONLY, async ({ page }) => {
 //   And when I reload the "Data Storage" tab "Never retain input/output data (zero-persistence)" is selected
 //   And the flow "flow-zero-persistence-runs" has started for project "Malawi HIV"
 // The flow is the runs'; here only that the project now stores no I/O data.
-test('@S06', PASSING_BOTH, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const id = givenProject('admin', {
     history_retention_period: 14,
     dataclip_retention_period: 7,
@@ -292,7 +284,7 @@ test('@S06', PASSING_BOTH, async ({ page }) => {
 //   When I click "Save"
 //   Then I see "Project updated successfully"
 //   And when I reload the "Data Storage" tab "Retain all input/output data" is selected
-test('@S07', PASSING_BOTH, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const id = givenProject('admin', { retention_policy: 'erase_all' });
   await onDataStorage(page, id);
 
@@ -315,7 +307,7 @@ test('@S07', PASSING_BOTH, async ({ page }) => {
 //   And I click "Cancel"
 //   Then "Retain all input/output data" is selected
 //   And project "Malawi HIV" still retains all I/O data
-test('@S08', PASSING_BOTH, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const id = givenProject('admin');
   await onDataStorage(page, id);
 
@@ -340,7 +332,7 @@ test('@S08', PASSING_BOTH, async ({ page }) => {
 //   Examples: viewer, editor, support user with no membership row
 const S09_ROWS = ['viewer', 'editor', 'support user'] as const;
 for (const role of S09_ROWS)
-  test(`@S09 ${role}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S09 ${role}`, async ({ page }) => {
     const support = role === 'support user';
     if (support) cleanups.push(makeSupportUser(ME));
     const id = givenProject(
@@ -373,7 +365,7 @@ for (const role of S09_ROWS)
 // Checked by what is stored and that the page didn't crash: one version
 // flashes the refusal, another answers the request.
 for (const role of ['editor', 'viewer'] as const)
-  test(`@S10 ${role}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S10 ${role}`, async ({ page }) => {
     const id = givenProject(role);
     const lv = watchLiveView(page);
     await onDataStorage(page, id);
@@ -398,7 +390,7 @@ for (const role of ['editor', 'viewer'] as const)
 //   When I choose "Never retain input/output data (zero-persistence)" and click "Save"
 //   Then I see "You are not authorized to perform this action"
 //   And project "Malawi HIV" still retains all I/O data
-test('@S11', PASSING_BOTH, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const id = givenProject('admin');
   await onDataStorage(page, id);
 
@@ -417,7 +409,7 @@ test('@S11', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Project updated successfully"
 //   And project "Malawi HIV" keeps history for 14 days
 //   And its name and MFA requirement are unchanged
-test('@S12', PASSING_BOTH, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const id = givenProject('admin');
   const before = retentionOf(id);
   const lv = watchLiveView(page);
@@ -448,23 +440,19 @@ test('@S12', PASSING_BOTH, async ({ page }) => {
 //   And the "Input/Output Data Retention Period" select offers the same periods
 //   And the plan's retention message is shown next to the history select
 // Serial: it swaps the instance's usage limiter.
-test(
-  '@S13',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const id = givenProject('admin');
-    const message = 'Upgrade for longer retention';
-    cleanups.push(withRetentionPeriods(id, [7, 14], message));
-    await onDataStorage(page, id);
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
+  const id = givenProject('admin');
+  const message = 'Upgrade for longer retention';
+  cleanups.push(withRetentionPeriods(id, [7, 14], message));
+  await onDataStorage(page, id);
 
-    expect(await offeredPeriods(historySelect(page))).toEqual([
-      '7 Days',
-      '14 Days',
-    ]);
-    expect(await offeredPeriods(ioSelect(page))).toEqual(['7 Days', '14 Days']);
-    await expect(tab(page).getByText(message)).toBeVisible();
-  }
-);
+  expect(await offeredPeriods(historySelect(page))).toEqual([
+    '7 Days',
+    '14 Days',
+  ]);
+  expect(await offeredPeriods(ioSelect(page))).toEqual(['7 Days', '14 Days']);
+  await expect(tab(page).getByText(message)).toBeVisible();
+});
 
 // @S14 @variant:retention-single-option
 // Scenario: A plan with a single period can't change history retention
@@ -473,17 +461,13 @@ test(
 //   When I open the "Data Storage" tab
 //   Then the "History Retention Period" select is disabled
 // Serial: it swaps the instance's usage limiter.
-test(
-  '@S14',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const id = givenProject('admin');
-    cleanups.push(withRetentionPeriods(id, [7]));
-    await onDataStorage(page, id);
+test('@S14', { tag: ['@serial'] }, async ({ page }) => {
+  const id = givenProject('admin');
+  cleanups.push(withRetentionPeriods(id, [7]));
+  await onDataStorage(page, id);
 
-    await expect(historySelect(page)).toBeDisabled();
-  }
-);
+  await expect(historySelect(page)).toBeDisabled();
+});
 
 // @S15
 // Scenario: A failed save is reported
@@ -495,4 +479,4 @@ test(
 // Skipped: the audit write only fails when it is stubbed (the old LiveView
 // tests use Mimic). Any failure the e2e instance can cause raises instead of
 // returning the error this message answers.
-test.skip('@S15', PENDING, () => {});
+test.skip('@S15', () => {});

@@ -65,20 +65,6 @@ const ME = 'editor@openfn.org';
 const OWNER = 'owner@openfn.org';
 const AMARA = 'super@openfn.org';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const UNRUN =
-  'not run yet: the e2e instance was started without AI_ASSISTANT_API_KEY';
-const STILL_PENDING: Record<string, string> = {
-  S01: UNRUN,
-  S02: UNRUN,
-  S03: UNRUN,
-  S04: UNRUN,
-  S06: UNRUN,
-};
-const tags = (key: string) => ({
-  tag: [key in STILL_PENDING ? '@pending' : '@passing-old', '@serial'],
-});
-
 // A reply goes through a background job and a stream, so it gets this long
 const EVENTUALLY = { timeout: 20000 };
 
@@ -149,7 +135,7 @@ async function bothOpen(
 //   When "Amara" starts a conversation with "Add a step that posts to DHIS2"
 //   Then "Add a step that posts to DHIS2" appears at the top of my list without a reload
 //   And the conversation count goes up by one
-test('@S01', tags('S01'), async ({ page, browser }) => {
+test('@S01', { tag: ['@serial'] }, async ({ page, browser }) => {
   const apollo = await givenApollo();
   apollo.always(answer('Here is how.'));
   const wf = givenIntake();
@@ -174,7 +160,7 @@ test('@S01', tags('S01'), async ({ page, browser }) => {
 //   And I see the assistant's status and reply text appear as they arrive
 //   And once complete the reply is the same one "Amara" sees
 // The reply is held after its first words, so they are seen before the end.
-test('@S02', tags('S02'), async ({ page, browser }) => {
+test('@S02', { tag: ['@serial'] }, async ({ page, browser }) => {
   const apollo = await givenApollo();
   const held = gate();
   const text = 'Add a step after Load that posts to DHIS2.';
@@ -209,7 +195,7 @@ test('@S02', tags('S02'), async ({ page, browser }) => {
 //   When "Amara"'s question starts being answered
 //   Then my message box is disabled until the reply is in or fails
 //   And if I open the conversation while it is still being answered, my message box is disabled too
-test('@S03', tags('S03'), async ({ page, browser }) => {
+test('@S03', { tag: ['@serial'] }, async ({ page, browser }) => {
   const apollo = await givenApollo();
   const held = gate();
   apollo.replyWith([thinking, held.step, ...answer('Done.')]);
@@ -237,7 +223,7 @@ test('@S03', tags('S03'), async ({ page, browser }) => {
 //   And my "Save" shows unsaved changes (shared-editor-session)
 // Had my browser imported the reply too, the shared workflow would hold the
 // step twice.
-test('@S04', tags('S04'), async ({ page, browser }) => {
+test('@S04', { tag: ['@serial'] }, async ({ page, browser }) => {
   const apollo = await givenApollo();
   apollo.replyWith(req =>
     answer(`I added "${SEND}" after Load.`, {
@@ -269,7 +255,7 @@ test('@S04', tags('S04'), async ({ page, browser }) => {
 // The apply is the two events her browser sends around it. My panel is
 // checked only where the instance has the assistant: there her earlier reply
 // changed the workflow, so it offers "Revert changes".
-test('@S05', tags('S05'), async ({ page, browser }) => {
+test('@S05', { tag: ['@serial'] }, async ({ page, browser }) => {
   const withPanel = assistantOnInstance().enabled;
   const wf = givenIntake();
   const chat = givenConversation(wf);
@@ -325,7 +311,7 @@ test('@S05', tags('S05'), async ({ page, browser }) => {
 //   When "Amara" clicks "Try again"
 //   Then "Try again" disappears for me as well
 // The first reply's stream is cut; the retry is answered.
-test('@S06', tags('S06'), async ({ page, browser }) => {
+test('@S06', { tag: ['@serial'] }, async ({ page, browser }) => {
   const apollo = await givenApollo();
   apollo.replyWith(['cut'], answer('Here is how.'));
   const wf = givenIntake();

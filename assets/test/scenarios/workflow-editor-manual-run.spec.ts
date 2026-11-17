@@ -113,10 +113,6 @@ const OWNER = 'owner@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-const PENDING = { tag: '@pending' };
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_OLD_SERIAL = { tag: ['@passing-old', '@serial'] };
-
 const EMPTY_TEXT = 'Use an empty JSON object as the input for this run.';
 const LIMIT_COPY =
   'Search results are limited to the 10 most recent matches for this step.';
@@ -249,7 +245,7 @@ const localDatetime = (date: Date) => date.toISOString().slice(0, 16);
 //   And the panel closes and the URL has "run=<new run id>" and no "panel"
 //   And workflow-editor-run-viewer takes over
 // The run viewer taking over is that view's to prove.
-test('@S01', PASSING_OLD, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
   // An unsaved change, so the save is seen
@@ -283,7 +279,7 @@ test('@S01', PASSING_OLD, async ({ page }) => {
 //   And I click "Run From Here"
 //   Then a saved input dataclip with body {"patient": "123"} is created in "Malawi HIV"
 //   And the new work order starts at "Fetch" with that dataclip
-test('@S02', PASSING_OLD, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const { id, wf } = givenIntake();
   await openPanel(page, wf);
 
@@ -314,7 +310,7 @@ test('@S02', PASSING_OLD, async ({ page }) => {
 //     | nothing                       | no message                              |
 // One step per example, the large one last. The Value is that no run starts,
 // so each tries to run and checks nothing was created.
-test('@S03', PASSING_OLD, async ({ page }) => {
+test('@S03', async ({ page }) => {
   test.slow();
   const { wf } = givenIntake();
   await openPanel(page, wf);
@@ -362,7 +358,7 @@ test('@S03', PASSING_OLD, async ({ page }) => {
 //   Then the editor shows it indented by two spaces
 //   When I drop "notes.txt" onto the upload area
 //   Then I see "Invalid file format. Please only upload: JSON" for a few seconds
-test('@S04', PASSING_OLD, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const { wf } = givenIntake();
   await openPanel(page, wf);
   await inputTab(page, 'New').click();
@@ -399,7 +395,7 @@ test('@S04', PASSING_OLD, async ({ page }) => {
 //   When I click "Run From Here"
 //   Then the new work order uses that dataclip and no new dataclip is created
 // The body viewer's own scenarios run on this preview below.
-test('@S05', PASSING_OLD, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const { id, wf } = givenIntake();
   const twoDaysAgo = daysAgo(2);
   const [edge, newest] = seedEarlierInputs(wf, 'Fetch', [
@@ -458,7 +454,7 @@ test('@S05', PASSING_OLD, async ({ page }) => {
 //     | turn on the named only filter                             |
 // One step per example, each on a freshly opened panel. The inputs are days
 // apart, so the date filter does not depend on the time zone.
-test('@S06', PASSING_OLD, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const { wf } = givenIntake();
   const [, unnamed] = seedEarlierInputs(wf, 'Fetch', [
     {
@@ -537,7 +533,7 @@ test('@S06', PASSING_OLD, async ({ page }) => {
 //   Then the list is empty
 //   When a run is submitted in "Malawi HIV" with a dataclip from "Kenya TB"
 //   Then no work order is created
-test('@S07', PASSING_OLD, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { id, wf } = givenIntake();
   const kenya = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   const other = seedEditorWorkflow(kenya.id, kenya.by, {
@@ -574,7 +570,7 @@ test('@S07', PASSING_OLD, async ({ page }) => {
 //   And I see "Default Next Input for Cron" and "This workflow has a "cron" trigger, and by default it will use the input below for its next run. You can override that by starting a manual run with an empty input or a custom input at any time."
 //   And in the "Existing" list "D" is first, marked with a clock titled "Next state that will be used for cron execution"
 // "D" is named so it can be told from the step's other inputs.
-test('@S08', PASSING_OLD, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const { id, by } = givenProject();
   const run = seedRun(
     id,
@@ -631,7 +627,7 @@ test('@S08', PASSING_OLD, async ({ page }) => {
 //   Then "Run From Here" is enabled
 // The input is selected for me by following run "R", which would select it
 // again if anything did.
-test('@S09', PASSING_OLD, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const { id, by } = givenProject();
   const { run, wf } = givenFollowedRun(id, by);
   await openPanel(page, wf, 'Fetch', { run: run.runId });
@@ -661,7 +657,7 @@ test('@S09', PASSING_OLD, async ({ page }) => {
 //   When I clear the name and save
 //   Then it shows "Unnamed" and an audit event "label_deleted" is recorded
 //   And when I am a viewer I see no pencil
-test('@S10', PASSING_OLD, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const { id, wf } = givenIntake();
   const [d] = seedEarlierInputs(wf, 'Fetch', [{ type: 'http_request' }]);
   await openPanel(page, wf, 'Fetch', { dataclip: d });
@@ -709,8 +705,7 @@ test('@S10', PASSING_OLD, async ({ page }) => {
 //   Then the panel is still titled "Pick a custom input"
 //   When I run with the "Empty" tab
 //   Then the work order starts at "Fetch"
-// Still pending, old: the header's "Run with custom input" leaves runMode out of the URL, so the title does not survive a reload
-test('@S11', PENDING, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const { wf } = givenIntake();
   seedEarlierInputs(wf, 'Fetch', [
     { type: 'http_request', name: 'Kobo sample' },
@@ -749,7 +744,7 @@ test('@S11', PENDING, async ({ page }) => {
 //   And the panel does not open and the URL has "run=<new run id>"
 // Same as shared-run-retry-controls S01, which workflow-editor-canvas runs
 // with a click; this runs it with Ctrl+Enter.
-test('@S12', PASSING_OLD, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
   await runRetry.S01(
@@ -770,7 +765,7 @@ test('@S12', PASSING_OLD, async ({ page }) => {
 //   When I select step "Post"
 //   Then the panel is titled "Run from Post"
 // "Post" is "Intake"'s "Load".
-test('@S13', PASSING_OLD, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const { wf } = givenIntake();
   await openPanel(page, wf);
 
@@ -805,7 +800,7 @@ test('@S13', PASSING_OLD, async ({ page }) => {
 //   And the URL has "run=<new run id>"
 // "D" is named so the panel can be seen to have chosen it. The list shows
 // only once "D" is unselected, so it is chosen again from there.
-test('@S14', PASSING_OLD, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const { id, by } = givenProject();
   const { run, wf, fetchInput } = givenFollowedRun(id, by);
   nameInput(fetchInput, 'Patient 123');
@@ -841,7 +836,7 @@ test('@S14', PASSING_OLD, async ({ page }) => {
 //   And R's work order gets no new run
 // Same as shared-run-retry-controls S05 (which retries first), once from the
 // chevron and once with the keys.
-test('@S15', PASSING_OLD, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const { id, by } = givenProject();
   const { run, wf } = givenFollowedRun(id, by);
   const onR = runQuery(wf, 'Fetch', { run: run.runId });
@@ -867,7 +862,7 @@ test('@S15', PASSING_OLD, async ({ page }) => {
 // panel closes once a run starts, so S06's editor is gone when it looks
 // again. The search box is left out: it shows only while no input is
 // selected, and then there is nothing to run.
-test('@S16', PASSING_OLD, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const { id, by, wf } = givenIntake();
   const followed = givenFollowedRun(id, by, { workflow: 'Intake followed' });
 
@@ -913,7 +908,7 @@ test('@S16', PASSING_OLD, async ({ page }) => {
 //   And I see "Failed to submit run" with the save error
 // Same as shared-run-retry-controls S08. The change is a blank workflow name,
 // which stays in the shared draft when the panel is opened.
-test('@S17', PASSING_OLD, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
   await renameWorkflow(page, '');
@@ -930,7 +925,7 @@ test('@S17', PASSING_OLD, async ({ page }) => {
 //   Then the workflow is not saved
 //   And I see "Run started" with "Created new work order"
 // Same as shared-run-retry-controls S09.
-test('@S18', PASSING_OLD, async ({ page }) => {
+test('@S18', async ({ page }) => {
   experimental();
   const { by, wf } = givenIntake();
   goLiveOnNode(wf.id, by);
@@ -959,7 +954,7 @@ test('@S18', PASSING_OLD, async ({ page }) => {
 // button runs on workflow-editor-canvas. One step per example; the deleted
 // one is its own test. '"Intake" is new' is left out: on /w/new the panel can't be
 // opened. The usage limiter is instance-wide, so this runs alone.
-test('@S19', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   const why = runRetry.given.S10;
   const { id, by, wf } = givenIntake({ [ME]: 'viewer' });
   const sock = await watchEditorSocket(page);
@@ -992,8 +987,7 @@ test('@S19', PASSING_OLD_SERIAL, async ({ page }) => {
   });
 });
 
-// Still pending, old: an open editor leaves for the workflow list when its workflow is deleted, so no reason is shown
-test('@S19, "Intake" has been deleted', PENDING, async ({ page }) => {
+test('@S19, "Intake" has been deleted', async ({ page }) => {
   const { wf } = givenIntake();
   await openPanel(page, wf);
   deleteWorkflowOnNode(wf.id, OWNER);
@@ -1017,7 +1011,7 @@ test('@S19, "Intake" has been deleted', PENDING, async ({ page }) => {
 // last. The last row posts through "Kenya TB", where I am an editor. A
 // support user can reach every project that allows support, so this runs
 // alone.
-test('@S20', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S20', { tag: ['@serial'] }, async ({ page }) => {
   const { id, wf } = givenIntake({ [OWNER]: 'owner' });
   const kenya = givenProject({ [ME]: 'editor' }, { name: 'Kenya TB' });
   const body = { job_id: wf.steps.Fetch };
@@ -1067,7 +1061,7 @@ test('@S20', PASSING_OLD_SERIAL, async ({ page }) => {
 // One step per example, each on its own run, with the change made after the
 // panel offered "Retry". The deletion is written where the open editor does
 // not hear of it; otherwise the editor turns "Retry" off first (S19).
-test('@S21', PASSING_OLD, async ({ page }) => {
+test('@S21', async ({ page }) => {
   const { id, by } = givenProject();
   const wiped = givenFollowedRun(id, by);
   const deleted = givenFollowedRun(id, by, { workflow: 'Intake deleted' });
@@ -1111,7 +1105,7 @@ test('@S21', PASSING_OLD, async ({ page }) => {
 // The limiter starts refusing after the panel has loaded, so the page still
 // allows the click. A retry first, then a new work order from the chevron.
 // The usage limiter is instance-wide, so this runs alone.
-test('@S22', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S22', { tag: ['@serial'] }, async ({ page }) => {
   const text = 'Run limit exceeded for this project';
   const { id, by } = givenProject();
   const { run, wf } = givenFollowedRun(id, by);
@@ -1146,7 +1140,7 @@ test('@S22', PASSING_OLD_SERIAL, async ({ page }) => {
 // panel closes once the run is accepted. The save is held by holding back
 // what the server sends; the still-running run is seeded started, with no
 // worker to finish it until finishRun does.
-test('@S23', PASSING_OLD, async ({ page }) => {
+test('@S23', async ({ page }) => {
   const { id, by, wf } = givenIntake();
   const running = givenFollowedRun(id, by, {
     workflow: 'Intake running',
@@ -1193,7 +1187,7 @@ test('@S23', PASSING_OLD, async ({ page }) => {
 //   And "dataclip" is removed from the URL
 // "D" is named, and is not the newest input, so the panel can't have chosen
 // it by itself.
-test('@S24', PASSING_OLD, async ({ page }) => {
+test('@S24', async ({ page }) => {
   const { wf } = givenIntake();
   const [d] = seedEarlierInputs(wf, 'Fetch', [
     { type: 'http_request', name: 'Patient 123', at: utcStamp(daysAgo(1)) },
@@ -1216,7 +1210,7 @@ test('@S24', PASSING_OLD, async ({ page }) => {
 //   And the rest of the editor keeps working
 // Stand-in for "something throws": the earlier inputs come back without a
 // type, which the selected input's header can't draw.
-test('@S25', PASSING_OLD, async ({ page }) => {
+test('@S25', async ({ page }) => {
   const { wf } = givenIntake();
   const [d] = seedEarlierInputs(wf, 'Fetch', [{ type: 'http_request' }]);
   await breakInputPreview(page);
@@ -1246,33 +1240,31 @@ test('@S25', PASSING_OLD, async ({ page }) => {
 
 test.describe('shared-run-retry-controls', () => {
   // A different input selected, then "D" wiped
-  test(
-    'shared-run-retry-controls@S04 on workflow-editor-manual-run',
-    PASSING_OLD,
-    async ({ page }) => {
-      const { id, by } = givenProject();
-      const { run, wf, fetchInput } = givenFollowedRun(id, by);
-      seedEarlierInputs(wf, 'Fetch', [
-        { type: 'saved_input', name: 'Other input' },
-      ]);
-      const onR = runQuery(wf, 'Fetch', { run: run.runId });
-      await openPanel(page, wf, 'Fetch', { run: run.runId });
+  test('shared-run-retry-controls@S04 on workflow-editor-manual-run', async ({
+    page,
+  }) => {
+    const { id, by } = givenProject();
+    const { run, wf, fetchInput } = givenFollowedRun(id, by);
+    seedEarlierInputs(wf, 'Fetch', [
+      { type: 'saved_input', name: 'Other input' },
+    ]);
+    const onR = runQuery(wf, 'Fetch', { run: run.runId });
+    await openPanel(page, wf, 'Fetch', { run: run.runId });
 
-      await test.step('I select a different input', () =>
-        runRetry.S04(page, runPanel(page), async () => {
-          await unselectButton(page).click();
-          await inputRow(page, 'Other input').click();
-        }));
+    await test.step('I select a different input', () =>
+      runRetry.S04(page, runPanel(page), async () => {
+        await unselectButton(page).click();
+        await inputRow(page, 'Other input').click();
+      }));
 
-      await test.step('"D" has been wiped', async () => {
+    await test.step('"D" has been wiped', async () => {
+      await reopen(page, wf, onR);
+      await runRetry.S04(page, runPanel(page), async () => {
+        runRetry.wipeInput(fetchInput);
         await reopen(page, wf, onR);
-        await runRetry.S04(page, runPanel(page), async () => {
-          runRetry.wipeInput(fetchInput);
-          await reopen(page, wf, onR);
-        });
       });
-    }
-  );
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1311,20 +1303,20 @@ test.describe('shared-dataclip-body-viewer', () => {
     await openPanel(page, wf, step, { dataclip: dataclip(run) });
   }
 
-  test(name('S01'), PASSING_OLD, async ({ page }) => {
+  test(name('S01'), async ({ page }) => {
     const body = { patients: [{ id: 1 }] };
     await onPreview(page, body);
     await bodyViewer.S01(page, body);
   });
 
-  test(name('S02'), PASSING_OLD, async ({ page }) => {
+  test(name('S02'), async ({ page }) => {
     const body = { patients: [{ id: 1 }] };
     await onPreview(page, body);
     await bodyViewer.S02(page, body);
   });
 
   // The webhook request is "Fetch"'s input
-  test(name('S03'), PASSING_OLD, async ({ page }) => {
+  test(name('S03'), async ({ page }) => {
     const { username, password } = bodyViewer.given.S03;
     await onRunInput(
       page,
@@ -1341,7 +1333,7 @@ test.describe('shared-dataclip-body-viewer', () => {
   });
 
   // "Fetch"'s output is "Post"'s input
-  test(name('S04'), PASSING_OLD, async ({ page }) => {
+  test(name('S04'), async ({ page }) => {
     const { Login, Fetch, Post, output } = bodyViewer.given.S04;
     await onRunInput(
       page,
@@ -1361,7 +1353,7 @@ test.describe('shared-dataclip-body-viewer', () => {
 
   // Each Examples row is its own "Kenya TB": not a member, scheduled for
   // deletion, requires MFA I have not set up
-  test(name('S05'), PASSING_OLD, async ({ page }) => {
+  test(name('S05'), async ({ page }) => {
     const mine = await onPreview(page, { shared: true });
     const kenya = (members: Record<string, Role>) => {
       const { id, by } = givenProject(members, { name: 'Kenya TB' });
@@ -1385,7 +1377,7 @@ test.describe('shared-dataclip-body-viewer', () => {
       await bodyViewer.S05(page, mine.d, k.d, mine.show);
   });
 
-  test(name('S06'), PASSING_OLD, async ({ page }) => {
+  test(name('S06'), async ({ page }) => {
     const mine = await onPreview(page, { shared: true });
     await bodyViewer.S06(page, mine.d, mine.show);
   });

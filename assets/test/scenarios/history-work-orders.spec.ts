@@ -92,7 +92,6 @@ import {
   sql,
   stepRow,
   stepsOfRun,
-  tagFor,
   tipOf,
   user,
   utcStamp,
@@ -105,8 +104,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const RETRY_JOB = 'Lightning.WorkOrders.RetryManyWorkOrdersJob';
 const CANCEL_JOB = 'Lightning.WorkOrders.CancelManyWorkOrdersJob';
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING = { tag: ['@passing-old', '@passing-new'] };
 
 let cleanups: (() => void)[] = [];
 test.beforeEach(() => {
@@ -185,7 +182,7 @@ function pendingWorkOrder(wf: SeededWorkflow, minutesAgo = 60) {
 //   Then I see "A"
 //   And I do not see "B"
 //   And the last activity chip reads "Last activity after" a date 30 days ago
-test('@S01', PASSING, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const h = givenHistory('Malawi HIV', { [ME]: 'viewer' });
   const a = seedWorkOrder(h.wf, { state: 'success', at: utcStamp(daysAgo(5)) });
   const b = seedWorkOrder(h.wf, {
@@ -209,7 +206,7 @@ test('@S01', PASSING, async ({ page }) => {
 //   And project "Kenya TB" has a work order "K"
 //   When I open the history page of "Malawi HIV"
 //   Then I do not see "K"
-test('@S02', PASSING, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const members = { [ME]: 'editor', [OTHER]: 'owner' } as const;
   const h = givenHistory('Malawi HIV', members);
   const kenya = given('Kenya TB', members);
@@ -228,7 +225,7 @@ test('@S02', PASSING, async ({ page }) => {
 //   When I choose "Intake" from the workflow chip
 //   Then the chip reads "Workflow is Intake"
 //   And I only see work orders of "Intake"
-test('@S03', PASSING, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const project = given('Malawi HIV', { [ME]: 'editor' });
   const intake = seedWorkOrder(seedWorkflow(project.id, 'Intake'), {
     state: 'success',
@@ -252,7 +249,7 @@ test('@S03', PASSING, async ({ page }) => {
 //   When I tick "Failed" and "Crashed" in the status chip
 //   Then the chip reads "Status in Failed, Crashed"
 //   And I see only failed and crashed work orders
-test('@S04', PASSING, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const h = givenHistory();
   const failed = seedWorkOrder(h.wf, { state: 'failed' });
   const crashed = seedWorkOrder(h.wf, { state: 'crashed' });
@@ -278,7 +275,7 @@ test('@S04', PASSING, async ({ page }) => {
 // The dates are 20 and 10 days ago, and the bound is 15 days ago, so that all
 // of them stay inside the page's 30 day window. The early work order had
 // activity yesterday, so only a filter on the received date can leave it out.
-test('@S05', PASSING, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const h = givenHistory();
   const early = seedWorkOrder(h.wf, {
     state: 'success',
@@ -310,7 +307,7 @@ test('@S05', PASSING, async ({ page }) => {
 //   When I clear the workflow chip
 //   Then the chip reads "Workflow is any"
 //   And I see work orders of every workflow
-test('@S06', PASSING, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const project = given('Malawi HIV', { [ME]: 'editor' });
   const intakeWf = seedWorkflow(project.id, 'Intake');
   const intake = seedWorkOrder(intakeWf, { state: 'success' });
@@ -336,7 +333,7 @@ test('@S06', PASSING, async ({ page }) => {
 //   Then I see "A" and not "B"
 //   When I search for "qassim" with inputs and logs included
 //   Then I see "B" and not "A"
-test('@S07', PASSING, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const h = givenHistory();
   const a = seedHistoryOrder(h.wf, {
     state: 'success',
@@ -382,7 +379,7 @@ test('@S07', PASSING, async ({ page }) => {
 //   When I search for "error" in run logs
 //   Then I see '50+ work orders with runs matching "error"'
 //   And I see "(try more specific filters)"
-test('@S08', PASSING, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const h = givenHistory();
   seedLoggedWorkOrders(h.wf, 60, 'error while sending the record');
   await signInAs(page, ME);
@@ -405,7 +402,7 @@ test('@S08', PASSING, async ({ page }) => {
 //   Then the oldest is first
 // The page starts sorted by last activity, which here runs the other way
 // round, so that the first click visibly changes the order.
-test('@S09', PASSING, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const h = givenHistory();
   const [oldest, middle, newest] = [3, 2, 1].map(days =>
     seedWorkOrder(h.wf, { state: 'success', at: utcStamp(daysAgo(days)) })
@@ -434,7 +431,7 @@ test('@S09', PASSING, async ({ page }) => {
 //   Then I see only "W"
 //   And I see a chip "Work order: <short id of W>"
 //   And both runs of "W" are shown
-test('@S10', PASSING, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const h = givenHistory();
   const w = seedHistoryOrder(h.wf, {
     state: 'failed',
@@ -461,7 +458,7 @@ test('@S10', PASSING, async ({ page }) => {
 //   And I do not see the earlier runs
 //   When I click "show previous"
 //   Then I see all three runs
-test('@S11', PASSING, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const h = givenHistory();
   const w = seedHistoryOrder(h.wf, {
     state: 'failed',
@@ -487,7 +484,7 @@ test('@S11', PASSING, async ({ page }) => {
 //   Given a run that was rerun from its second step
 //   When I expand its work order
 //   Then its first step is faded with a paperclip whose tooltip says it "was originally executed in a previous run"
-test('@S12', PASSING, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const h = givenHistory();
   const w = seedHistoryOrder(h.wf, {
     state: 'failed',
@@ -517,7 +514,7 @@ test('@S12', PASSING, async ({ page }) => {
 //   When I look at the workflow name in the row
 //   Then it links to the workflow editor with "run=<latest run id>" and "v=3"
 // The workflow is renamed twice after the run, so it is two versions ahead.
-test('@S13', PASSING, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const h = givenHistory();
   const w = seedHistoryOrder(h.wf, {
     state: 'failed',
@@ -546,7 +543,7 @@ test('@S13', PASSING, async ({ page }) => {
 //   And work order "W" ran on an older workflow version
 //   When I look at the workflow name in the row
 //   Then it links with "run=<latest run id>" and "as_run=<latest run id>"
-test('@S14', PASSING, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const h = givenHistory();
   const w = seedHistoryOrder(h.wf, {
     state: 'failed',
@@ -575,7 +572,7 @@ test('@S14', PASSING, async ({ page }) => {
 //   When I click its retry button
 //   Then I see "New run enqueued for 1 workorder"
 //   And a retry of "W" is queued
-test('@S15', PASSING, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const h = givenHistory();
   const w = failedWorkOrder(h.wf);
   await signInAs(page, ME);
@@ -595,7 +592,7 @@ test('@S15', PASSING, async ({ page }) => {
 //   When I expand "W" and click the rerun icon on "Load"
 //   Then a new run for "W" is created starting at "Load"
 //   And the steps before "Load" are carried over from the original run
-test('@S16', PASSING, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const h = givenHistory();
   connectJobs(h.wf, ['Fetch', 'Load']);
   const w = failedWorkOrder(h.wf);
@@ -621,7 +618,7 @@ test('@S16', PASSING, async ({ page }) => {
 //   When I send "rerun" for run "R"
 //   Then I see "Run not found."
 //   And no new run is created for "R"'s work order
-test('@S17', PASSING, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const h = givenHistory();
   const own = failedWorkOrder(h.wf);
   const kenya = given('Kenya TB', { [OTHER]: 'owner' });
@@ -646,7 +643,7 @@ test('@S17', PASSING, async ({ page }) => {
 //   Given work order "W" belongs to a deleted workflow
 //   When I rerun a step of its run
 //   Then I see "Runs for deleted workflows cannot be retried"
-test('@S18', PASSING, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const h = givenHistory();
   const w = failedWorkOrder(h.wf);
   markWorkflowDeleted(h.wf);
@@ -669,7 +666,7 @@ test('@S18', PASSING, async ({ page }) => {
 //   Then the retry icon is disabled with the tooltip "You are not authorized to start runs for this project."
 //   And I do not see a cancel button
 //   And I do not see the export button
-test('@S19', PASSING, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const h = givenHistory('Malawi HIV', { [ME]: 'viewer' });
   const failed = failedWorkOrder(h.wf);
   const pending = pendingWorkOrder(h.wf);
@@ -700,7 +697,7 @@ test('@S19', PASSING, async ({ page }) => {
 // system's answers the page's own request, so one sent outside the page is refused
 // silently. What is checked is that the server answered each one, did not
 // crash, and changed nothing (pilot lesson 6).
-test('@S20', PASSING, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const h = givenHistory('Malawi HIV', { [ME]: 'viewer' });
   const failed = failedWorkOrder(h.wf);
   const pending = pendingWorkOrder(h.wf);
@@ -745,7 +742,7 @@ test('@S20', PASSING, async ({ page }) => {
 //   And selecting all work orders on the page leaves "W" unselected
 // Fails on the design system's page: after select all, the header box stays
 // part-ticked (the wiped row can't be picked), so check() can't tick it.
-test('@S21', PASSING_OLD, async ({ page }) => {
+test('@S21', async ({ page }) => {
   const h = givenHistory();
   const wiped = seedHistoryOrder(h.wf, {
     state: 'failed',
@@ -799,7 +796,7 @@ test('@S21', PASSING_OLD, async ({ page }) => {
 //   Then the tooltip has a "Go to data storage settings" link to "/projects/<project_id>/settings#data-storage"
 //   When an editor hovers it
 //   Then the tooltip says "For more information, contact one of your project admins."
-test('@S22', PASSING, async ({ page, browser }) => {
+test('@S22', async ({ page, browser }) => {
   const h = givenHistory('Malawi HIV', { [ME]: 'admin', [OTHER]: 'editor' });
   const w = seedHistoryOrder(h.wf, {
     state: 'failed',
@@ -833,7 +830,7 @@ test('@S22', PASSING, async ({ page, browser }) => {
 //   When I select all on the first page and click "Retry"
 //   Then I see "Rerun 10 selected work orders from start"
 //   And I see "Rerun all 25 matching work orders from start"
-test('@S23', PASSING, async ({ page }) => {
+test('@S23', async ({ page }) => {
   const h = givenHistory();
   seedWorkOrders(h.wf, 'failed', 25);
   await signInAs(page, ME);
@@ -860,7 +857,7 @@ test('@S23', PASSING, async ({ page }) => {
 //   When I confirm "Rerun 3 selected work orders from start"
 //   Then I see "New runs enqueued for 2 workorders (1 were discarded due to wiped dataclip/workflow being deleted)"
 //   And the page reloads with my filters
-test('@S24', PASSING, async ({ page }) => {
+test('@S24', async ({ page }) => {
   const project = given('Malawi HIV', { [ME]: 'editor' });
   const intake = seedWorkflow(project.id, 'Intake');
   const sync = seedWorkflow(project.id, 'Sync');
@@ -904,7 +901,7 @@ test('@S24', PASSING, async ({ page }) => {
 //   Then I do not see "Retry from"
 //   When I unselect the "Sync" work orders
 //   Then I see "Retry from"
-test('@S25', PASSING, async ({ page }) => {
+test('@S25', async ({ page }) => {
   const project = given('Malawi HIV', { [ME]: 'editor' });
   const intake = failedWorkOrder(seedWorkflow(project.id, 'Intake')).id;
   const sync = failedWorkOrder(seedWorkflow(project.id, 'Sync')).id;
@@ -930,7 +927,7 @@ test('@S25', PASSING, async ({ page }) => {
 //   And every job except "Load" is disabled
 //   When I choose "Load" and confirm
 //   Then the selected work orders are rerun from "Load"
-test('@S26', PASSING, async ({ page }) => {
+test('@S26', async ({ page }) => {
   const project = given('Malawi HIV', { [ME]: 'editor' });
   const wf = seedWorkflow(project.id, 'Daily sync', [
     { name: 'Fetch', adaptor: '@openfn/language-http@latest' },
@@ -987,7 +984,7 @@ test('@S26', PASSING, async ({ page }) => {
 //   Given I selected one pending and one failed work order
 //   Then the bulk "Cancel" button is disabled with "Cancel is only available when all selected work orders are pending"
 //   And the bulk "Retry" button is disabled with "Retry is only available when all selected work orders have finished running"
-test('@S27', PASSING, async ({ page }) => {
+test('@S27', async ({ page }) => {
   const h = givenHistory();
   const pending = pendingWorkOrder(h.wf);
   const failed = failedWorkOrder(h.wf);
@@ -1015,7 +1012,7 @@ test('@S27', PASSING, async ({ page }) => {
 //   When I click its cancel button
 //   Then I see "Work order cancelled."
 //   And its unclaimed run is cancelled
-test('@S28', PASSING, async ({ page }) => {
+test('@S28', async ({ page }) => {
   const h = givenHistory();
   const w = pendingWorkOrder(h.wf);
   await signInAs(page, ME);
@@ -1034,7 +1031,7 @@ test('@S28', PASSING, async ({ page }) => {
 //   When I click its cancel button
 //   Then I see "Work order could not be cancelled"
 //   And the run keeps its state
-test('@S29', PASSING, async ({ page }) => {
+test('@S29', async ({ page }) => {
   const h = givenHistory();
   const w = pendingWorkOrder(h.wf);
   await signInAs(page, ME);
@@ -1057,7 +1054,7 @@ test('@S29', PASSING, async ({ page }) => {
 //   Then I see "it is no longer available"
 // The work order has two enqueued runs; the second is claimed after the page
 // has loaded.
-test('@S30', PASSING, async ({ page }) => {
+test('@S30', async ({ page }) => {
   const h = givenHistory();
   const w = seedHistoryOrder(h.wf, {
     state: 'pending',
@@ -1086,7 +1083,7 @@ test('@S30', PASSING, async ({ page }) => {
 //   Given I selected two pending work orders
 //   When I click "Cancel" and confirm "Cancel up to 2 selected"
 //   Then I see "Cancelled 2 runs"
-test('@S31', PASSING, async ({ page }) => {
+test('@S31', async ({ page }) => {
   const h = givenHistory();
   const orders = [pendingWorkOrder(h.wf), pendingWorkOrder(h.wf)];
   await signInAs(page, ME);
@@ -1108,7 +1105,7 @@ test('@S31', PASSING, async ({ page }) => {
 //   Then I see "Cancelling runs for 3 work orders in the background..."
 //   And a background cancellation job is queued for those work orders
 // Two to a page, so that selecting the page leaves one more that matches.
-test('@S32', PASSING, async ({ page }) => {
+test('@S32', async ({ page }) => {
   const h = givenHistory();
   const orders = [
     pendingWorkOrder(h.wf),
@@ -1141,7 +1138,7 @@ test('@S32', PASSING, async ({ page }) => {
 // test cannot switch it on. Until that instance has a limiting variant, the
 // ExUnit test "Project editors can't rerun when limit has been reached"
 // (test/lightning_web/live/work_order_live_test.exs:1928) covers the refusal.
-test('@S33', { tag: '@pending' }, () => {
+test('@S33', () => {
   test.skip(true, 'variant usage-limited is not configured on this instance');
 });
 
@@ -1154,7 +1151,7 @@ test('@S33', { tag: '@pending' }, () => {
 // Needs the same limiting instance as @S33, and no other test covers it. When
 // there is one: select a finished work order, click bulkAction(page, 'Retry'),
 // expect the flash "Runs limit exceeded" and no "Rerun ... from start" button.
-test('@S34', { tag: '@pending' }, () => {
+test('@S34', () => {
   test.skip(true, 'variant usage-limited is not configured on this instance');
 });
 
@@ -1166,58 +1163,54 @@ test('@S34', { tag: '@pending' }, () => {
 //   And the flow "flow-history-export" has started for my filters
 // The export is an audit event, a file record and a background job. It mails
 // the requester when done, which makes this scenario instance-wide.
-test(
-  '@S35',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    const h = givenHistory();
-    cleanups.push(() =>
-      exec(`delete from project_files where project_id = '${h.project.id}';
+test('@S35', { tag: ['@serial'] }, async ({ page }) => {
+  const h = givenHistory();
+  cleanups.push(() =>
+    exec(`delete from project_files where project_id = '${h.project.id}';
           delete from audit_events where item_id = '${h.project.id}'`)
-    );
-    seedWorkOrders(h.wf, 'success', 12);
-    // More work orders in another workflow, which my filter leaves out
-    const elsewhere = seedWorkflow(h.project.id, 'Other flow');
-    seedWorkOrders(elsewhere, 'success', 5);
-    await signInAs(page, ME);
-    await openHistory(page, h.project.id, { workflow_id: h.wf.id });
+  );
+  seedWorkOrders(h.wf, 'success', 12);
+  // More work orders in another workflow, which my filter leaves out
+  const elsewhere = seedWorkflow(h.project.id, 'Other flow');
+  seedWorkOrders(elsewhere, 'success', 5);
+  await signInAs(page, ME);
+  await openHistory(page, h.project.id, { workflow_id: h.wf.id });
 
-    await exportButton(page).click();
-    await expect(page.getByText(/all 12 work orders/)).toBeVisible();
-    await page.getByRole('button', { name: 'Export history' }).click();
+  await exportButton(page).click();
+  await expect(page.getByText(/all 12 work orders/)).toBeVisible();
+  await page.getByRole('button', { name: 'Export history' }).click();
 
-    await expect(
-      flash(
-        page,
-        'History export started successfully. You will be notified by email after completion.'
-      )
-    ).toBeVisible();
-    const requested = () =>
-      sql(
-        `select id from audit_events where item_id = '${h.project.id}'
+  await expect(
+    flash(
+      page,
+      'History export started successfully. You will be notified by email after completion.'
+    )
+  ).toBeVisible();
+  const requested = () =>
+    sql(
+      `select id from audit_events where item_id = '${h.project.id}'
        and item_type = 'history_export' and event = 'requested'`
-      );
-    await expect.poll(() => requested().length).toBe(1);
-    expect(
-      sql(
-        `select id from project_files where project_id = '${h.project.id}'
+    );
+  await expect.poll(() => requested().length).toBe(1);
+  expect(
+    sql(
+      `select id from project_files where project_id = '${h.project.id}'
        and created_by_id = '${user(ME).id}' and type = 'export'`
-      )
-    ).toHaveLength(1);
-    // The queued job carries my filter: it names the workflow I filtered by
-    const exportJob = 'Lightning.WorkOrders.ExportWorker';
-    await expect
-      .poll(() => obanJobsNaming(exportJob, h.wf.id).length)
-      .toBeGreaterThan(0);
-    expect(obanJobsNaming(exportJob, elsewhere.id)).toHaveLength(0);
-  }
-);
+    )
+  ).toHaveLength(1);
+  // The queued job carries my filter: it names the workflow I filtered by
+  const exportJob = 'Lightning.WorkOrders.ExportWorker';
+  await expect
+    .poll(() => obanJobsNaming(exportJob, h.wf.id).length)
+    .toBeGreaterThan(0);
+  expect(obanJobsNaming(exportJob, elsewhere.id)).toHaveLength(0);
+});
 
 // @S36
 // Scenario: No export is offered when nothing matches
 //   Given I am an editor and no work orders match my filters
 //   Then I do not see the export button
-test('@S36', PASSING, async ({ page }) => {
+test('@S36', async ({ page }) => {
   const h = givenHistory();
   const emptyWf = seedWorkflow(h.project.id, 'Empty flow');
   seedWorkOrder(h.wf, { state: 'success' });
@@ -1240,26 +1233,22 @@ test('@S36', PASSING, async ({ page }) => {
 // waits until the page gives up on it (30 seconds). That fails whatever the
 // search term is, so it doesn't depend on how input is escaped. It locks a
 // table every search reads, hence @serial.
-test(
-  '@S37',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page }) => {
-    test.setTimeout(120_000);
-    const h = givenHistory();
-    seedWorkOrder(h.wf, { state: 'success' });
-    await signInAs(page, ME);
-    cleanups.push(await lockLogLines());
+test('@S37', { tag: ['@serial'] }, async ({ page }) => {
+  test.setTimeout(120_000);
+  const h = givenHistory();
+  seedWorkOrder(h.wf, { state: 'success' });
+  await signInAs(page, ME);
+  cleanups.push(await lockLogLines());
 
-    await open(
-      page,
-      historyPath(h.project.id, { search_term: 'error', log: 'true' })
-    );
+  await open(
+    page,
+    historyPath(h.project.id, { search_term: 'error', log: 'true' })
+  );
 
-    await expect(
-      page.getByText('There was an error loading the work orders')
-    ).toBeVisible({ timeout: 60_000 });
-  }
-);
+  await expect(
+    page.getByText('There was an error loading the work orders')
+  ).toBeVisible({ timeout: 60_000 });
+});
 
 // @S38
 // Scenario: Filters from the health page show as chips that can be dropped
@@ -1268,7 +1257,7 @@ test(
 //   And I see a chip starting "Run created" and ending "UTC"
 //   When I clear the run status chip
 //   Then the run created chip remains
-test('@S38', PASSING, async ({ page }) => {
+test('@S38', async ({ page }) => {
   const h = givenHistory();
   await signInAs(page, ME);
 
@@ -1295,7 +1284,7 @@ test('@S38', PASSING, async ({ page }) => {
 //   When I open it
 //   Then the error signature chip shows the short job id, not the job's name
 // A job of this project shows its name, so the chip can tell the two apart.
-test('@S39', PASSING, async ({ page }) => {
+test('@S39', async ({ page }) => {
   const h = givenHistory();
   const kenya = given('Kenya TB', { [OTHER]: 'owner' });
   const secret = seedWorkflow(kenya.id, 'Kenya sync', [
@@ -1325,7 +1314,7 @@ test('@S39', PASSING, async ({ page }) => {
 //   Given a link with "error_signature_exit_reason" set to "rejected" and no job id
 //   When I open it
 //   Then I see no work orders
-test('@S40', PASSING, async ({ page }) => {
+test('@S40', async ({ page }) => {
   const h = givenHistory();
   const failed = failedWorkOrder(h.wf).id;
   await signInAs(page, ME);
@@ -1345,7 +1334,7 @@ test('@S40', PASSING, async ({ page }) => {
 //   When I open the history page
 //   Then I see tabs "Work orders" and "Channel logs"
 //   And without experimental features I see no tabs
-test('@S41', PASSING, async ({ page }) => {
+test('@S41', async ({ page }) => {
   const h = givenHistory();
   await signInAs(page, ME);
 
@@ -1368,7 +1357,7 @@ test('@S41', PASSING, async ({ page }) => {
 //   Then the flow "flow-history-live-updates" ends on this page
 // Another member cancels the pending work order from their own session, and
 // then a webhook request makes a new work order.
-test('@S42', PASSING, async ({ page, browser }) => {
+test('@S42', async ({ page, browser }) => {
   const h = givenHistory('Malawi HIV', { [ME]: 'viewer', [OTHER]: 'owner' });
   connectJobs(h.wf, ['Fetch', 'Load']);
   const w = pendingWorkOrder(h.wf);
@@ -1411,7 +1400,7 @@ test('@S42', PASSING, async ({ page, browser }) => {
 // Both were received before the bound, so a filter on the received date
 // would leave out both. Sorting by created first puts "B" on top, so the
 // first click on "Last Activity" visibly changes the order.
-test('@S43', PASSING, async ({ page }) => {
+test('@S43', async ({ page }) => {
   const h = givenHistory();
   const seed = (received: number, active: number) => {
     const id = seedWorkOrder(h.wf, {
@@ -1452,45 +1441,39 @@ const HOST = 'History host';
 
 // Inherited from shared-authenticated-session, on the history page.
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S01(page, givenHistory().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on history-work-orders', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, givenHistory().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on history-work-orders',
-    PASSING,
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, givenHistory().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on history-work-orders', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, givenHistory().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S03(page, givenHistory().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on history-work-orders', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, givenHistory().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on history-work-orders',
-    PASSING,
-    async ({ page, browser }) => {
-      const h = givenHistory();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        `/projects/${h.project.id}/w`,
-        ME,
-        'History'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on history-work-orders', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenHistory();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      `/projects/${h.project.id}/w`,
+      ME,
+      'History'
+    );
+  });
 
   // The page renders the book-a-demo banner slot (S08 and S09), but these
   // variants need instance configuration the e2e Lightning does not have
@@ -1503,76 +1486,49 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on history-work-orders`,
-      { tag: tagFor(id, []) },
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on history-work-orders`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 // Inherited from shared-project-scope, on the history page.
 // S11 and S12 are not run: see the list at the end of this file.
 test.describe('shared-project-scope', () => {
-  test(
-    'shared-project-scope@S01 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S01(page, givenHistory().path);
-    }
-  );
+  test('shared-project-scope@S01 on history-work-orders', async ({ page }) => {
+    await projectScope.S01(page, givenHistory().path);
+  });
 
-  test(
-    'shared-project-scope@S02 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      await projectScope.S02(page, h.path, ME, historySearchBox(page));
-    }
-  );
+  test('shared-project-scope@S02 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    await projectScope.S02(page, h.path, ME, historySearchBox(page));
+  });
 
-  test(
-    'shared-project-scope@S03 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory('Malawi HIV', { [OTHER]: 'owner' });
-      await projectScope.S03(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S03 on history-work-orders', async ({ page }) => {
+    const h = givenHistory('Malawi HIV', { [OTHER]: 'owner' });
+    await projectScope.S03(page, h.path, ME);
+  });
 
-  test(
-    'shared-project-scope@S04 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory('Malawi HIV', { [OTHER]: 'owner' });
-      exec(
-        `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.project.id}'`
-      );
-      await projectScope.S04(page, h.path, OTHER);
-    }
-  );
+  test('shared-project-scope@S04 on history-work-orders', async ({ page }) => {
+    const h = givenHistory('Malawi HIV', { [OTHER]: 'owner' });
+    exec(
+      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.project.id}'`
+    );
+    await projectScope.S04(page, h.path, OTHER);
+  });
 
-  test(
-    'shared-project-scope@S05 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      exec(
-        `update projects set requires_mfa = true where id = '${h.project.id}'`
-      );
-      removeMfaOf(ME);
-      await projectScope.S05(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S05 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    exec(
+      `update projects set requires_mfa = true where id = '${h.project.id}'`
+    );
+    removeMfaOf(ME);
+    await projectScope.S05(page, h.path, ME);
+  });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-scope@S06 on history-work-orders',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenHistory('Malawi HIV', { [OTHER]: 'owner' });
       exec(
@@ -1583,38 +1539,30 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S07 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory('Malawi HIV', {
-        [ME]: 'editor',
-        [OTHER]: 'owner',
-      });
-      await projectScope.S07(page, h.path, ME, () =>
-        removeMemberOnNode(h.project.id, ME, OTHER)
-      );
-    }
-  );
+  test('shared-project-scope@S07 on history-work-orders', async ({ page }) => {
+    const h = givenHistory('Malawi HIV', {
+      [ME]: 'editor',
+      [OTHER]: 'owner',
+    });
+    await projectScope.S07(page, h.path, ME, () =>
+      removeMemberOnNode(h.project.id, ME, OTHER)
+    );
+  });
 
-  test(
-    'shared-project-scope@S08 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory('Malawi HIV', { [ME]: 'admin', [OTHER]: 'owner' });
-      await projectScope.S08(
-        page,
-        `${h.path}?page_size=5`,
-        ME,
-        () => changeRoleOnNode(h.project.id, ME, 'viewer'),
-        historyRoot(page)
-      );
-    }
-  );
+  test('shared-project-scope@S08 on history-work-orders', async ({ page }) => {
+    const h = givenHistory('Malawi HIV', { [ME]: 'admin', [OTHER]: 'owner' });
+    await projectScope.S08(
+      page,
+      `${h.path}?page_size=5`,
+      ME,
+      () => changeRoleOnNode(h.project.id, ME, 'viewer'),
+      historyRoot(page)
+    );
+  });
 
   test(
     'shared-project-scope@S09 on history-work-orders',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenHistory('Malawi HIV', { [OTHER]: 'owner' });
       exec(
@@ -1627,42 +1575,29 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S10 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory('Malawi HIV', {
-        [ME]: 'editor',
-        [OTHER]: 'owner',
-      });
-      await projectScope.S10(page, h.path, ME, () =>
-        scheduleDeletionOnNode(h.project.id)
-      );
-    }
-  );
+  test('shared-project-scope@S10 on history-work-orders', async ({ page }) => {
+    const h = givenHistory('Malawi HIV', {
+      [ME]: 'editor',
+      [OTHER]: 'owner',
+    });
+    await projectScope.S10(page, h.path, ME, () =>
+      scheduleDeletionOnNode(h.project.id)
+    );
+  });
 });
 
 // Inherited from shared-usage-limits-banner: the page renders the banner slot
 test.describe('shared-usage-limits-banner', () => {
-  test(
-    'shared-usage-limits-banner@S01 on history-work-orders',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'variant usage-limited is not configured on this instance'
-      );
-    }
-  );
+  test('shared-usage-limits-banner@S01 on history-work-orders', () => {
+    test.skip(true, 'variant usage-limited is not configured on this instance');
+  });
 
-  test(
-    'shared-usage-limits-banner@S02 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      await usageLimitsBanner.S02(page, h.path, ME, historySearchBox(page));
-    }
-  );
+  test('shared-usage-limits-banner@S02 on history-work-orders', async ({
+    page,
+  }) => {
+    const h = givenHistory();
+    await usageLimitsBanner.S02(page, h.path, ME, historySearchBox(page));
+  });
 });
 
 // Inherited from shared-project-header: the breadcrumbs, picker and side menu
@@ -1671,53 +1606,39 @@ test.describe('shared-usage-limits-banner', () => {
 test.describe('shared-project-header', () => {
   // shared-project-header S01 opens a run's page; the same breadcrumb
   // contract on this page ends in "History", which is no link
-  test(
-    'shared-project-header@S01 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory(HOST);
-      await projectHeader.S01(page, h.path, ME, HOST, [{ name: 'History' }]);
-    }
-  );
+  test('shared-project-header@S01 on history-work-orders', async ({ page }) => {
+    const h = givenHistory(HOST);
+    await projectHeader.S01(page, h.path, ME, HOST, [{ name: 'History' }]);
+  });
 
-  test(
-    'shared-project-header@S02 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory(HOST);
-      await projectHeader.S02(page, ME, { path: h.path, project: HOST });
-    }
-  );
+  test('shared-project-header@S02 on history-work-orders', async ({ page }) => {
+    const h = givenHistory(HOST);
+    await projectHeader.S02(page, ME, { path: h.path, project: HOST });
+  });
 
-  test(
-    'shared-project-header@S03 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const parent = given(HOST, { [ME]: 'editor' });
-      const sandbox = given('dev', { [ME]: 'editor' });
-      exec(`update projects set parent_id = '${parent.id}', color = '#E33D63'
+  test('shared-project-header@S03 on history-work-orders', async ({ page }) => {
+    const parent = given(HOST, { [ME]: 'editor' });
+    const sandbox = given('dev', { [ME]: 'editor' });
+    exec(`update projects set parent_id = '${parent.id}', color = '#E33D63'
             where id = '${sandbox.id}'`);
-      await projectHeader.S03(page, ME, {
-        path: historyPath(sandbox.id),
-        label: `${HOST}:dev`,
-      });
-    }
-  );
+    await projectHeader.S03(page, ME, {
+      path: historyPath(sandbox.id),
+      label: `${HOST}:dev`,
+    });
+  });
 
   for (const id of ['S04', 'S05', 'S06', 'S08'] as const)
-    test(
-      `shared-project-header@${id} on history-work-orders`,
-      { tag: tagFor(id, ['S04', 'S05', 'S06', 'S08'], true) },
-      async ({ page }) => {
-        const h = givenHistory(HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on history-work-orders`, async ({
+      page,
+    }) => {
+      const h = givenHistory(HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-header@S07 on history-work-orders',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenHistory(HOST);
       await projectHeader.S07(page, h.path, ME);
@@ -1726,86 +1647,60 @@ test.describe('shared-project-header', () => {
 
   // shared-project-header S09 starts on a project settings page, whatever
   // page hosts the header (see the shared step)
-  test(
-    'shared-project-header@S09 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      await projectHeader.S09(page, ME);
-    }
-  );
+  test('shared-project-header@S09 on history-work-orders', async ({ page }) => {
+    await projectHeader.S09(page, ME);
+  });
 
   // shared-project-header S10: none of its Examples start on History, which
   // has an equivalent in every project. A History link that names a work
   // order of this project is the nearest case: its id exists only here, and
   // picking another project must land on that project's plain History.
-  test(
-    'shared-project-header@S10 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory(HOST);
-      const w = failedWorkOrder(h.wf);
-      await projectHeader.S10(
-        page,
-        historyPath(h.project.id, { workorder_id: w.id }),
-        ME,
-        '/history'
-      );
-    }
-  );
+  test('shared-project-header@S10 on history-work-orders', async ({ page }) => {
+    const h = givenHistory(HOST);
+    const w = failedWorkOrder(h.wf);
+    await projectHeader.S10(
+      page,
+      historyPath(h.project.id, { workorder_id: w.id }),
+      ME,
+      '/history'
+    );
+  });
 
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on history-work-orders`,
-      { tag: tagFor(id, ['S11', 'S12', 'S13', 'S18'], true) },
-      async ({ page }) => {
-        const h = givenHistory(HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on history-work-orders`, async ({
+      page,
+    }) => {
+      const h = givenHistory(HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
-  test(
-    'shared-project-header@S14 on history-work-orders',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'variant require-email-verification is not configured on this instance'
-      );
-    }
-  );
+  test('shared-project-header@S14 on history-work-orders', () => {
+    test.skip(
+      true,
+      'variant require-email-verification is not configured on this instance'
+    );
+  });
 
   // This page highlights "History" in the side menu
-  test(
-    'shared-project-header@S15 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory(HOST);
-      await projectHeader.S15(page, h.path, ME, h.project.id, 'History');
-    }
-  );
+  test('shared-project-header@S15 on history-work-orders', async ({ page }) => {
+    const h = givenHistory(HOST);
+    await projectHeader.S15(page, h.path, ME, h.project.id, 'History');
+  });
 
   // The preference is data, so the variant is seeded rather than skipped
-  test(
-    'shared-project-header@S16 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory(HOST);
-      await projectHeader.S16(page, h.path, ME, { channels: true });
-    }
-  );
+  test('shared-project-header@S16 on history-work-orders', async ({ page }) => {
+    const h = givenHistory(HOST);
+    await projectHeader.S16(page, h.path, ME, { channels: true });
+  });
 
   // A superuser needs a role on the project to open this page at all
-  test(
-    'shared-project-header@S17 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory(HOST, {
-        [ME]: 'viewer',
-        'super@openfn.org': 'viewer',
-      });
-      await projectHeader.S17(page, h.path);
-    }
-  );
+  test('shared-project-header@S17 on history-work-orders', async ({ page }) => {
+    const h = givenHistory(HOST, {
+      [ME]: 'viewer',
+      'super@openfn.org': 'viewer',
+    });
+    await projectHeader.S17(page, h.path);
+  });
 });
 
 // Inherited from shared-run-components: the state pill, step icons, durations,
@@ -1818,188 +1713,164 @@ test.describe('shared-run-components', () => {
 
   // A work order has a state pill; a run is never "claimed" or "Starting" as a
   // work order, so that half of the scenario is only visible on the run page
-  test(
-    'shared-run-components@S01 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const labelled = [
-        ['pending', 'Enqueued'],
-        ['running', 'Running'],
-        ['failed', 'Failed'],
-      ] as const;
-      const orders = labelled.map(([state]) => seedWorkOrder(h.wf, { state }));
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
-      await expectHistoryLists(page, orders, []);
+  test('shared-run-components@S01 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const labelled = [
+      ['pending', 'Enqueued'],
+      ['running', 'Running'],
+      ['failed', 'Failed'],
+    ] as const;
+    const orders = labelled.map(([state]) => seedWorkOrder(h.wf, { state }));
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
+    await expectHistoryLists(page, orders, []);
 
-      await runComponents.S01(
-        page,
-        orders.map((id, i) => [
-          historyCell(historyRow(page, id), 'Status'),
-          labelled[i][1],
-        ])
-      );
-    }
-  );
+    await runComponents.S01(
+      page,
+      orders.map((id, i) => [
+        historyCell(historyRow(page, id), 'Status'),
+        labelled[i][1],
+      ])
+    );
+  });
 
-  test(
-    'shared-run-components@S02 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const project = given('Malawi HIV', { [ME]: 'editor' });
-      const wf = seedWorkflow(
-        project.id,
-        'Daily sync',
-        jobsNamed('Fetch', 'Transform', 'Load')
-      );
-      const w = seedHistoryOrder(wf, {
-        state: 'running',
-        runs: [
-          {
-            state: 'started',
-            steps: [
-              { job: 'Fetch', exit: 'success' },
-              { job: 'Transform', exit: 'fail' },
-              { job: 'Load', exit: null },
-            ],
-          },
-        ],
-      });
-      await signInAs(page, ME);
-      await openHistory(page, project.id);
-      await expandWorkOrder(page, w.id);
+  test('shared-run-components@S02 on history-work-orders', async ({ page }) => {
+    const project = given('Malawi HIV', { [ME]: 'editor' });
+    const wf = seedWorkflow(
+      project.id,
+      'Daily sync',
+      jobsNamed('Fetch', 'Transform', 'Load')
+    );
+    const w = seedHistoryOrder(wf, {
+      state: 'running',
+      runs: [
+        {
+          state: 'started',
+          steps: [
+            { job: 'Fetch', exit: 'success' },
+            { job: 'Transform', exit: 'fail' },
+            { job: 'Load', exit: null },
+          ],
+        },
+      ],
+    });
+    await signInAs(page, ME);
+    await openHistory(page, project.id);
+    await expandWorkOrder(page, w.id);
 
-      const steps = w.runs[0].steps;
-      await runComponents.S02(page, {
-        pending: stepRow(page, steps.Load),
-        success: stepRow(page, steps.Fetch),
-        failed: stepRow(page, steps.Transform),
-      });
-    }
-  );
+    const steps = w.runs[0].steps;
+    await runComponents.S02(page, {
+      pending: stepRow(page, steps.Load),
+      success: stepRow(page, steps.Fetch),
+      failed: stepRow(page, steps.Transform),
+    });
+  });
 
-  test(
-    'shared-run-components@S03 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const project = given('Malawi HIV', { [ME]: 'editor' });
-      const wf = seedWorkflow(
-        project.id,
-        'Daily sync',
-        jobsNamed('Timeout', 'Security', 'Memory', 'Size')
-      );
-      const kill = (job: string, error: string) => ({
-        job,
-        exit: 'kill',
-        error,
-      });
-      const w = seedHistoryOrder(wf, {
-        state: 'killed',
-        runs: [
-          {
-            state: 'killed',
-            steps: [
-              kill('Timeout', 'TimeoutError'),
-              kill('Security', 'SecurityError'),
-              kill('Memory', 'OOMError'),
-              kill('Size', 'StateTooLargeError'),
-            ],
-          },
-        ],
-      });
-      await signInAs(page, ME);
-      await openHistory(page, project.id);
-      await expandWorkOrder(page, w.id);
+  test('shared-run-components@S03 on history-work-orders', async ({ page }) => {
+    const project = given('Malawi HIV', { [ME]: 'editor' });
+    const wf = seedWorkflow(
+      project.id,
+      'Daily sync',
+      jobsNamed('Timeout', 'Security', 'Memory', 'Size')
+    );
+    const kill = (job: string, error: string) => ({
+      job,
+      exit: 'kill',
+      error,
+    });
+    const w = seedHistoryOrder(wf, {
+      state: 'killed',
+      runs: [
+        {
+          state: 'killed',
+          steps: [
+            kill('Timeout', 'TimeoutError'),
+            kill('Security', 'SecurityError'),
+            kill('Memory', 'OOMError'),
+            kill('Size', 'StateTooLargeError'),
+          ],
+        },
+      ],
+    });
+    await signInAs(page, ME);
+    await openHistory(page, project.id);
+    await expandWorkOrder(page, w.id);
 
-      const steps = w.runs[0].steps;
-      await runComponents.S03(page, {
-        timeout: stepRow(page, steps.Timeout),
-        security: stepRow(page, steps.Security),
-        oom: stepRow(page, steps.Memory),
-        tooLarge: stepRow(page, steps.Size),
-      });
-    }
-  );
+    const steps = w.runs[0].steps;
+    await runComponents.S03(page, {
+      timeout: stepRow(page, steps.Timeout),
+      security: stepRow(page, steps.Security),
+      oom: stepRow(page, steps.Memory),
+      tooLarge: stepRow(page, steps.Size),
+    });
+  });
 
-  test(
-    'shared-run-components@S04 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const w = seedHistoryOrder(h.wf, {
-        state: 'running',
-        runs: [
-          {
-            state: 'started',
-            steps: [{ job: 'Fetch', exit: null, seconds: 20 }],
-          },
-        ],
-      });
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, w.id);
+  test('shared-run-components@S04 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const w = seedHistoryOrder(h.wf, {
+      state: 'running',
+      runs: [
+        {
+          state: 'started',
+          steps: [{ job: 'Fetch', exit: null, seconds: 20 }],
+        },
+      ],
+    });
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, w.id);
 
-      await runComponents.S04(
-        page,
-        elapsedOf(stepRow(page, w.runs[0].steps.Fetch))
-      );
-    }
-  );
+    await runComponents.S04(
+      page,
+      elapsedOf(stepRow(page, w.runs[0].steps.Fetch))
+    );
+  });
 
-  test(
-    'shared-run-components@S05 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const ran = seedHistoryOrder(h.wf, {
-        state: 'success',
-        runs: [
-          {
-            state: 'success',
-            steps: [{ job: 'Fetch', exit: 'success', seconds: 90 }],
-          },
-        ],
-      });
-      const waiting = pendingWorkOrder(h.wf);
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, ran.id);
+  test('shared-run-components@S05 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const ran = seedHistoryOrder(h.wf, {
+      state: 'success',
+      runs: [
+        {
+          state: 'success',
+          steps: [{ job: 'Fetch', exit: 'success', seconds: 90 }],
+        },
+      ],
+    });
+    const waiting = pendingWorkOrder(h.wf);
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, ran.id);
 
-      await runComponents.S05(
-        page,
-        elapsedOf(stepRow(page, ran.runs[0].steps.Fetch)),
-        elapsedOf(historyCell(historyRow(page, waiting.id), 'Duration'))
-      );
-    }
-  );
+    await runComponents.S05(
+      page,
+      elapsedOf(stepRow(page, ran.runs[0].steps.Fetch)),
+      elapsedOf(historyCell(historyRow(page, waiting.id), 'Duration'))
+    );
+  });
 
-  test(
-    'shared-run-components@S06 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const w = seedHistoryOrder(h.wf, {
-        state: 'failed',
-        runs: [
-          failedRun(),
-          {
-            state: 'failed',
-            steps: [{ job: 'Fetch', carried: true }, { job: 'Load' }],
-          },
-        ],
-      });
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, w.id);
+  test('shared-run-components@S06 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const w = seedHistoryOrder(h.wf, {
+      state: 'failed',
+      runs: [
+        failedRun(),
+        {
+          state: 'failed',
+          steps: [{ job: 'Fetch', carried: true }, { job: 'Load' }],
+        },
+      ],
+    });
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, w.id);
 
-      await runComponents.S06(
-        page,
-        stepRow(page, w.runs[1].steps.Fetch),
-        stepRow(page, w.runs[1].steps.Load)
-      );
-    }
-  );
+    await runComponents.S06(
+      page,
+      stepRow(page, w.runs[1].steps.Fetch),
+      stepRow(page, w.runs[1].steps.Load)
+    );
+  });
 
   // The first work order ran on the version before the workflow changed, the
   // second on the version it is on now. The workflow link and the step's
@@ -2025,210 +1896,183 @@ test.describe('shared-run-components', () => {
     return { h, older, current };
   }
 
-  test(
-    'shared-run-components@S07 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const { older, current } = await olderAndCurrent(page);
+  test('shared-run-components@S07 on history-work-orders', async ({ page }) => {
+    const { older, current } = await olderAndCurrent(page);
 
-      await runComponents.S07(page, {
-        older: historyCell(historyRow(page, older.id), 'Workflow').getByRole(
-          'link'
-        ),
-        olderRun: older.runs[0].id,
-        version: 0,
-        current: historyCell(
-          historyRow(page, current.id),
-          'Workflow'
-        ).getByRole('link'),
-        currentRun: current.runs[0].id,
-      });
-      await runComponents.S07(page, {
-        older: inspectStepLink(page, older.runs[0].steps.Load),
-        olderRun: older.runs[0].id,
-        version: 0,
-        current: inspectStepLink(page, current.runs[0].steps['Load again']),
-        currentRun: current.runs[0].id,
-      });
-    }
-  );
+    await runComponents.S07(page, {
+      older: historyCell(historyRow(page, older.id), 'Workflow').getByRole(
+        'link'
+      ),
+      olderRun: older.runs[0].id,
+      version: 0,
+      current: historyCell(historyRow(page, current.id), 'Workflow').getByRole(
+        'link'
+      ),
+      currentRun: current.runs[0].id,
+    });
+    await runComponents.S07(page, {
+      older: inspectStepLink(page, older.runs[0].steps.Load),
+      olderRun: older.runs[0].id,
+      version: 0,
+      current: inspectStepLink(page, current.runs[0].steps['Load again']),
+      currentRun: current.runs[0].id,
+    });
+  });
 
-  test(
-    'shared-run-components@S08 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const older = failedWorkOrder(h.wf);
-      h.wf.rename('Load', 'Load again');
-      setPreferences(ME, { experimental_features: true });
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
+  test('shared-run-components@S08 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const older = failedWorkOrder(h.wf);
+    h.wf.rename('Load', 'Load again');
+    setPreferences(ME, { experimental_features: true });
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
 
-      await runComponents.S08(
-        page,
-        historyCell(historyRow(page, older.id), 'Workflow').getByRole('link'),
-        older.runs[0].id,
-        `/projects/${h.project.id}/w/${h.wf.id}`
-      );
-    }
-  );
+    await runComponents.S08(
+      page,
+      historyCell(historyRow(page, older.id), 'Workflow').getByRole('link'),
+      older.runs[0].id,
+      `/projects/${h.project.id}/w/${h.wf.id}`
+    );
+  });
 
-  test(
-    'shared-run-components@S09 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const w = pendingWorkOrder(h.wf);
-      const [run] = w.runs;
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, w.id);
+  test('shared-run-components@S09 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const w = pendingWorkOrder(h.wf);
+    const [run] = w.runs;
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, w.id);
 
-      await runComponents.S09(
-        page,
-        cancelRunButton(page, run.id),
-        run.id,
-        historyRun(page, run.id)
-      );
-    }
-  );
+    await runComponents.S09(
+      page,
+      cancelRunButton(page, run.id),
+      run.id,
+      historyRun(page, run.id)
+    );
+  });
 
-  test(
-    'shared-run-components@S10 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const w = pendingWorkOrder(h.wf);
-      const [run] = w.runs;
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, w.id);
-      await expect(cancelRunButton(page, run.id)).toBeVisible();
+  test('shared-run-components@S10 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const w = pendingWorkOrder(h.wf);
+    const [run] = w.runs;
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, w.id);
+    await expect(cancelRunButton(page, run.id)).toBeVisible();
 
-      await runComponents.S10(page, cancelRunButton(page, run.id), run.id, () =>
-        claimRun(run.id)
-      );
-    }
-  );
+    await runComponents.S10(page, cancelRunButton(page, run.id), run.id, () =>
+      claimRun(run.id)
+    );
+  });
 
-  test(
-    'shared-run-components@S11 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const kenya = given('Kenya TB', { [OTHER]: 'owner' });
-      const k = pendingWorkOrder(seedWorkflow(kenya.id));
-      const own = pendingWorkOrder(h.wf);
-      await signInAs(page, ME);
-      const cancelNamingR = await sendingValues(page, {
-        run_id: k.runs[0].id,
-      });
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, own.id);
+  test('shared-run-components@S11 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const kenya = given('Kenya TB', { [OTHER]: 'owner' });
+    const k = pendingWorkOrder(seedWorkflow(kenya.id));
+    const own = pendingWorkOrder(h.wf);
+    await signInAs(page, ME);
+    const cancelNamingR = await sendingValues(page, {
+      run_id: k.runs[0].id,
+    });
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, own.id);
 
-      // The cancel button of my own pending run, sending R's id instead
-      await runComponents.S11(
-        page,
-        () => cancelNamingR(cancelRunButton(page, own.runs[0].id)),
-        k.runs[0].id
-      );
-      expect(runStateOf(own.runs[0].id)).toBe('available');
-    }
-  );
+    // The cancel button of my own pending run, sending R's id instead
+    await runComponents.S11(
+      page,
+      () => cancelNamingR(cancelRunButton(page, own.runs[0].id)),
+      k.runs[0].id
+    );
+    expect(runStateOf(own.runs[0].id)).toBe('available');
+  });
 
   // A viewer sees no cancel button on an available run; an editor sees none
   // on a claimed, a started or a finished one
-  test(
-    'shared-run-components@S12 on history-work-orders',
-    PASSING,
-    async ({ page, browser }) => {
-      const h = givenHistory('Malawi HIV', {
-        [ME]: 'viewer',
-        [OTHER]: 'editor',
-      });
-      const available = pendingWorkOrder(h.wf);
-      const others = seedHistoryOrder(h.wf, {
-        state: 'running',
-        runs: [{ state: 'claimed' }, { state: 'started' }, failedRun()],
-      });
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id, { workorder_id: available.id });
-      await expect(runLink(page, available.runs[0].id)).toBeVisible();
+  test('shared-run-components@S12 on history-work-orders', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenHistory('Malawi HIV', {
+      [ME]: 'viewer',
+      [OTHER]: 'editor',
+    });
+    const available = pendingWorkOrder(h.wf);
+    const others = seedHistoryOrder(h.wf, {
+      state: 'running',
+      runs: [{ state: 'claimed' }, { state: 'started' }, failedRun()],
+    });
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id, { workorder_id: available.id });
+    await expect(runLink(page, available.runs[0].id)).toBeVisible();
 
-      await runComponents.S12(
-        page,
-        page.getByRole('button', { name: 'Cancel this run' })
-      );
+    await runComponents.S12(
+      page,
+      page.getByRole('button', { name: 'Cancel this run' })
+    );
 
-      const editor = await otherSession(browser, OTHER);
-      await openHistory(editor, h.project.id, { workorder_id: others.id });
-      for (const run of others.runs)
-        await expect(runLink(editor, run.id)).toBeVisible();
-      await runComponents.S12(
-        editor,
-        editor.getByRole('button', { name: 'Cancel this run' })
-      );
-      await editor.context().close();
-    }
-  );
+    const editor = await otherSession(browser, OTHER);
+    await openHistory(editor, h.project.id, { workorder_id: others.id });
+    for (const run of others.runs)
+      await expect(runLink(editor, run.id)).toBeVisible();
+    await runComponents.S12(
+      editor,
+      editor.getByRole('button', { name: 'Cancel this run' })
+    );
+    await editor.context().close();
+  });
 
-  test(
-    'shared-run-components@S13 on history-work-orders',
-    PASSING,
-    async ({ page, browser }) => {
-      const h = givenHistory('Malawi HIV', {
-        [ME]: 'admin',
-        [OTHER]: 'editor',
-      });
-      const w = seedHistoryOrder(h.wf, {
-        state: 'failed',
-        runs: [
-          {
-            state: 'failed',
-            steps: [
-              { job: 'Fetch', exit: 'success' },
-              { job: 'Load', inputWiped: true },
-            ],
-          },
-        ],
-      });
-      const icon = (p: Page) => rerunStepIcon(p, w.runs[0].steps.Load);
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, w.id);
-      const editor = await otherSession(browser, OTHER);
-      await openHistory(editor, h.project.id);
-      await expandWorkOrder(editor, w.id);
+  test('shared-run-components@S13 on history-work-orders', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenHistory('Malawi HIV', {
+      [ME]: 'admin',
+      [OTHER]: 'editor',
+    });
+    const w = seedHistoryOrder(h.wf, {
+      state: 'failed',
+      runs: [
+        {
+          state: 'failed',
+          steps: [
+            { job: 'Fetch', exit: 'success' },
+            { job: 'Load', inputWiped: true },
+          ],
+        },
+      ],
+    });
+    const icon = (p: Page) => rerunStepIcon(p, w.runs[0].steps.Load);
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, w.id);
+    const editor = await otherSession(browser, OTHER);
+    await openHistory(editor, h.project.id);
+    await expandWorkOrder(editor, w.id);
 
-      await runComponents.S13(
-        { page, icon: icon(page) },
-        { page: editor, icon: icon(editor) },
-        h.project.id
-      );
-      await editor.context().close();
-    }
-  );
+    await runComponents.S13(
+      { page, icon: icon(page) },
+      { page: editor, icon: icon(editor) },
+      h.project.id
+    );
+    await editor.context().close();
+  });
 
-  test(
-    'shared-run-components@S14 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const w = failedWorkOrder(h.wf);
-      const loadJob = h.wf.jobs.Load;
-      deleteJobOf(h.wf, 'Load');
-      cleanups.push(() => removeStepsOfJob(loadJob));
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, w.id);
+  test('shared-run-components@S14 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const w = failedWorkOrder(h.wf);
+    const loadJob = h.wf.jobs.Load;
+    deleteJobOf(h.wf, 'Load');
+    cleanups.push(() => removeStepsOfJob(loadJob));
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, w.id);
 
-      await runComponents.S14(
-        page,
-        rerunStepIcon(page, w.runs[0].steps.Load),
-        () => runsOfWorkOrder(w.id).length
-      );
-    }
-  );
+    await runComponents.S14(
+      page,
+      rerunStepIcon(page, w.runs[0].steps.Load),
+      () => runsOfWorkOrder(w.id).length
+    );
+  });
 });
 
 // Inherited from shared-local-datetime: the "Created" and "Last Activity"
@@ -2250,71 +2094,57 @@ test.describe('shared-local-datetime', () => {
 
   test.describe(() => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-    test(
-      'shared-local-datetime@S01 on history-work-orders',
-      PASSING,
-      async ({ page }) => {
-        await localDatetime.S01(
-          page,
-          await createdAt(page, localDatetime.given.S01)
-        );
-      }
-    );
+    test('shared-local-datetime@S01 on history-work-orders', async ({
+      page,
+    }) => {
+      await localDatetime.S01(
+        page,
+        await createdAt(page, localDatetime.given.S01)
+      );
+    });
   });
 
   for (const id of ['S02', 'S04', 'S05', 'S06'] as const)
-    test(
-      `shared-local-datetime@${id} on history-work-orders`,
-      { tag: tagFor(id, ['S02', 'S04', 'S05', 'S06'], true) },
-      async ({ page }) => {
-        await localDatetime[id](
-          page,
-          await createdAt(page, localDatetime.given[id])
-        );
-      }
-    );
+    test(`shared-local-datetime@${id} on history-work-orders`, async ({
+      page,
+    }) => {
+      await localDatetime[id](
+        page,
+        await createdAt(page, localDatetime.given[id])
+      );
+    });
 
   // The run header says when the run finished in the relative detailed form
-  test(
-    'shared-local-datetime@S03 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const { utc, today } = localDatetime.given.S03;
-      // The run finishes a minute after the work order is created
-      const w = seedHistoryOrder(h.wf, {
-        state: 'success',
-        at: utc.replace('08:30:07', '08:29:07'),
-        runs: [
-          { state: 'success', steps: [{ job: 'Fetch', exit: 'success' }] },
-        ],
-      });
-      await signInAs(page, ME);
-      await page.clock.setFixedTime(today);
-      await openHistory(page, h.project.id, { workflow_id: h.wf.id });
-      await expandWorkOrder(page, w.id);
+  test('shared-local-datetime@S03 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const { utc, today } = localDatetime.given.S03;
+    // The run finishes a minute after the work order is created
+    const w = seedHistoryOrder(h.wf, {
+      state: 'success',
+      at: utc.replace('08:30:07', '08:29:07'),
+      runs: [{ state: 'success', steps: [{ job: 'Fetch', exit: 'success' }] }],
+    });
+    await signInAs(page, ME);
+    await page.clock.setFixedTime(today);
+    await openHistory(page, h.project.id, { workflow_id: h.wf.id });
+    await expandWorkOrder(page, w.id);
 
-      await localDatetime.S03(page, runTimestamp(page, w.runs[0].id));
-    }
-  );
+    await localDatetime.S03(page, runTimestamp(page, w.runs[0].id));
+  });
 
   // A work order that has had no activity has no last activity to show
-  test(
-    'shared-local-datetime@S07 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const id = seedWorkOrder(h.wf, { state: 'pending' });
-      exec(`update work_orders set last_activity = null where id = '${id}'`);
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id, { workflow_id: h.wf.id });
+  test('shared-local-datetime@S07 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const id = seedWorkOrder(h.wf, { state: 'pending' });
+    exec(`update work_orders set last_activity = null where id = '${id}'`);
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id, { workflow_id: h.wf.id });
 
-      await localDatetime.S07(
-        page,
-        historyCell(historyRow(page, id), 'Last Activity')
-      );
-    }
-  );
+    await localDatetime.S07(
+      page,
+      historyCell(historyRow(page, id), 'Last Activity')
+    );
+  });
 });
 
 // Inherited from shared-flash-messages. The messages are the ones this page
@@ -2332,103 +2162,74 @@ test.describe('shared-flash-messages', () => {
     return { h, w, cancel };
   }
 
-  test(
-    'shared-flash-messages@S01 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const { cancel } = await withPending(page);
-      await flashMessages.S01(page, 'Work order cancelled.', cancel);
-    }
-  );
+  test('shared-flash-messages@S01 on history-work-orders', async ({ page }) => {
+    const { cancel } = await withPending(page);
+    await flashMessages.S01(page, 'Work order cancelled.', cancel);
+  });
 
-  test(
-    'shared-flash-messages@S02 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const w = pendingWorkOrder(h.wf);
-      await signInAs(page, ME);
-      // The run's cancel button, sending the id of a run that doesn't exist
-      const cancelNamingNone = await sendingValues(page, {
-        run_id: randomUUID(),
-      });
-      await openHistory(page, h.project.id);
-      await expandWorkOrder(page, w.id);
+  test('shared-flash-messages@S02 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const w = pendingWorkOrder(h.wf);
+    await signInAs(page, ME);
+    // The run's cancel button, sending the id of a run that doesn't exist
+    const cancelNamingNone = await sendingValues(page, {
+      run_id: randomUUID(),
+    });
+    await openHistory(page, h.project.id);
+    await expandWorkOrder(page, w.id);
 
-      await flashMessages.S02(page, 'Run not found.', () =>
-        cancelNamingNone(cancelRunButton(page, w.runs[0].id))
-      );
-    }
-  );
+    await flashMessages.S02(page, 'Run not found.', () =>
+      cancelNamingNone(cancelRunButton(page, w.runs[0].id))
+    );
+  });
 
-  test(
-    'shared-flash-messages@S03 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const { cancel } = await withPending(page);
-      await flashMessages.S03(page, 'Work order cancelled.', cancel);
-    }
-  );
+  test('shared-flash-messages@S03 on history-work-orders', async ({ page }) => {
+    const { cancel } = await withPending(page);
+    await flashMessages.S03(page, 'Work order cancelled.', cancel);
+  });
 
-  test(
-    'shared-flash-messages@S04 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const { cancel } = await withPending(page);
-      await flashMessages.S04(
-        page,
-        'Work order cancelled.',
-        cancel,
-        async () => {
-          // Sorting makes the table render again
-          await sortHistoryBy(page, 'Created');
-          await expect.poll(() => page.url()).toContain('sort_by');
-          await historyLoaded(page);
-        }
-      );
-    }
-  );
+  test('shared-flash-messages@S04 on history-work-orders', async ({ page }) => {
+    const { cancel } = await withPending(page);
+    await flashMessages.S04(page, 'Work order cancelled.', cancel, async () => {
+      // Sorting makes the table render again
+      await sortHistoryBy(page, 'Created');
+      await expect.poll(() => page.url()).toContain('sort_by');
+      await historyLoaded(page);
+    });
+  });
 
   // A retry reloads the page, and the flash goes with it
-  test(
-    'shared-flash-messages@S05 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const w = failedWorkOrder(h.wf);
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
+  test('shared-flash-messages@S05 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const w = failedWorkOrder(h.wf);
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
 
-      await flashMessages.S05(
-        page,
-        'New run enqueued for 1 workorder',
-        async () => retryButton(historyRow(page, w.id)).click(),
-        `/projects/${h.project.id}/history`
-      );
-    }
-  );
+    await flashMessages.S05(
+      page,
+      'New run enqueued for 1 workorder',
+      async () => retryButton(historyRow(page, w.id)).click(),
+      `/projects/${h.project.id}/history`
+    );
+  });
 
-  test(
-    'shared-flash-messages@S06 on history-work-orders',
-    PASSING,
-    async ({ page }) => {
-      const h = givenHistory();
-      const notMine = givenHistory('Kenya TB', { [OTHER]: 'owner' });
-      await signInAs(page, ME);
-      await openHistory(page, h.project.id);
+  test('shared-flash-messages@S06 on history-work-orders', async ({ page }) => {
+    const h = givenHistory();
+    const notMine = givenHistory('Kenya TB', { [OTHER]: 'owner' });
+    await signInAs(page, ME);
+    await openHistory(page, h.project.id);
 
-      await flashMessages.S06(
-        page,
-        () => open(page, notMine.path),
-        '/projects',
-        // the list of my projects
-        page.getByRole('cell', {
-          name: manifest().projects[0].name,
-          exact: true,
-        })
-      );
-    }
-  );
+    await flashMessages.S06(
+      page,
+      () => open(page, notMine.path),
+      '/projects',
+      // the list of my projects
+      page.getByRole('cell', {
+        name: manifest().projects[0].name,
+        exact: true,
+      })
+    );
+  });
 
   // shared-flash-messages S07 and S08 are on admin pages and the sign-in form;
   // not_reachable_here does not exclude them, but this page never shows

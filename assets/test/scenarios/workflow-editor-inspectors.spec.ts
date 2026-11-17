@@ -131,11 +131,6 @@ const THIRD = 'super@openfn.org';
 
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
-const PENDING = { tag: '@pending' };
-const PENDING_SERIAL = { tag: ['@pending', '@serial'] };
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_OLD_SERIAL = { tag: ['@passing-old', '@serial'] };
-
 // A page that has to react to something done elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 
@@ -286,7 +281,7 @@ async function expectPanelsLocked(
 //   Then I see a panel titled "Fetch" with "Job Name" and "Adaptor"
 //   When I open "?job=<Fetch id>&panel=settings"
 //   Then I see "Workflow settings" instead
-test('@S01', PASSING_OLD, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, ME, stepOf(wf, 'Fetch'));
 
@@ -308,7 +303,7 @@ test('@S01', PASSING_OLD, async ({ page }) => {
 //   Given "amara@example.org" and I are editors with "Fetch" open
 //   When I rename "Fetch" to "Fetch patients"
 //   Then "amara@example.org" sees "Fetch patients" in the "Job Name" field without reloading
-test('@S02', PASSING_OLD, async ({ page, browser }) => {
+test('@S02', async ({ page, browser }) => {
   const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
   const amara = await otherSession(browser, THIRD);
   await reopen(amara, wf, stepOf(wf, 'Fetch'));
@@ -331,7 +326,7 @@ test('@S02', PASSING_OLD, async ({ page, browser }) => {
 //   When I open "Fetch"
 //   Then the "Job Name" field shows that error
 //   And opening "Load" shows no error
-test('@S03', PASSING_OLD, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const { wf } = givenIntake();
   const error = 'has already been taken';
   await openAs(page, wf);
@@ -355,7 +350,7 @@ test('@S03', PASSING_OLD, async ({ page }) => {
 //     | @openfn/language-dhis2@latest | Connect |
 //     | @openfn/language-http@latest  | Edit    |
 // Same as shared-adaptor-credential-config S01; one step per example.
-test('@S04', PASSING_OLD, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const { wf } = givenIntake();
   const [dhis2, http] = adaptorConfig.given.S01;
   adaptorConfig.jobUses(wf.steps.Fetch, dhis2.adaptor);
@@ -382,7 +377,7 @@ test('@S04', PASSING_OLD, async ({ page }) => {
 //   When I clear the selection
 //   Then "Fetch" has no credential
 // Shared-adaptor-credential-config S03, which also picks a keychain in between.
-test('@S05', PASSING_OLD, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const { id, wf } = givenIntake();
   adaptorConfig.jobUses(wf.steps.Fetch, DHIS2);
   givenCredential(id, 'DHIS2 prod');
@@ -406,7 +401,7 @@ test('@S05', PASSING_OLD, async ({ page }) => {
 //   When I click "Other credentials"
 //   Then I see the raw one under "Generic Credentials" and the keychain under "Keychain Credentials"
 // Same as shared-adaptor-credential-config S04.
-test('@S06', PASSING_OLD, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const { id, wf } = givenIntake();
   adaptorConfig.jobUses(wf.steps.Fetch, SALESFORCE);
   givenCredential(id, 'Salesforce prod', { schema: 'salesforce' });
@@ -443,7 +438,7 @@ async function givenFetchOnDhis2(page: Page, role: Role = 'editor') {
 //   Then "Fetch" uses Salesforce and has no credential
 //   And "Configure connection" opens
 // Shared-adaptor-credential-config S05, which first re-picks DHIS2.
-test('@S07', PASSING_OLD, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { id, wf } = await givenFetchOnDhis2(page);
 
   await adaptorConfig.S05(
@@ -461,7 +456,7 @@ test('@S07', PASSING_OLD, async ({ page }) => {
 //   Then "Fetch" still uses DHIS2 with "DHIS2 prod"
 //   And the adaptor picker is open again
 // Same as shared-adaptor-credential-config S06.
-test('@S08', PASSING_OLD, async ({ page }) => {
+test('@S08', async ({ page }) => {
   await givenFetchOnDhis2(page);
 
   await adaptorConfig.S06(page, adaptorBox(page));
@@ -476,7 +471,7 @@ test('@S08', PASSING_OLD, async ({ page }) => {
 //   Then "Fetch" shows "v4.9.1"
 // Same as shared-adaptor-credential-config S07. The adaptor catalogue is
 // instance-wide.
-test('@S09', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S09', { tag: ['@serial'] }, async ({ page }) => {
   cleanups.push(adaptorConfig.withAdaptorVersions());
   const { wf } = givenIntake();
   adaptorConfig.jobUses(wf.steps.Fetch, DHIS2);
@@ -490,7 +485,7 @@ test('@S09', PASSING_OLD_SERIAL, async ({ page }) => {
 //   When I search the adaptor picker for "zzz-unknown"
 //   Then I see "No adaptor found" and the HTTP adaptor
 // Shared-adaptor-credential-config S08, which also chooses HTTP with Enter.
-test('@S10', PASSING_OLD, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, ME, stepOf(wf, 'Fetch'));
 
@@ -510,7 +505,7 @@ test('@S10', PASSING_OLD, async ({ page }) => {
 //   Then the adaptor list appears
 // Same as shared-adaptor-credential-config S09. The adaptor catalogue is
 // instance-wide.
-test('@S11', PASSING_OLD_SERIAL, async ({ page }) => {
+test('@S11', { tag: ['@serial'] }, async ({ page }) => {
   let putBack: (() => void) | null = catalogueUnavailable();
   const makeAvailable = () => {
     putBack?.();
@@ -536,7 +531,7 @@ test('@S11', PASSING_OLD_SERIAL, async ({ page }) => {
 //   And "credentials_updated" is broadcast on "workflow:collaborate:<Intake id>"
 //   And "amara@example.org" sees "DHIS2 test" in her credential list
 // Shared-adaptor-credential-config S11, then the collaborator's list.
-test('@S12', PASSING_OLD, async ({ page, browser }) => {
+test('@S12', async ({ page, browser }) => {
   const { id, wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
   cleanups.push(() => removeCredentialsNamed(ME, ['DHIS2 test']));
   adaptorConfig.jobUses(wf.steps.Fetch, DHIS2);
@@ -565,7 +560,7 @@ test('@S12', PASSING_OLD, async ({ page, browser }) => {
 //   When "open_credential_modal" is sent with the id of "DHIS2 prod"
 //   Then no credential form opens and "credential_modal_closed" is pushed back
 // Same as shared-adaptor-credential-config S13.
-test('@S13', PASSING_OLD, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const { id, wf } = givenIntake();
   const secret = 'amara-only-4471';
   const credentialId = givenCredential(id, 'DHIS2 prod', {
@@ -590,8 +585,7 @@ test('@S13', PASSING_OLD, async ({ page }) => {
 //   Then the keychain credential exists on the project
 //   And "Fetch" has "Per facility" as its keychain credential
 // Same as shared-adaptor-credential-config S14.
-// Still pending, old: the keychain credential made from the step is selected but not stored on the step (unconfirmed)
-test('@S14', PENDING, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const { id, wf } = givenIntake({ [ME]: 'admin' });
   adaptorConfig.jobUses(wf.steps.Fetch, DHIS2);
   await openAs(page, wf, ME, stepOf(wf, 'Fetch'));
@@ -610,7 +604,7 @@ test('@S14', PENDING, async ({ page }) => {
 //   When I submit a keychain credential "Planted" from the step's advanced credential setup
 //   Then no keychain credential "Planted" exists
 // Shared-adaptor-credential-config S15, run here as an editor.
-test('@S15', PASSING_OLD, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const { id, wf } = givenIntake();
   const lv = watchLiveView(page);
   await openAs(page, wf, ME, stepOf(wf, 'Fetch'));
@@ -624,7 +618,7 @@ test('@S15', PASSING_OLD, async ({ page }) => {
 //   When I delete "Load" and confirm "Delete Job"
 //   Then "Load" and the path from "Fetch" to "Load" are gone
 //   And the schedule's input source reads "Final run state (default)"
-test('@S16', PASSING_OLD, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'editor' }, { trigger: 'cron' });
   setTrigger(wf.triggerId!, { cron_cursor_job_id: wf.steps.Load });
   await openAs(page, wf, ME, stepOf(wf, 'Load'));
@@ -651,7 +645,7 @@ test('@S16', PASSING_OLD, async ({ page }) => {
 //   Examples:
 //     | step  | reason                                          |
 //     | Fetch | Cannot delete: other jobs depend on this step   |
-test('@S17', PASSING_OLD, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, ME, stepOf(wf, 'Fetch'));
 
@@ -667,7 +661,7 @@ test('@S17', PASSING_OLD, async ({ page }) => {
 //   Given "Solo" is the only step, reached from the trigger
 //   When I open "Solo"
 //   Then the delete button is disabled with "You can't delete the first step in a workflow."
-test('@S18', PASSING_OLD, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'editor' }, { steps: ['Solo'] });
   await openAs(page, wf, ME, stepOf(wf, 'Solo'));
 
@@ -684,7 +678,7 @@ test('@S18', PASSING_OLD, async ({ page }) => {
 //   Then the URL has "panel=editor" and "job=<Fetch id>" (workflow-editor-ide takes over)
 //   When I return and click "Run From Here"
 //   Then the manual run panel opens for "Fetch" (workflow-editor-manual-run takes over)
-test('@S19', PASSING_OLD, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const { wf } = givenIntake();
   const fetch = wf.steps.Fetch;
   await openAs(page, wf, ME, stepOf(wf, 'Fetch'));
@@ -711,7 +705,7 @@ test('@S19', PASSING_OLD, async ({ page }) => {
 //   When I open the trigger
 //   Then I see a "Default" URL ending "/i/<trigger id>" and a "Custom" URL ending "/i/<project id>/kobo-intake"
 //   And each can be copied
-test('@S20', PASSING_OLD, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const { id, wf } = givenIntake({ [ME]: 'viewer' });
   setTrigger(wf.triggerId!, { custom_path: 'kobo-intake' });
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -736,7 +730,7 @@ test('@S20', PASSING_OLD, async ({ page }) => {
 //   Then the header reads "(1 configured)" and lists "Kobo basic (Basic Auth)"
 //   Given no method is attached and I am an editor
 //   Then I see "No authentication configured." with "Add authentication", which opens the wizard on Configure with Authentication expanded
-test('@S21', PASSING_OLD, async ({ page }) => {
+test('@S21', async ({ page }) => {
   const { id, by, wf } = givenIntake();
   const kobo = addWebhookAuthMethodOnNode(id, 'Kobo basic', by, {
     basic: KOBO,
@@ -768,7 +762,7 @@ test('@S21', PASSING_OLD, async ({ page }) => {
 //   When I open the wizard again, change the response type and click "Cancel"
 //   Then nothing is written
 // Both of us without experimental features, so the header has the switch.
-test('@S22', PASSING_OLD, async ({ page, browser }) => {
+test('@S22', async ({ page, browser }) => {
   withoutExperimental(ME);
   withoutExperimental(THIRD);
   const { wf } = givenIntake(
@@ -814,7 +808,7 @@ test('@S22', PASSING_OLD, async ({ page, browser }) => {
 //     | Kobo Intake                          | Use lowercase letters, numbers, hyphens and underscores only. | disabled |
 //     | 0b3c5e1a-3f1d-4c4e-9d55-4c0a7f2e9a11 | A UUID cannot be used as a path.                               | disabled |
 //     | kobo-intake                          | (nothing)                                                      | enabled  |
-test('@S23', PASSING_OLD, async ({ page }) => {
+test('@S23', async ({ page }) => {
   const { id, by, wf } = givenIntake();
   const other = seedEditorWorkflow(id, by, { name: 'Kobo' });
   setTrigger(other.triggerId!, { custom_path: 'kobo' });
@@ -854,7 +848,7 @@ test('@S23', PASSING_OLD, async ({ page }) => {
 //   When I open the trigger
 //   Then I see "The custom path was not saved:" followed by the error
 //   And the custom URL cannot be copied
-test('@S24', PASSING_OLD, async ({ page }) => {
+test('@S24', async ({ page }) => {
   const { wf } = givenIntake();
   const error = 'has already been taken';
   setTrigger(wf.triggerId!, { custom_path: 'kobo-intake' });
@@ -877,7 +871,7 @@ test('@S24', PASSING_OLD, async ({ page }) => {
 //   Then I see "Delete this webhook URL?" saying the default URL is unaffected
 //   When I confirm and click "Finish"
 //   Then the trigger has no custom path
-test('@S25', PASSING_OLD, async ({ page }) => {
+test('@S25', async ({ page }) => {
   const { wf } = givenIntake();
   setTrigger(wf.triggerId!, { custom_path: 'kobo-intake' });
   await openAs(page, wf, ME, panelQuery({ trigger: wf.triggerId! }));
@@ -906,7 +900,7 @@ test('@S25', PASSING_OLD, async ({ page }) => {
 //   Then the trigger replies after completion with those defaults
 //   When I set "Response Type" to "Immediately" and click "Finish"
 //   Then the response configuration is cleared
-test('@S26', PASSING_OLD, async ({ page }) => {
+test('@S26', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, ME, panelQuery({ trigger: wf.triggerId! }));
   await openTriggerWizard(page);
@@ -946,7 +940,7 @@ test('@S26', PASSING_OLD, async ({ page }) => {
 //   And the flow "flow-webhook-auth-method-enforcement" has taken over for requests to the trigger
 // The request shows by its effect: nothing attached before Finish, then
 // "Kobo basic".
-test('@S27', PASSING_OLD, async ({ page, browser }) => {
+test('@S27', async ({ page, browser }) => {
   const { id, by, wf } = givenIntake({ [ME]: 'admin', [THIRD]: 'editor' });
   addWebhookAuthMethodOnNode(id, 'Kobo basic', by, { basic: KOBO });
   const trigger = panelQuery({ trigger: wf.triggerId! });
@@ -979,7 +973,7 @@ test('@S27', PASSING_OLD, async ({ page, browser }) => {
 //   And the wizard is still open and no trigger field was written
 // The request fails because I am made an editor after the wizard opened, so
 // the page still offers the change.
-test('@S28', PASSING_OLD, async ({ page }) => {
+test('@S28', async ({ page }) => {
   const { id, by, wf } = givenIntake({ [ME]: 'admin' });
   addWebhookAuthMethodOnNode(id, 'Kobo basic', by, { basic: KOBO });
   await openAs(page, wf, ME, panelQuery({ trigger: wf.triggerId! }));
@@ -1004,7 +998,7 @@ test('@S28', PASSING_OLD, async ({ page }) => {
 //   When I change only the response type and click "Finish"
 //   Then "Kobo basic" is still attached and no auth request was sent
 // As an admin, so a request that was sent would be carried out.
-test('@S29', PASSING_OLD, async ({ page }) => {
+test('@S29', async ({ page }) => {
   const { id, by, wf } = givenIntake({ [ME]: 'admin' });
   const kobo = addWebhookAuthMethodOnNode(id, 'Kobo basic', by, {
     basic: KOBO,
@@ -1034,7 +1028,7 @@ test('@S29', PASSING_OLD, async ({ page }) => {
 //   Then the webhook auth method form opens (shared-webhook-auth-method-form S12 owns the rest)
 //   When I cancel it
 //   Then "close_webhook_auth_modal_complete" is pushed and it can be opened again
-test('@S30', PASSING_OLD, async ({ page }) => {
+test('@S30', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'admin' });
   const lv = watchLiveView(page);
   await openAs(page, wf, ME, panelQuery({ trigger: wf.triggerId! }));
@@ -1062,7 +1056,7 @@ test('@S30', PASSING_OLD, async ({ page }) => {
 //   Then its configuration is unchanged
 // The second half runs on a trigger that replies on completion, so a reset to
 // the defaults would show.
-test('@S31', PASSING_OLD, async ({ page }) => {
+test('@S31', async ({ page }) => {
   const { id, by, wf } = givenIntake({ [ME]: 'editor' }, { enabled: false });
   setTrigger(wf.triggerId!, { custom_path: 'kobo-intake' });
   const kobo = seedEditorWorkflow(id, by, { name: 'Kobo' });
@@ -1102,7 +1096,7 @@ test('@S31', PASSING_OLD, async ({ page }) => {
 //   When I type "every morning" under "Cron Expression"
 //   Then I see "Invalid cron expression"
 //   And clicking "Finish" shows "Invalid cron expression. Use format: minute hour day month weekday" and keeps the wizard open
-test('@S32', PASSING_OLD, async ({ page }) => {
+test('@S32', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'editor' }, { trigger: 'cron' });
   await openAs(page, wf, ME, panelQuery({ trigger: wf.triggerId! }));
   await openTriggerWizard(page);
@@ -1139,7 +1133,7 @@ test('@S32', PASSING_OLD, async ({ page }) => {
 //   Given the trigger is a schedule
 //   When I set "Cron Input Source" to "Fetch" and click "Finish"
 //   Then the schedule panel shows "Fetch" as its input source
-test('@S33', PASSING_OLD, async ({ page }) => {
+test('@S33', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'editor' }, { trigger: 'cron' });
   await openAs(page, wf, ME, panelQuery({ trigger: wf.triggerId! }));
   await openTriggerWizard(page);
@@ -1165,7 +1159,7 @@ test('@S33', PASSING_OLD, async ({ page }) => {
 //   Then I see "can't be blank"
 //   When I type "require('fs')"
 //   Then a warning says the expression contains potentially unsafe functions
-test('@S34', PASSING_OLD, async ({ page }) => {
+test('@S34', async ({ page }) => {
   const { wf } = givenIntake();
   const offered = async () => [...(await conditionChoices(page))].sort();
   await openAs(
@@ -1203,7 +1197,7 @@ test('@S34', PASSING_OLD, async ({ page }) => {
 //   Then the path is gone and the panel closes
 //   When I open the path from the trigger to "Fetch"
 //   Then there is no footer and I see "This path will be active if its trigger is enabled"
-test('@S35', PASSING_OLD, async ({ page }) => {
+test('@S35', async ({ page }) => {
   const { wf } = givenIntake();
   const jobPath = pathIdOf(wf.id, 'Fetch', 'Load');
   const edge = () => draftOf(wf.id)?.edges.find(e => e.id === jobPath);
@@ -1241,7 +1235,7 @@ test('@S35', PASSING_OLD, async ({ page }) => {
 //   Then I see "exceeds project concurrency limit (3) and has no effect"
 //   Given "Malawi HIV" allows 1 concurrent run
 //   Then "Max Concurrency" is disabled and a note links to the project setup page
-test('@S36', PASSING_OLD, async ({ page }) => {
+test('@S36', async ({ page }) => {
   const { id, wf } = givenIntake();
   setProjectConcurrency(id, 3);
   await openAs(page, wf, ME, panelQuery({ panel: 'settings' }));
@@ -1266,7 +1260,7 @@ test('@S36', PASSING_OLD, async ({ page }) => {
 // Scenario: Workflow name and console logging are set from settings
 //   When I rename "Intake" to "Intake v2" and turn off "Allow console.log() usage" in "Workflow settings"
 //   Then collaborators see the new name and setting without reloading
-test('@S37', PASSING_OLD, async ({ page, browser }) => {
+test('@S37', async ({ page, browser }) => {
   const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
   const settings = panelQuery({ panel: 'settings' });
   const amara = await otherSession(browser, THIRD);
@@ -1293,7 +1287,7 @@ test('@S37', PASSING_OLD, async ({ page, browser }) => {
 //   Then I do not see "Reset Workflow"
 //   And a "reset_workflow" request from me is refused
 // The refusal shows by its effect: amara's next unsaved change stays.
-test('@S38', PASSING_OLD, async ({ page, browser }) => {
+test('@S38', async ({ page, browser }) => {
   const { id, wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
   const sock = await watchEditorSocket(page);
   const amara = await otherSession(browser, THIRD);
@@ -1333,7 +1327,7 @@ test('@S38', PASSING_OLD, async ({ page, browser }) => {
 //   Then a file "Intake.yaml" is saved
 //   Given the workflow is named "ワークフロー"
 //   Then the download is named "workflow.yaml"
-test('@S39', PASSING_OLD, async ({ page }) => {
+test('@S39', async ({ page }) => {
   const { wf } = givenIntake();
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await openAs(page, wf, ME, panelQuery({ panel: 'settings' }));
@@ -1362,8 +1356,7 @@ test('@S39', PASSING_OLD, async ({ page }) => {
 //   When I publish again
 //   Then the same template is updated and I see "Template updated"
 // A support user is instance-wide.
-// Still pending, old: no "Template updated" message on the second publish (unconfirmed)
-test('@S40', PENDING_SERIAL, async ({ page }) => {
+test('@S40', { tag: ['@serial'] }, async ({ page }) => {
   const { wf } = givenIntake();
   cleanups.push(() => removeTemplatesOf(wf.id));
   cleanups.push(makeSupportUser(ME));
@@ -1395,8 +1388,7 @@ test('@S40', PENDING_SERIAL, async ({ page }) => {
 //   And a "publish_template" request from me is refused with "You don't have permission to publish templates"
 // The refusal is checked on a second workflow with nothing unsaved, by its
 // effect: no template. A support user is instance-wide.
-// Still pending, old: Publish stays enabled while there are unsaved edits; only an older saved version turns it off
-test('@S41', PENDING_SERIAL, async ({ page }) => {
+test('@S41', { tag: ['@serial'] }, async ({ page }) => {
   const { id, by, wf } = givenIntake();
   const saved = seedEditorWorkflow(id, by, { name: 'Intake saved' });
   cleanups.push(() => removeTemplatesOf(wf.id));
@@ -1440,7 +1432,7 @@ test('@S41', PENDING_SERIAL, async ({ page }) => {
 //   When I open "Fetch", the trigger and the path from "Fetch" to "Load"
 //   Then the fields are disabled, and "Edit trigger" and the delete buttons are disabled with "You do not have permission to edit this workflow"
 //   And the code button on "Fetch" still works
-test('@S42', PASSING_OLD, async ({ page }) => {
+test('@S42', async ({ page }) => {
   const { wf } = givenIntake({ [ME]: 'viewer' });
   await signInAs(page, ME);
 
@@ -1463,7 +1455,7 @@ test('@S42', PASSING_OLD, async ({ page }) => {
 //   Given the YAML view is open
 //   When I press Escape
 //   Then "Workflow settings" is shown
-test('@S43', PASSING_OLD, async ({ page }) => {
+test('@S43', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf, ME, stepOf(wf, 'Fetch'));
   await adaptorConfig.configureButton(adaptorBox(page)).click();
@@ -1488,7 +1480,7 @@ test('@S43', PASSING_OLD, async ({ page }) => {
 //   Given I have "Load" open
 //   When "amara@example.org" deletes "Load"
 //   Then my inspector closes
-test('@S44', PASSING_OLD, async ({ page, browser }) => {
+test('@S44', async ({ page, browser }) => {
   const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
   await openAs(page, wf, ME, stepOf(wf, 'Load'));
   await expect(panelHeading(page, 'Load')).toBeVisible();
@@ -1508,7 +1500,7 @@ test('@S44', PASSING_OLD, async ({ page, browser }) => {
 //   And a "reset_workflow" request from me is refused
 // The refusal shows by its effect: a colleague without experimental features
 // is not locked, and her unsaved change stays.
-test('@S45', PASSING_OLD, async ({ page, browser }) => {
+test('@S45', async ({ page, browser }) => {
   experimental();
   withoutExperimental(THIRD);
   const { by, wf } = givenIntake(
@@ -1543,7 +1535,7 @@ test.describe('shared-adaptor-credential-config', () => {
 
   // "Fetch" points at the project credential of "Kenya TB", which is not in
   // "Malawi HIV"'s list
-  test(name('S02'), PASSING_OLD, async ({ page }) => {
+  test(name('S02'), async ({ page }) => {
     const { wf } = givenIntake();
     const kenya = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
     const credentialId = givenCredential(kenya.id, 'Kenya DHIS2');
@@ -1557,7 +1549,7 @@ test.describe('shared-adaptor-credential-config', () => {
   });
 
   // The adaptor catalogue is instance-wide
-  test(name('S10'), PASSING_OLD_SERIAL, async ({ page }) => {
+  test(name('S10'), { tag: ['@serial'] }, async ({ page }) => {
     cleanups.push(adaptorConfig.withRetiredAdaptors());
     const { wf } = givenIntake();
     adaptorConfig.jobUses(wf.steps.Fetch, DHIS2);
@@ -1570,7 +1562,7 @@ test.describe('shared-adaptor-credential-config', () => {
     );
   });
 
-  test(name('S12'), PASSING_OLD, async ({ page }) => {
+  test(name('S12'), async ({ page }) => {
     const { wf } = givenIntake({ [ME]: 'viewer' });
     cleanups.push(() => removeCredentialsNamed(ME, ['Viewer raw']));
     const lv = watchLiveView(page);
@@ -1579,19 +1571,19 @@ test.describe('shared-adaptor-credential-config', () => {
     await adaptorConfig.S12(page, lv, ME);
   });
 
-  test(name('S16'), PENDING, () => {
+  test(name('S16'), () => {
     test.skip(
       true,
       "needs another project's credential written into the shared document"
     );
   });
 
-  test(name('S17'), PASSING_OLD, async ({ page }) => {
+  test(name('S17'), async ({ page }) => {
     await givenFetchOnDhis2(page);
     await adaptorConfig.S17(page, adaptorBox(page));
   });
 
-  test(name('S18'), PASSING_OLD, async ({ page }) => {
+  test(name('S18'), async ({ page }) => {
     await givenFetchOnDhis2(page, 'viewer');
     await adaptorConfig.S18(page, adaptorBox(page));
   });
@@ -1606,52 +1598,43 @@ test.describe('shared-adaptor-credential-config', () => {
 test.describe('shared-run-retry-controls', () => {
   // Examples, one step each. '"Intake" is new and not yet created' is left
   // out: on /w/new the inspector does not open.
-  test(
-    'shared-run-retry-controls@S10 on workflow-editor-inspectors',
-    PASSING_OLD,
-    async ({ page }) => {
-      const why = runRetry.given.S10;
-      const h = givenIntake({ [ME]: 'viewer' });
-      const fetch = h.wf.steps.Fetch;
-      const surface = () => panel(page, 'Fetch');
-      const sock = await watchEditorSocket(page);
-      await openAs(page, h.wf, ME, stepOf(h.wf, 'Fetch'));
+  test('shared-run-retry-controls@S10 on workflow-editor-inspectors', async ({
+    page,
+  }) => {
+    const why = runRetry.given.S10;
+    const h = givenIntake({ [ME]: 'viewer' });
+    const fetch = h.wf.steps.Fetch;
+    const surface = () => panel(page, 'Fetch');
+    const sock = await watchEditorSocket(page);
+    await openAs(page, h.wf, ME, stepOf(h.wf, 'Fetch'));
 
-      await test.step('I am a viewer', () =>
-        runRetry.S10(page, surface(), why.viewer));
+    await test.step('I am a viewer', () =>
+      runRetry.S10(page, surface(), why.viewer));
 
-      changeRoleOnNode(h.id, ME, 'editor', { quietly: true });
-      const pinned = storedWorkflow(h.wf.id).lock_version;
-      renameStepOnNode(h.wf.id, 'Load', 'Load v2', h.by);
-      await test.step('I am viewing a pinned version', async () => {
-        await reopen(page, h.wf, panelQuery({ v: pinned, job: fetch }));
-        await runRetry.S10(page, surface(), why.pinned);
-      });
+    changeRoleOnNode(h.id, ME, 'editor', { quietly: true });
+    const pinned = storedWorkflow(h.wf.id).lock_version;
+    renameStepOnNode(h.wf.id, 'Load', 'Load v2', h.by);
+    await test.step('I am viewing a pinned version', async () => {
+      await reopen(page, h.wf, panelQuery({ v: pinned, job: fetch }));
+      await runRetry.S10(page, surface(), why.pinned);
+    });
 
-      await test.step('the editor is disconnected', async () => {
-        await reopen(page, h.wf, stepOf(h.wf, 'Fetch'));
-        sock.drop();
-        await runRetry.S10(page, surface(), why.disconnected);
-        sock.reconnect();
-      });
-    }
-  );
+    await test.step('the editor is disconnected', async () => {
+      await reopen(page, h.wf, stepOf(h.wf, 'Fetch'));
+      sock.drop();
+      await runRetry.S10(page, surface(), why.disconnected);
+      sock.reconnect();
+    });
+  });
 
-  // Still pending, old: an open editor leaves for the workflow list when its workflow is deleted, so no reason is shown
-  test(
-    'shared-run-retry-controls@S10 on workflow-editor-inspectors, deleted',
-    PENDING,
-    async ({ page }) => {
-      const h = givenIntake({ [ME]: 'editor' });
-      await openAs(page, h.wf, ME, stepOf(h.wf, 'Fetch'));
-      deleteWorkflowOnNode(h.wf.id, OWNER);
-      await runRetry.S10(
-        page,
-        panel(page, 'Fetch'),
-        runRetry.given.S10.deleted
-      );
-    }
-  );
+  test('shared-run-retry-controls@S10 on workflow-editor-inspectors, deleted', async ({
+    page,
+  }) => {
+    const h = givenIntake({ [ME]: 'editor' });
+    await openAs(page, h.wf, ME, stepOf(h.wf, 'Fetch'));
+    deleteWorkflowOnNode(h.wf.id, OWNER);
+    await runRetry.S10(page, panel(page, 'Fetch'), runRetry.given.S10.deleted);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1668,31 +1651,29 @@ test.describe('shared-webhook-auth-method-form', () => {
   //   When I create basic auth method "Kobo basic"
   //   Then the auth method form closes
   //   And "webhook_auth_methods_updated" is broadcast on "workflow:collaborate:<workflow_id>" including "Kobo basic"
-  test(
-    'shared-webhook-auth-method-form@S12 on workflow-editor-inspectors',
-    PASSING_OLD,
-    async ({ page }) => {
-      const { wf } = givenIntake({ [ME]: 'owner' });
-      const sock = await watchEditorSocket(page);
-      await openAs(page, wf, ME, panelQuery({ trigger: wf.triggerId! }));
-      await openTriggerWizard(page);
-      await authenticationToggle(page).click();
-      await createAuthMethodButton(page).click();
+  test('shared-webhook-auth-method-form@S12 on workflow-editor-inspectors', async ({
+    page,
+  }) => {
+    const { wf } = givenIntake({ [ME]: 'owner' });
+    const sock = await watchEditorSocket(page);
+    await openAs(page, wf, ME, panelQuery({ trigger: wf.triggerId! }));
+    await openTriggerWizard(page);
+    await authenticationToggle(page).click();
+    await createAuthMethodButton(page).click();
 
-      await chooseAuthType(page, 'Basic HTTP Authentication');
-      await field(page, 'Auth method name').fill('Kobo basic');
-      await field(page, 'Username').fill(KOBO.username);
-      await field(page, 'Password').fill(KOBO.password);
-      await submit(page.getByRole('dialog'), 'Create auth method');
+    await chooseAuthType(page, 'Basic HTTP Authentication');
+    await field(page, 'Auth method name').fill('Kobo basic');
+    await field(page, 'Username').fill(KOBO.username);
+    await field(page, 'Password').fill(KOBO.password);
+    await submit(page.getByRole('dialog'), 'Create auth method');
 
-      await expect(field(page, 'Auth method name')).toBeHidden();
-      await expect
-        .poll(() => JSON.stringify(sock.pushed('webhook_auth_methods_updated')))
-        .toContain('Kobo basic');
-      // Offered on the trigger without reloading
-      await chooseAuthMethod(page, 'Kobo basic');
-    }
-  );
+    await expect(field(page, 'Auth method name')).toBeHidden();
+    await expect
+      .poll(() => JSON.stringify(sock.pushed('webhook_auth_methods_updated')))
+      .toContain('Kobo basic');
+    // Offered on the trigger without reloading
+    await chooseAuthMethod(page, 'Kobo basic');
+  });
 });
 
 // shared-workflow-yaml-format is about importing a file; it runs where files

@@ -153,7 +153,7 @@ async function mailTo(page: Page, email: string) {
 //   When I open "/credentials"
 //   Then I see "DHIS2 prod"
 //   And I do not see "Shared Postgres"
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const malawi = project('Malawi HIV', { [OTHER]: 'owner', [ME]: 'editor' });
   credential({ name: 'DHIS2 prod' });
   credential({ name: 'Shared Postgres', projects: [malawi] }, OTHER);
@@ -175,7 +175,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Credential created successfully"
 //   And "Mailchimp" is listed with both projects
 //   And an audit event "created" and two "added_to_project" events are recorded
-test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   project('Malawi HIV', { [ME]: 'owner' });
   project('Kenya TB', { [ME]: 'owner' });
   removesCreated(['Mailchimp']);
@@ -224,8 +224,7 @@ function dhis2Schema() {
 //   Then I see an input for each field in the dhis2 schema
 //   And a required field I have touched and left empty shows an error
 //   And "Save credential" stays disabled until the required fields are valid
-// Not on the port: the form checks required fields on Save, not as you type.
-test('@S03', { tag: '@passing-old' }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const fields = dhis2Schema();
   expect(fields.length, 'the dhis2 schema has fields').toBeGreaterThan(0);
   removesCreated(['DHIS2 half done']);
@@ -258,8 +257,7 @@ test('@S03', { tag: '@passing-old' }, async ({ page }) => {
 //   When I enter "{not json" as the body
 //   Then I see "Invalid JSON format"
 //   And "Save credential" is disabled
-// Not on the port: the form checks the JSON on Save, not as you type.
-test('@S04', { tag: '@passing-old' }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   removesCreated(['Mailchimp']);
   await onCredentials(page);
   const form = await startCredential(page, 'Raw JSON');
@@ -281,7 +279,7 @@ test('@S04', { tag: '@passing-old' }, async ({ page }) => {
 //   When I create another credential named "DHIS2 prod"
 //   Then I see "you have another credential with the same name"
 //   And no second credential is created
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   credential({ name: 'DHIS2 prod' });
   removesCreated(['DHIS2 prod']);
   await onCredentials(page);
@@ -304,8 +302,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Credential updated successfully"
 //   And the stored value for environment "main" is the new password
 //   And an audit event "updated" is recorded
-// @pending on today's Lightning and the port: the port keeps the old save.
-test('@S06', { tag: '@pending' }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const malawi = project('Malawi HIV', { [ME]: 'owner' });
   const id = credential({
     name: 'DHIS2 prod',
@@ -332,7 +329,7 @@ test('@S06', { tag: '@pending' }, async ({ page }) => {
 //   Then the credential has bodies named "main" and "staging" with the values I entered
 // Fails on today's Lightning: the raw JSON of an environment that isn't open
 // when saving is stored empty.
-test('@S07', { tag: '@passing-new' }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   removesCreated(['Mailchimp']);
   await onCredentials(page);
   const form = await startCredential(page, 'Raw JSON');
@@ -358,7 +355,7 @@ test('@S07', { tag: '@passing-new' }, async ({ page }) => {
 //   When I rename "staging" to "main"
 //   Then I see "Environment 'main' already exists"
 //   And the environments are still "main" and "staging"
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const id = credential({
     name: 'Mailchimp',
     bodies: { main: { key: 'p' }, staging: { key: 's' } },
@@ -384,7 +381,7 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I am editing a credential with 5 environments
 //   Then the add environment button is disabled
 //   And its tooltip reads "Maximum of 5 environments reached"
-test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   credential({
     name: 'Mailchimp',
     bodies: Object.fromEntries(
@@ -406,7 +403,7 @@ test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I own a credential with environments "main" and "staging"
 //   When I edit it, delete environment "staging", confirm, and save
 //   Then the credential has no "staging" body
-test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const id = credential({
     name: 'Mailchimp',
     bodies: { main: { key: 'p' }, staging: { key: 's' } },
@@ -428,7 +425,7 @@ test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I own credential "DHIS2 prod" used by workflow "Daily sync" in project "Malawi HIV"
 //   When I edit "DHIS2 prod" and remove "Malawi HIV"
 //   Then I am asked to confirm a warning naming "Daily sync"
-test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const w = workspace({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -451,7 +448,7 @@ test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I edit "DHIS2 prod", remove "Malawi HIV" and save
 //   Then "DHIS2 prod" no longer lists "Malawi HIV"
 //   And an audit event "removed_from_project" is recorded
-test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const malawi = project('Malawi HIV', { [ME]: 'owner' });
   const id = credential({ name: 'DHIS2 prod', projects: [malawi] });
   await onCredentials(page);
@@ -471,7 +468,7 @@ test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given project "Malawi HIV" has sandbox "Malawi HIV staging"
 //   When I share my credential "DHIS2 prod" with "Malawi HIV"
 //   Then "DHIS2 prod" is available in "Malawi HIV staging"
-test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const w = workspace({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -497,7 +494,7 @@ test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the project picker on a new credential
 //   Then "Malawi HIV" is offered
 //   And "Kenya TB" is not offered
-test('@S14', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S14', async ({ page }) => {
   project('Malawi HIV', { [ME]: 'editor', [OTHER]: 'owner' });
   project('Kenya TB', { [OTHER]: 'owner' });
   await onCredentials(page);
@@ -515,7 +512,7 @@ test('@S14', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And project "Kenya TB" allows support access and I am not a member
 //   When I create a credential and add "Kenya TB"
 //   Then the credential is shared with "Kenya TB"
-test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S15', async ({ page }) => {
   cleanups.push(makeSupportUser(ME));
   const kenya = seedProject(
     'Kenya TB',
@@ -545,7 +542,7 @@ test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And "DHIS2 prod" is no longer shared with any project
 //   And the job no longer has a credential
 //   And the flow "flow-credential-scheduled-deletion" has started for "DHIS2 prod"
-test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const w = workspace({
     name: 'Malawi HIV',
     members: { [ME]: 'owner' },
@@ -586,7 +583,7 @@ test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Credential deleted successfully"
 //   And "Old token" no longer exists
 //   And an audit event "deleted" is recorded
-test('@S17', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const id = credential({ name: 'Old token', scheduled: true });
   await onCredentials(page);
 
@@ -606,7 +603,7 @@ test('@S17', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Credential marked for deletion" with only an "Ok, understood" button
 //   And forcing the delete shows "Cannot delete a credential that has activities in projects"
 //   And "DHIS2 prod" still exists
-test('@S18', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const id = credential({ name: 'DHIS2 prod', scheduled: true });
   const malawi = project('Malawi HIV', { [ME]: 'owner' });
   const run = seedRun(malawi, { steps: [{ name: 'Fetch' }] }, ME);
@@ -633,7 +630,7 @@ test('@S18', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the delete modal for "DHIS2 prod" and submit it with the id of "Other"
 //   Then I see "You can't perform this action"
 //   And neither credential is scheduled for deletion
-test('@S19', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S19', async ({ page }) => {
   credential({ name: 'DHIS2 prod' });
   const other = credential({ name: 'Other' }, OTHER);
   const lv = watchLiveView(page);
@@ -669,7 +666,7 @@ async function transferTo(page: Page, name: string, email: string) {
 //   Then I see "Credential transfer initiated. We've sent you a confirmation email."
 //   And "DHIS2 prod" shows "Revoke transfer"
 //   And the flow "flow-credential-transfer" has started for "DHIS2 prod"
-test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const malawi = project('Malawi HIV', { [ME]: 'owner', [OTHER]: 'editor' });
   credential({ name: 'DHIS2 prod', projects: [malawi] });
   await onCredentials(page);
@@ -706,8 +703,7 @@ test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I enter "amara@example.org" in the transfer form
 //   Then I see "User doesn't have access to these projects: Malawi HIV"
 //   And "Transfer" is disabled
-// Not on the port: the server checks the recipient on Transfer, not as you type.
-test('@S21', { tag: '@passing-old' }, async ({ page }) => {
+test('@S21', async ({ page }) => {
   const malawi = project('Malawi HIV', { [ME]: 'owner' });
   credential({ name: 'DHIS2 prod', projects: [malawi] });
   await onCredentials(page);
@@ -729,7 +725,7 @@ test('@S21', { tag: '@passing-old' }, async ({ page }) => {
 //   When I choose "Revoke transfer" and confirm with "Revoke"
 //   Then I see "Transfer revoked successfully"
 //   And "DHIS2 prod" shows "Transfer"
-test('@S22', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S22', async ({ page }) => {
   credential({ name: 'DHIS2 prod', transferStatus: 'pending' });
   await onCredentials(page);
 
@@ -771,7 +767,7 @@ async function fillOauthClient(page: Page, name: string) {
 //   Then I see "Oauth client created successfully"
 //   And the client is listed with project "Malawi HIV"
 //   And an audit event "created" is recorded for the client
-test('@S23', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S23', async ({ page }) => {
   project('Malawi HIV', { [ME]: 'owner' });
   removesCreated([], ['Sheets app']);
   await onCredentials(page);
@@ -797,7 +793,7 @@ test('@S23', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I enter "oauth2/v2/auth" as the authorization endpoint of a new OAuth client
 //   Then I see "must be either a http or https URL"
 //   And "Add OAuth Client" is disabled
-test('@S24', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S24', async ({ page }) => {
   removesCreated([], ['Sheets app']);
   await onCredentials(page);
   const form = await fillOauthClient(page, 'Sheets app');
@@ -821,7 +817,7 @@ test('@S24', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I add an OAuth client and the request carries global "true"
 //   Then the client is saved as not global
 //   And I do not see the "Make client global" checkbox
-test('@S25', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S25', async ({ page }) => {
   expect(user(ME).superuser).toBe(false);
   removesCreated([], ['Sheets app']);
   const outsidePage = await sendingGlobal(page);
@@ -843,36 +839,30 @@ test('@S25', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the project picker is hidden
 //   And other users see the client in their list as "GLOBAL" and can pick it for a new credential
 // A global client shows on every user's page, so this runs alone
-test(
-  '@S26',
-  { tag: ['@passing-old', '@passing-new', '@serial'] },
-  async ({ page, browser }) => {
-    cleanups.push(makeSuperuser(OTHER));
-    cleanups.push(() => {
-      for (const { id } of oauthClientsNamed(OTHER, 'Instance sheets'))
-        removeOauthClient(id);
-    });
-    await onCredentials(page, OTHER);
+test('@S26', { tag: ['@serial'] }, async ({ page, browser }) => {
+  cleanups.push(makeSuperuser(OTHER));
+  cleanups.push(() => {
+    for (const { id } of oauthClientsNamed(OTHER, 'Instance sheets'))
+      removeOauthClient(id);
+  });
+  await onCredentials(page, OTHER);
 
-    const form = await fillOauthClient(page, 'Instance sheets');
-    await globalCheckbox(form).check();
-    await expect(
-      form.getByRole('option', { name: /^Grant projects access/ })
-    ).toHaveCount(0);
-    await submit(form, 'Add OAuth Client');
-    await expect(
-      toast(page, 'Oauth client created successfully')
-    ).toBeVisible();
+  const form = await fillOauthClient(page, 'Instance sheets');
+  await globalCheckbox(form).check();
+  await expect(
+    form.getByRole('option', { name: /^Grant projects access/ })
+  ).toHaveCount(0);
+  await submit(form, 'Add OAuth Client');
+  await expect(toast(page, 'Oauth client created successfully')).toBeVisible();
 
-    const other = await otherSession(browser, ME);
-    await open(other, PATH);
-    await expect(row(other, 'Instance sheets')).toContainText('GLOBAL');
-    await addNew(other, 'Credential');
-    const picker = await dialog(other, 'Add a credential');
-    await expect(typeOption(picker, 'Instance sheets')).toBeVisible();
-    await other.context().close();
-  }
-);
+  const other = await otherSession(browser, ME);
+  await open(other, PATH);
+  await expect(row(other, 'Instance sheets')).toContainText('GLOBAL');
+  await addNew(other, 'Credential');
+  const picker = await dialog(other, 'Add a credential');
+  await expect(typeOption(picker, 'Instance sheets')).toBeVisible();
+  await other.context().close();
+});
 
 // @S27
 // Scenario: Creating an OAuth credential hands off to the provider sign-in
@@ -880,30 +870,26 @@ test(
 //   When I start a new credential, pick "Google Sheets app" and continue
 //   And I choose "Sign in with Google Sheets app"
 //   Then the flow "flow-oauth-credential-authorize" has started for environment "main"
-test(
-  '@S27',
-  { tag: ['@passing-old', '@passing-new'] },
-  async ({ page, context }) => {
-    const provider = await standInOauth();
-    cleanups.push(provider.close);
-    oauthClient({ name: 'Google Sheets app', base: provider.base });
-    await onCredentials(page);
+test('@S27', async ({ page, context }) => {
+  const provider = await standInOauth();
+  cleanups.push(provider.close);
+  oauthClient({ name: 'Google Sheets app', base: provider.base });
+  await onCredentials(page);
 
-    const form = await startCredential(page, 'Google Sheets app');
-    const popup = context.waitForEvent('page');
-    await form
-      .getByRole('button', { name: 'Sign in with Google Sheets app' })
-      .click();
+  const form = await startCredential(page, 'Google Sheets app');
+  const popup = context.waitForEvent('page');
+  await form
+    .getByRole('button', { name: 'Sign in with Google Sheets app' })
+    .click();
 
-    // The flow has started: the provider's sign-in opens, for this client
-    const signIn = new URL((await (await popup).waitForEvent('load')).url());
-    expect(`${signIn.origin}${signIn.pathname}`).toBe(
-      `${provider.base}/authorize`
-    );
-    expect(signIn.searchParams.get('client_id')).toBe('scenario-client');
-    expect(signIn.searchParams.get('state')).toBeTruthy();
-  }
-);
+  // The flow has started: the provider's sign-in opens, for this client
+  const signIn = new URL((await (await popup).waitForEvent('load')).url());
+  expect(`${signIn.origin}${signIn.pathname}`).toBe(
+    `${provider.base}/authorize`
+  );
+  expect(signIn.searchParams.get('client_id')).toBe('scenario-client');
+  expect(signIn.searchParams.get('state')).toBeTruthy();
+});
 
 // Given I own OAuth credential "Sheets" through a client of the stand-in
 // provider with mandatory scope "read" and optional "write", its token
@@ -932,7 +918,7 @@ async function givenOauthCredential(inSeconds: number) {
 //   When I tick an extra optional scope "write"
 //   Then I am told to reauthorize
 //   And "Save credential" is disabled until I do
-test('@S28', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S28', async ({ page }) => {
   const { id } = await givenOauthCredential(3600);
   await onCredentials(page);
   const form = await edit(page, 'Sheets');
@@ -953,7 +939,7 @@ test('@S28', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I own an OAuth credential whose access token has expired and whose refresh token is valid
 //   When I edit it
 //   Then the token is refreshed and the account details are shown
-test('@S29', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S29', async ({ page }) => {
   const { provider } = await givenOauthCredential(-60);
   await onCredentials(page);
 
@@ -970,7 +956,7 @@ test('@S29', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I own an OAuth credential whose refresh token the provider rejects with "invalid_grant"
 //   When I edit it
 //   Then I see a prompt to reauthorize with the provider
-test('@S30', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S30', async ({ page }) => {
   const { provider } = await givenOauthCredential(-60);
   provider.refreshes('invalid_grant');
   await onCredentials(page);
@@ -988,7 +974,7 @@ test('@S30', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given I own an OAuth credential whose OAuth client has been deleted
 //   When I edit it
 //   Then I see "OAuth client not found"
-test('@S31', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S31', async ({ page }) => {
   const { client } = await givenOauthCredential(3600);
   removeOauthClient(client);
   await onCredentials(page);
@@ -1005,8 +991,7 @@ test('@S31', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I see "Couldn't load adaptors. Please try again." with a "Retry" button
 //   And "Raw JSON" is still offered
 // The catalogue is instance-wide, so this runs alone
-// Not on the port: the design-system picker has no unavailable state or Retry.
-test('@S32', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
+test('@S32', { tag: ['@serial'] }, async ({ page }) => {
   cleanups.push(catalogueUnavailable());
   await onCredentials(page);
 
@@ -1030,21 +1015,19 @@ test.describe('shared-credential-index-component', () => {
   //   Given I own credential "DHIS2 prod"
   //   When I open the credential list
   //   Then I see edit, delete and transfer actions for "DHIS2 prod"
-  test(
-    'shared-credential-index-component@S01 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      credential({ name: 'DHIS2 prod' });
-      await onCredentials(page);
+  test('shared-credential-index-component@S01 on credentials-index', async ({
+    page,
+  }) => {
+    credential({ name: 'DHIS2 prod' });
+    await onCredentials(page);
 
-      const actions = (await actionsOf(page, row(page, 'DHIS2 prod'))).map(a =>
-        a.toLowerCase()
-      );
-      expect(actions).toEqual(
-        expect.arrayContaining(['edit', 'delete', 'transfer'])
-      );
-    }
-  );
+    const actions = (await actionsOf(page, row(page, 'DHIS2 prod'))).map(a =>
+      a.toLowerCase()
+    );
+    expect(actions).toEqual(
+      expect.arrayContaining(['edit', 'delete', 'transfer'])
+    );
+  });
 
   // S02 (another member's credential in a project's list) can't be reached
   // here: this page lists only my own credentials (S01 above). S03 and S04
@@ -1056,19 +1039,17 @@ test.describe('shared-credential-index-component', () => {
   //   Given I own credential "DHIS2 prod" which is scheduled for deletion
   //   When I cancel its deletion
   //   Then I see "Credential deletion canceled"
-  test(
-    'shared-credential-index-component@S05 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      credential({ name: 'DHIS2 prod', scheduled: true });
-      await onCredentials(page);
+  test('shared-credential-index-component@S05 on credentials-index', async ({
+    page,
+  }) => {
+    credential({ name: 'DHIS2 prod', scheduled: true });
+    await onCredentials(page);
 
-      await rowAction(page, row(page, 'DHIS2 prod'), 'Cancel deletion');
+    await rowAction(page, row(page, 'DHIS2 prod'), 'Cancel deletion');
 
-      await expect(toast(page, 'Credential deletion canceled')).toBeVisible();
-      expect(credentialNamed(ME, 'DHIS2 prod').scheduled_deletion).toBeNull();
-    }
-  );
+    await expect(toast(page, 'Credential deletion canceled')).toBeVisible();
+    expect(credentialNamed(ME, 'DHIS2 prod').scheduled_deletion).toBeNull();
+  });
 
   // @S06
   // Scenario: A non-owner's action sent outside the page is refused
@@ -1077,30 +1058,28 @@ test.describe('shared-credential-index-component', () => {
   //   Then I see "You are not authorized to perform this action"
   // Checked by its effect: the other owner's credential never opens and its values are not on the page
   // Fails on today's Lightning: the page reloads instead of showing the message.
-  test(
-    'shared-credential-index-component@S06 on credentials-index',
-    { tag: '@passing-new' },
-    async ({ page }) => {
-      credential({ name: 'Mine' });
-      const theirs = credential(
-        { name: 'DHIS2 prod', bodies: { main: { password: 'their-secret' } } },
-        OTHER
-      );
-      const lv = watchLiveView(page);
-      const outsidePage = await namingAnother(page, theirs);
-      await onCredentials(page);
+  test('shared-credential-index-component@S06 on credentials-index', async ({
+    page,
+  }) => {
+    credential({ name: 'Mine' });
+    const theirs = credential(
+      { name: 'DHIS2 prod', bodies: { main: { password: 'their-secret' } } },
+      OTHER
+    );
+    const lv = watchLiveView(page);
+    const outsidePage = await namingAnother(page, theirs);
+    await onCredentials(page);
 
-      await page.getByRole('button', { name: 'Actions' }).click();
-      await outsidePage(
-        page.getByRole('menu').getByText('Edit', { exact: true })
-      );
-      await lv.answered(lv.events());
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await outsidePage(
+      page.getByRole('menu').getByText('Edit', { exact: true })
+    );
+    await lv.answered(lv.events());
 
-      expect(lv.crashes()).toBe(0);
-      await expect(page.getByRole('dialog')).toHaveCount(0);
-      expect(await page.content()).not.toContain('their-secret');
-    }
-  );
+    expect(lv.crashes()).toBe(0);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await page.content()).not.toContain('their-secret');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1113,44 +1092,38 @@ test.describe('shared-authenticated-session', () => {
     cleanups.push(keepAccount(ME));
   });
 
-  test(
-    'shared-authenticated-session@S01 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PATH, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on credentials-index', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, PATH, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, PATH, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on credentials-index', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, PATH, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PATH, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on credentials-index', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, PATH, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page, browser }) => {
-      await authenticatedSession.S07(
-        page,
-        browser,
-        PATH,
-        '/projects',
-        ME,
-        'Credentials'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on credentials-index', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S07(
+      page,
+      browser,
+      PATH,
+      '/projects',
+      ME,
+      'Credentials'
+    );
+  });
 
   // These variants are not configured on this instance
   for (const [id, variant] of [
@@ -1162,13 +1135,9 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on credentials-index`,
-      { tag: '@pending' },
-      () => {
-        test.skip(true, `variant ${variant} is not configured here`);
-      }
-    );
+    test(`shared-authenticated-session@${id} on credentials-index`, () => {
+      test.skip(true, `variant ${variant} is not configured here`);
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -1185,83 +1154,63 @@ test.describe('shared-flash-messages', () => {
     return () => rowAction(page, row(page, 'DHIS2 prod'), 'Cancel deletion');
   }
 
-  test(
-    'shared-flash-messages@S01 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await flashMessages.S01(page, INFO, await givenScheduled(page));
-    }
-  );
+  test('shared-flash-messages@S01 on credentials-index', async ({ page }) => {
+    await flashMessages.S01(page, INFO, await givenScheduled(page));
+  });
 
   // A refusal: opening someone else's credential from a request sent outside the page
   // Fails on today's Lightning: the page reloads instead of showing the message.
-  test(
-    'shared-flash-messages@S02 on credentials-index',
-    { tag: '@passing-new' },
-    async ({ page }) => {
-      credential({ name: 'Mine' });
-      const theirs = credential({ name: 'Theirs' }, OTHER);
-      const outsidePage = await namingAnother(page, theirs);
-      await onCredentials(page);
+  test('shared-flash-messages@S02 on credentials-index', async ({ page }) => {
+    credential({ name: 'Mine' });
+    const theirs = credential({ name: 'Theirs' }, OTHER);
+    const outsidePage = await namingAnother(page, theirs);
+    await onCredentials(page);
 
-      await flashMessages.S02(
-        page,
-        'You are not authorized to perform this action',
-        async () => {
-          await page.getByRole('button', { name: 'Actions' }).click();
-          await outsidePage(
-            page.getByRole('menu').getByText('Edit', { exact: true })
-          );
-        }
-      );
-    }
-  );
+    await flashMessages.S02(
+      page,
+      'You are not authorized to perform this action',
+      async () => {
+        await page.getByRole('button', { name: 'Actions' }).click();
+        await outsidePage(
+          page.getByRole('menu').getByText('Edit', { exact: true })
+        );
+      }
+    );
+  });
 
-  test(
-    'shared-flash-messages@S03 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await flashMessages.S03(page, INFO, await givenScheduled(page));
-    }
-  );
+  test('shared-flash-messages@S03 on credentials-index', async ({ page }) => {
+    await flashMessages.S03(page, INFO, await givenScheduled(page));
+  });
 
-  test(
-    'shared-flash-messages@S04 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      await flashMessages.S04(
-        page,
-        INFO,
-        await givenScheduled(page),
-        async () => {
-          // Opening the new credential form makes the page render again
-          await addNew(page, 'Credential');
-          await dialog(page, 'Add a credential');
-        }
-      );
-    }
-  );
+  test('shared-flash-messages@S04 on credentials-index', async ({ page }) => {
+    await flashMessages.S04(
+      page,
+      INFO,
+      await givenScheduled(page),
+      async () => {
+        // Opening the new credential form makes the page render again
+        await addNew(page, 'Credential');
+        await dialog(page, 'Add a credential');
+      }
+    );
+  });
 
   // Scheduling a deletion redirects back to /credentials with the flash
-  test(
-    'shared-flash-messages@S05 on credentials-index',
-    { tag: ['@passing-old', '@passing-new'] },
-    async ({ page }) => {
-      credential({ name: 'DHIS2 prod' });
-      await onCredentials(page);
+  test('shared-flash-messages@S05 on credentials-index', async ({ page }) => {
+    credential({ name: 'DHIS2 prod' });
+    await onCredentials(page);
 
-      await flashMessages.S05(
-        page,
-        'Credential scheduled for deletion',
-        async () => {
-          await rowAction(page, row(page, 'DHIS2 prod'), 'Delete');
-          const d = await dialog(page, 'Delete credential');
-          await d.getByRole('button', { name: 'Delete credential' }).click();
-        },
-        PATH
-      );
-    }
-  );
+    await flashMessages.S05(
+      page,
+      'Credential scheduled for deletion',
+      async () => {
+        await rowAction(page, row(page, 'DHIS2 prod'), 'Delete');
+        const d = await dialog(page, 'Delete credential');
+        await d.getByRole('button', { name: 'Delete credential' }).click();
+      },
+      PATH
+    );
+  });
 
   // S06 (a Not Found card) needs a page that can be refused by its URL;
   // /credentials takes no parameters. S07 is on admin pages and S08 on the

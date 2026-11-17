@@ -44,8 +44,6 @@ import {
 
 const PATH = '/users/confirm-required';
 const EDITOR = 'editor@openfn.org';
-const PASSING = { tag: ['@passing-old', '@passing-new', '@serial'] };
-const PENDING = { tag: ['@pending', '@serial'] };
 
 const LOCKOUT =
   'Your account is blocked pending email confirmation. Confirm your email address, or update it below and we will send a new link.';
@@ -159,7 +157,7 @@ const pendingChanges = (id: string) =>
 //   And I see a "Resend confirmation email" button
 //   And I see a "Change email address" form with "New email address" and "Enter password to confirm"
 //   And I see a "Log out" link
-test('@S01', PASSING, async ({ page }) => {
+test('@S01', { tag: ['@serial'] }, async ({ page }) => {
   const amara = await lockedOutHere(page);
 
   await expect(
@@ -189,7 +187,7 @@ test('@S01', PASSING, async ({ page }) => {
 //   And the page carries no socket token
 // The project gets a fresh name. "No chrome": no navigation landmark, and
 // none of the user menu's entries (Credentials, profile).
-test('@S02', PASSING, async ({ page }) => {
+test('@S02', { tag: ['@serial'] }, async ({ page }) => {
   const amara = me();
   verificationRequired();
   const project = seedProjectWith(`Malawi HIV ${randomUUID().slice(0, 8)}`, {
@@ -218,7 +216,7 @@ test('@S02', PASSING, async ({ page }) => {
 //   And the "Resend confirmation email" button is still enabled
 //   And the flow "flow-resend-account-confirmation" continues from that email (its S08)
 // The flow continuing is the email arriving; its confirm step is the flow's.
-test('@S03', PASSING, async ({ page, request }) => {
+test('@S03', { tag: ['@serial'] }, async ({ page, request }) => {
   const amara = await lockedOutHere(page);
 
   await resendButton(page).click();
@@ -239,7 +237,7 @@ test('@S03', PASSING, async ({ page, request }) => {
 //   When I click "Resend confirmation email"
 //   Then I see "You've asked for this a few times recently. Check your inbox and spam folder; you can request another in a few minutes."
 //   And no confirmation email is sent
-test('@S04', PASSING, async ({ page, request }) => {
+test('@S04', { tag: ['@serial'] }, async ({ page, request }) => {
   const amara = await lockedOutHere(page);
   for (const n of [1, 2, 3]) await resendSent(page, request, amara.email, n);
 
@@ -257,7 +255,7 @@ test('@S04', PASSING, async ({ page, request }) => {
 //   Then I see "you can request another in a few minutes"
 //   And I do not see "We have sent a new confirmation link"
 //   And no confirmation email is sent
-test('@S05', PASSING, async ({ page, request }) => {
+test('@S05', { tag: ['@serial'] }, async ({ page, request }) => {
   const amara = me();
   verificationRequired();
   await signInAs(page, amara.email);
@@ -287,7 +285,7 @@ test('@S05', PASSING, async ({ page, request }) => {
 //   When I click "Resend confirmation email"
 //   Then I see "We could not send that email just now. Try again in a moment; if it keeps failing, contact your instance administrator."
 //   And I do not see "We have sent a new confirmation link"
-test('@S06', PASSING, async ({ page }) => {
+test('@S06', { tag: ['@serial'] }, async ({ page }) => {
   await lockedOutHere(page);
   cleanups.push(mailerFailing());
 
@@ -315,7 +313,7 @@ test('@S06', PASSING, async ({ page }) => {
 //   And the flow "flow-change-email-confirm" has started for "amara@example.org" (its S02)
 // The flow has started: a pending change for the new address, and its
 // confirmation email sent there.
-test('@S07', PASSING, async ({ page, request }) => {
+test('@S07', { tag: ['@serial'] }, async ({ page, request }) => {
   const amara = await lockedOutHere(page);
   const corrected = fresh('amara-fixed');
 
@@ -336,7 +334,7 @@ test('@S07', PASSING, async ({ page, request }) => {
 //   And I do not see "We have sent confirmation instructions"
 //   And no email is sent
 // Today's error reads "Your passwords do not match." (annotation 6.1).
-test('@S08', PASSING, async ({ page, request }) => {
+test('@S08', { tag: ['@serial'] }, async ({ page, request }) => {
   const amara = await lockedOutHere(page);
   const typed = fresh('typo-fixed');
 
@@ -367,10 +365,9 @@ test('@S08', PASSING, async ({ page, request }) => {
 //     | taken@example.org  | This value should be unique.  |
 //     | not-an-address     | Email address not valid.      |
 // "Update email" being off is not asserted: today's page turns it off once
-// the server has checked the address, the port only for what it can check
-// itself. Each example presses it when it can, with my password, and reads
-// the field. Messages take today's wording or the port's.
-test('@S09', PASSING, async ({ page, request }) => {
+// the server has checked the address. Each example presses it when it can,
+// with my password, and reads the field. Messages take either wording.
+test('@S09', { tag: ['@serial'] }, async ({ page, request }) => {
   const amara = await lockedOutHere(page);
   const other = seedUser('taken');
   cleanups.push(other.remove);
@@ -408,7 +405,7 @@ test('@S09', PASSING, async ({ page, request }) => {
 //   And "New email address" still contains "typo-fixed-4@example.com"
 //   And I do not see "We have sent confirmation instructions"
 //   And no "Please confirm your new email" email is sent
-test('@S10', PASSING, async ({ page, request }) => {
+test('@S10', { tag: ['@serial'] }, async ({ page, request }) => {
   const amara = await lockedOutHere(page);
   for (const n of [1, 2, 3]) await correctionSent(page, fresh(`typo-${n}`));
   const fourth = fresh('typo-4');
@@ -433,7 +430,7 @@ test('@S10', PASSING, async ({ page, request }) => {
 //   When I submit a correction to "typo-fixed@example.com" with my password
 //   Then I see "We have sent confirmation instructions to typo-fixed@example.com."
 //   And I do not see "You've asked us to change this address a few times recently."
-test('@S11', PASSING, async ({ page, request }) => {
+test('@S11', { tag: ['@serial'] }, async ({ page, request }) => {
   const amara = await lockedOutHere(page);
   for (const n of [1, 2, 3]) await resendSent(page, request, amara.email, n);
   await resendButton(page).click();
@@ -453,7 +450,7 @@ test('@S11', PASSING, async ({ page, request }) => {
 //     | age          | state                 |
 //     | 50 hours ago | is confirmed          |
 //     | 2 hours ago  | is unconfirmed        |
-test('@S12', PASSING, async ({ page }) => {
+test('@S12', { tag: ['@serial'] }, async ({ page }) => {
   verificationRequired();
   for (const age of [
     { hoursAgo: 50, confirmed: true },
@@ -474,7 +471,7 @@ test('@S12', PASSING, async ({ page }) => {
 //   And my account was created 50 hours ago and is unconfirmed
 //   When I visit "/users/confirm-required"
 //   Then I am on "/projects"
-test('@S13', PASSING, async ({ page }) => {
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
   verificationRequired(false);
   await signInAs(page, me().email);
 
@@ -490,7 +487,7 @@ test('@S13', PASSING, async ({ page }) => {
 //   When I click "Log out"
 //   Then the flow "flow-log-out" has started
 // The flow has started when I land on log in, signed out.
-test('@S14', PASSING, async ({ page }) => {
+test('@S14', { tag: ['@serial'] }, async ({ page }) => {
   await lockedOutHere(page);
 
   await clickable(page, 'Log out').click();
@@ -506,7 +503,7 @@ test.describe('shared-authenticated-session', () => {
   // Signed out, the visit itself is what sends me here after logging in
   test(
     'shared-authenticated-session@S01 on auth-confirmation-required',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       const amara = me();
       verificationRequired();
@@ -517,7 +514,7 @@ test.describe('shared-authenticated-session', () => {
   // A manifest account, so an administrator can disable it; locked out first
   test(
     'shared-authenticated-session@S02 on auth-confirmation-required',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page, browser }) => {
       cleanups.push(keepAccount(EDITOR));
       cleanups.push(unconfirmedSince(EDITOR, 50));
@@ -531,7 +528,7 @@ test.describe('shared-authenticated-session', () => {
   // locked-out account can't reach.
   test(
     'shared-authenticated-session@S03 on auth-confirmation-required',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       const amara = me({ confirmed: true });
       verificationRequired();
@@ -541,7 +538,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S04 on auth-confirmation-required',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       const amara = me();
       verificationRequired();
@@ -551,7 +548,7 @@ test.describe('shared-authenticated-session', () => {
 
   test(
     'shared-authenticated-session@S05 on auth-confirmation-required',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       const amara = me();
       verificationRequired();
@@ -562,7 +559,7 @@ test.describe('shared-authenticated-session', () => {
   for (const id of ['S06', 'S07', 'S08', 'S09', 'S10'])
     test(
       `shared-authenticated-session@${id} on auth-confirmation-required`,
-      PENDING,
+      { tag: ['@serial'] },
       () => {
         test.skip(
           true,
@@ -578,7 +575,7 @@ test.describe('shared-authenticated-session', () => {
   //   Then I am on "/first_setup"
   test(
     'shared-authenticated-session@S11 on auth-confirmation-required',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       cleanups.push(firstSetupOpen());
       await authenticatedSession.S11(page, PATH);
@@ -593,7 +590,7 @@ test.describe('shared-authenticated-session', () => {
 test.describe('shared-flash-messages', () => {
   test(
     'shared-flash-messages@S02 on auth-confirmation-required',
-    PASSING,
+    { tag: ['@serial'] },
     async ({ page }) => {
       const amara = me();
       verificationRequired();

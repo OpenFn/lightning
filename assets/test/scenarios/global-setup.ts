@@ -12,7 +12,7 @@ import { load } from 'js-yaml';
 import { STATE, workerManifest } from './workers';
 
 export default function globalSetup(config: FullConfig) {
-  if (process.env.TARGET === 'demo' || config.workers < 2) return;
+  if (config.workers < 2) return;
 
   const instance = JSON.parse(
     readFileSync(`${STATE}/instance.json`, 'utf8')

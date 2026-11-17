@@ -146,7 +146,7 @@ const clipboard = (page: Page) =>
 //   Then I see "POST", "/api/v1/data", "?format=json" and "200"
 //   And the state pill reads "Success" (labels owned by shared-run-components channel_state_pill)
 //   And I see "orders-proxy", the client IP, the destination URL, the start and completed times and "350 ms"
-test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   await onRequest(page, {
     completedAt: '2026-01-01 10:00:00.350',
     request: { client_identity: '203.0.113.7' },
@@ -183,7 +183,7 @@ test('@S01', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the request headers list "authorization" with the value "[REDACTED]" shown in italics
 //   And other headers such as "content-type" show their values
 // The italics are the look; the Value is that the secret is not shown.
-test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   await onRequest(page, {
     event: {
       request_method: 'GET',
@@ -206,7 +206,7 @@ test('@S02', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given a request with a JSON request body and a JSON response body
 //   When I open the request
 //   Then each body shows its text, a "JSON" label, its size, a copy button and the first 16 characters of its SHA256 hash
-test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const sent = '{"patient":"A1"}';
   const got = '{"status":"stored","count":1}';
   await onRequest(page, {
@@ -245,7 +245,7 @@ test('@S03', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given a response body of 10 KB of which a 2 KB preview was stored
 //   When I open the request
 //   Then below the body I see "Preview: 2.0 KB of 10.0 KB"
-test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   await onRequest(page, {
     event: {
       request_method: 'GET',
@@ -269,7 +269,7 @@ test('@S04', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the request
 //   Then the response body shows "application/octet-stream", "4.0 KB" and "SHA256: binaryhash123"
 //   And no body text is shown
-test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   await onRequest(page, {
     event: {
       request_method: 'GET',
@@ -298,7 +298,7 @@ test('@S05', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the request
 //   Then the request body reads "Body not captured (2.0 KB)"
 //   And an empty body with size 0 reads "No body"
-test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   await onRequest(page, {
     event: {
       request_method: 'POST',
@@ -328,7 +328,7 @@ test('@S06', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the response section reads "No response received"
 //   And it explains "Connection refused" in plain words and shows the code "econnrefused"
 //   And the timing section shows a single "Total" bar
-test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   await onRequest(page, {
     state: 'error',
     event: {
@@ -359,7 +359,7 @@ test('@S07', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And it says the configured credential "is missing required authentication fields" and shows the code
 //   And there is no timing section
 // The request has a duration, so a timing section would show if allowed.
-test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   await onRequest(page, {
     state: 'error',
     event: {
@@ -387,7 +387,7 @@ test('@S08', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given a request in state "timeout" whose error is "response_timeout"
 //   When I hover its "Timeout" state pill
 //   Then the tooltip says the destination "accepted the connection but did not send a response in time"
-test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   await onRequest(page, {
     state: 'timeout',
     event: {
@@ -413,7 +413,7 @@ test('@S09', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the timing bar has segments titled "Queue: 2 ms", "Connect: 15 ms", "Send: 5 ms", "Processing: 158 ms" and "Recv: 65 ms"
 //   And it reads "0 ms" to "260 ms" with a "TTFB: 180 ms" marker
 //   And the legend includes "Proxy overhead"
-test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   await onRequest(page, {
     event: {
       request_method: 'GET',
@@ -447,7 +447,7 @@ test('@S10', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given a request that reused an open connection to the destination
 //   When I open the request
 //   Then the timing bar shows a "Connect" segment badged "(reused)"
-test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   await onRequest(page, {
     event: {
       request_method: 'GET',
@@ -475,7 +475,7 @@ test('@S11', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open the request
 //   Then the timing bar has "TTFB: 280 ms" and "Download: 70 ms" segments and no "Proxy overhead"
 //   And a request with only a total of 420 ms shows a single "Total: 420 ms" segment
-test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const { id: projectId } = givenProject();
   const event = { request_method: 'GET', request_path: '/patients' };
   const {
@@ -512,7 +512,7 @@ test('@S12', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And the flow "flow-channel-proxy-request" is what recorded the matched method
 // The requests are stored as that flow records them; the flow itself is
 // not run here.
-test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const { id: projectId } = givenProject(
     { [ME]: 'viewer' },
     { credentials: ['Destination API'] }
@@ -559,9 +559,8 @@ test('@S13', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then client auth reads "(deleted) (API key)"
 //   And destination auth reads "(deleted)"
 // Both are deleted from the database as Lightning deletes them, after the
-// request was stored (annotation 6.1 expects today's page to read "None").
-// @pending on today's Lightning: client auth reads "API key" and destination auth "None", with no "(deleted)".
-test('@S14', { tag: '@pending' }, async ({ page }) => {
+// request was stored.
+test('@S14', async ({ page }) => {
   const { id: projectId } = givenProject(
     { [ME]: 'viewer' },
     { credentials: ['Destination API'] }
@@ -602,7 +601,7 @@ test('@S14', { tag: '@pending' }, async ({ page }) => {
 //   And a "Config changed" badge
 // The version is read from the channel when the request is stored, rather
 // than assumed to be 1.
-test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const { id: projectId } = givenProject();
   const {
     channelId,
@@ -640,7 +639,7 @@ test('@S15', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And I do not see "rerun this work order"
 // The request is stored through Lightning's own rule for what the project
 // keeps, which wipes it.
-test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const { id: projectId } = givenProject({ [ME]: 'admin' });
   keepNoData(projectId);
   const {
@@ -675,7 +674,7 @@ test('@S16', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   And hovering "project admins" shows "admin@example.com"
 //   And there is no link to the data storage settings
 // The admin is super@openfn.org.
-test('@S17', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const { id: projectId } = givenProject({ [ME]: 'editor', [THIRD]: 'admin' });
   keepNoData(projectId);
   const {
@@ -703,7 +702,7 @@ test('@S17', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   When I open "/projects/<my project>/history/channels/<that request id>"
 //   Then I am redirected to "/projects/<my project>/history"
 //   And I am also redirected there for "/projects/<my project>/history/channels/not-a-uuid"
-test('@S18', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const mine = givenProject();
   const theirs = givenProject({ [OWNER]: 'owner' }, { name: 'Kenya TB' });
   const {
@@ -725,7 +724,7 @@ test('@S18', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then I am redirected to "/projects/<project_id>/history"
 // The same request opens once the features are on, so the redirect is
 // what the setting does.
-test('@S19', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const { id: projectId } = givenProject();
   const {
     ids: [id],
@@ -748,7 +747,7 @@ test('@S19', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Then the breadcrumbs read "History", "Channels" and "Channel Request" with the request's short id
 //   And "Channels" links to "/projects/<project_id>/history/channels"
 //   And "orders-proxy" links to "/projects/<project_id>/channels/<channel_id>/edit"
-test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const { projectId, channelId, id } = await onRequest(page, { path: '/x' });
 
   const trail = page.getByRole('navigation', { name: 'Breadcrumbs' });
@@ -775,7 +774,7 @@ test('@S20', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 //   Given a request with a JSON response body
 //   When I click "Copy request ID", "Copy body" or "Copy hash"
 //   Then the full request id, the body preview or the full hash is copied to the clipboard
-test('@S21', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
+test('@S21', async ({ page }) => {
   const body = '{"status":"stored"}';
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   const { id } = await onRequest(page, {
@@ -803,8 +802,6 @@ test('@S21', { tag: ['@passing-old', '@passing-new'] }, async ({ page }) => {
 
 // Inherited shared annotations, run on a request page with my experimental
 // features on (without them the page redirects, S19)
-const PENDING = { tag: '@pending' };
-const PASSING = { tag: ['@passing-old', '@passing-new'] };
 
 // Given project "Malawi HIV" (or <name>) with these members and a channel
 // that logged one request
@@ -829,50 +826,39 @@ function givenRequestPage(
 const shown = (page: Page) => copyButton(page, 'Copy request ID');
 
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S01(page, givenRequestPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on channel-request-show', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, givenRequestPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on channel-request-show',
-    PASSING,
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(
-        page,
-        browser,
-        givenRequestPage().path,
-        ME
-      );
-    }
-  );
+  test('shared-authenticated-session@S02 on channel-request-show', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, givenRequestPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      await authenticatedSession.S03(page, givenRequestPage().path, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on channel-request-show', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, givenRequestPage().path, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on channel-request-show',
-    PASSING,
-    async ({ page, browser }) => {
-      const h = givenRequestPage();
-      await authenticatedSession.S07(
-        page,
-        browser,
-        h.path,
-        `/projects/${h.id}/w`,
-        ME,
-        'History'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on channel-request-show', async ({
+    page,
+    browser,
+  }) => {
+    const h = givenRequestPage();
+    await authenticatedSession.S07(
+      page,
+      browser,
+      h.path,
+      `/projects/${h.id}/w`,
+      ME,
+      'History'
+    );
+  });
 
   // These variants are not configured on this instance
   for (const [id, variant] of [
@@ -884,75 +870,48 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on channel-request-show`,
-      PENDING,
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on channel-request-show`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 test.describe('shared-project-scope', () => {
-  test(
-    'shared-project-scope@S01 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S01(page, givenRequestPage().path);
-    }
-  );
+  test('shared-project-scope@S01 on channel-request-show', async ({ page }) => {
+    await projectScope.S01(page, givenRequestPage().path);
+  });
 
-  test(
-    'shared-project-scope@S02 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      await projectScope.S02(page, givenRequestPage().path, ME, shown(page));
-    }
-  );
+  test('shared-project-scope@S02 on channel-request-show', async ({ page }) => {
+    await projectScope.S02(page, givenRequestPage().path, ME, shown(page));
+  });
 
-  test(
-    'shared-project-scope@S03 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      setPreferences(ME, { experimental_features: true });
-      await projectScope.S03(
-        page,
-        givenRequestPage({ [OWNER]: 'owner' }).path,
-        ME
-      );
-    }
-  );
+  test('shared-project-scope@S03 on channel-request-show', async ({ page }) => {
+    setPreferences(ME, { experimental_features: true });
+    await projectScope.S03(
+      page,
+      givenRequestPage({ [OWNER]: 'owner' }).path,
+      ME
+    );
+  });
 
-  test(
-    'shared-project-scope@S04 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [OWNER]: 'owner' });
-      exec(
-        `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
-      );
-      await projectScope.S04(page, h.path, OWNER);
-    }
-  );
+  test('shared-project-scope@S04 on channel-request-show', async ({ page }) => {
+    const h = givenRequestPage({ [OWNER]: 'owner' });
+    exec(
+      `update projects set scheduled_deletion = now() + interval '7 days' where id = '${h.id}'`
+    );
+    await projectScope.S04(page, h.path, OWNER);
+  });
 
-  test(
-    'shared-project-scope@S05 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage();
-      exec(`update projects set requires_mfa = true where id = '${h.id}'`);
-      removeMfaOf(ME);
-      await projectScope.S05(page, h.path, ME);
-    }
-  );
+  test('shared-project-scope@S05 on channel-request-show', async ({ page }) => {
+    const h = givenRequestPage();
+    exec(`update projects set requires_mfa = true where id = '${h.id}'`);
+    removeMfaOf(ME);
+    await projectScope.S05(page, h.path, ME);
+  });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-scope@S06 on channel-request-show',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenRequestPage({ [OWNER]: 'owner' });
       setPreferences(ME, { experimental_features: true });
@@ -964,35 +923,27 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S07 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'editor', [OWNER]: 'owner' });
-      await projectScope.S07(page, h.path, ME, () =>
-        removeMemberOnNode(h.id, ME, OWNER)
-      );
-    }
-  );
+  test('shared-project-scope@S07 on channel-request-show', async ({ page }) => {
+    const h = givenRequestPage({ [ME]: 'editor', [OWNER]: 'owner' });
+    await projectScope.S07(page, h.path, ME, () =>
+      removeMemberOnNode(h.id, ME, OWNER)
+    );
+  });
 
-  test(
-    'shared-project-scope@S08 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'admin', [OWNER]: 'owner' });
-      await projectScope.S08(
-        page,
-        `${h.path}?x=1`,
-        ME,
-        () => changeRoleOnNode(h.id, ME, 'viewer'),
-        shown(page)
-      );
-    }
-  );
+  test('shared-project-scope@S08 on channel-request-show', async ({ page }) => {
+    const h = givenRequestPage({ [ME]: 'admin', [OWNER]: 'owner' });
+    await projectScope.S08(
+      page,
+      `${h.path}?x=1`,
+      ME,
+      () => changeRoleOnNode(h.id, ME, 'viewer'),
+      shown(page)
+    );
+  });
 
   test(
     'shared-project-scope@S09 on channel-request-show',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenRequestPage({ [OWNER]: 'owner' });
       setPreferences(ME, { experimental_features: true });
@@ -1006,16 +957,12 @@ test.describe('shared-project-scope', () => {
     }
   );
 
-  test(
-    'shared-project-scope@S10 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'editor', [OWNER]: 'owner' });
-      await projectScope.S10(page, h.path, ME, () =>
-        scheduleDeletionOnNode(h.id)
-      );
-    }
-  );
+  test('shared-project-scope@S10 on channel-request-show', async ({ page }) => {
+    const h = givenRequestPage({ [ME]: 'editor', [OWNER]: 'owner' });
+    await projectScope.S10(page, h.path, ME, () =>
+      scheduleDeletionOnNode(h.id)
+    );
+  });
 
   // shared-project-scope S11 and S12 are not run on this page: they are about
   // an open workflow editor (archived sandbox, deleted workflow), and this
@@ -1027,70 +974,62 @@ test.describe('shared-project-scope', () => {
 test.describe('shared-project-header', () => {
   const HOST = 'Channel request host';
 
-  test(
-    'shared-project-header@S01 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S01(page, h.path, ME, HOST, [
-        { name: 'History', href: `/projects/${h.id}/history` },
-        { name: 'Channels', href: `/projects/${h.id}/history/channels` },
-        { name: `Channel Request ${shortId(h.requestId)}` },
-      ]);
-    }
-  );
+  test('shared-project-header@S01 on channel-request-show', async ({
+    page,
+  }) => {
+    const h = givenRequestPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S01(page, h.path, ME, HOST, [
+      { name: 'History', href: `/projects/${h.id}/history` },
+      { name: 'Channels', href: `/projects/${h.id}/history/channels` },
+      { name: `Channel Request ${shortId(h.requestId)}` },
+    ]);
+  });
 
-  test(
-    'shared-project-header@S02 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S02(page, ME, { path: h.path, project: HOST });
-    }
-  );
+  test('shared-project-header@S02 on channel-request-show', async ({
+    page,
+  }) => {
+    const h = givenRequestPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S02(page, ME, { path: h.path, project: HOST });
+  });
 
-  test(
-    'shared-project-header@S03 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      setPreferences(ME, { experimental_features: true });
-      const w = seedWorkspace(
-        {
-          name: HOST,
-          members: { [ME]: 'editor', [OWNER]: 'owner' },
-          sandboxes: [
-            { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
-          ],
-        },
-        OWNER
-      );
-      cleanups.push(w.remove);
-      const dev = w.id('dev');
-      cleanups.push(() => removeChannelsOf(dev));
-      const {
-        ids: [id],
-      } = givenRequests(dev, [{ at: '2026-01-01 10:00:00', path: '/x' }]);
-      await projectHeader.S03(page, ME, {
-        path: requestPath(dev, id),
-        label: `${HOST}:dev`,
-      });
-    }
-  );
+  test('shared-project-header@S03 on channel-request-show', async ({
+    page,
+  }) => {
+    setPreferences(ME, { experimental_features: true });
+    const w = seedWorkspace(
+      {
+        name: HOST,
+        members: { [ME]: 'editor', [OWNER]: 'owner' },
+        sandboxes: [
+          { name: 'dev', color: '#E33D63', members: { [ME]: 'editor' } },
+        ],
+      },
+      OWNER
+    );
+    cleanups.push(w.remove);
+    const dev = w.id('dev');
+    cleanups.push(() => removeChannelsOf(dev));
+    const {
+      ids: [id],
+    } = givenRequests(dev, [{ at: '2026-01-01 10:00:00', path: '/x' }]);
+    await projectHeader.S03(page, ME, {
+      path: requestPath(dev, id),
+      label: `${HOST}:dev`,
+    });
+  });
 
   for (const id of ['S04', 'S05', 'S06', 'S08'] as const)
-    test(
-      `shared-project-header@${id} on channel-request-show`,
-      PASSING,
-      async ({ page }) => {
-        const h = givenRequestPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on channel-request-show`, async ({
+      page,
+    }) => {
+      const h = givenRequestPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
   // A support user sees every project that allows support access
   test(
     'shared-project-header@S07 on channel-request-show',
-    { tag: ['@passing-old', '@passing-new', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const h = givenRequestPage({ [ME]: 'editor' }, HOST);
       await projectHeader.S07(page, h.path, ME);
@@ -1098,37 +1037,31 @@ test.describe('shared-project-header', () => {
   );
 
   // S09 starts on a project settings page, whatever page hosts the header
-  test(
-    'shared-project-header@S09 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      setPreferences(ME, { experimental_features: true });
-      await projectHeader.S09(page, ME);
-    }
-  );
+  test('shared-project-header@S09 on channel-request-show', async ({
+    page,
+  }) => {
+    setPreferences(ME, { experimental_features: true });
+    await projectHeader.S09(page, ME);
+  });
 
   // The request exists only in this project, so its page has no equivalent
   // in "Kenya TB"; the page sends a missing request to History.
-  test(
-    'shared-project-header@S10 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S10(page, h.path, ME, '/history');
-    }
-  );
+  test('shared-project-header@S10 on channel-request-show', async ({
+    page,
+  }) => {
+    const h = givenRequestPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S10(page, h.path, ME, '/history');
+  });
 
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on channel-request-show`,
-      PASSING,
-      async ({ page }) => {
-        const h = givenRequestPage({ [ME]: 'editor' }, HOST);
-        await projectHeader[id](page, h.path, ME);
-      }
-    );
+    test(`shared-project-header@${id} on channel-request-show`, async ({
+      page,
+    }) => {
+      const h = givenRequestPage({ [ME]: 'editor' }, HOST);
+      await projectHeader[id](page, h.path, ME);
+    });
 
-  test('shared-project-header@S14 on channel-request-show', PENDING, () => {
+  test('shared-project-header@S14 on channel-request-show', () => {
     test.skip(
       true,
       'variant require-email-verification is not configured on this instance'
@@ -1136,35 +1069,29 @@ test.describe('shared-project-header', () => {
   });
 
   // This page marks "History" in the side menu
-  test(
-    'shared-project-header@S15 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'viewer' }, HOST);
-      await projectHeader.S15(page, h.path, ME, h.id, 'History');
-    }
-  );
+  test('shared-project-header@S15 on channel-request-show', async ({
+    page,
+  }) => {
+    const h = givenRequestPage({ [ME]: 'viewer' }, HOST);
+    await projectHeader.S15(page, h.path, ME, h.id, 'History');
+  });
 
   // S16 turns the features off, and then this page redirects to History.
   // Its own header is what is checked before that.
-  test(
-    'shared-project-header@S16 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'editor' }, HOST);
-      await projectHeader.S16(page, h.path, ME, { channels: true });
-    }
-  );
+  test('shared-project-header@S16 on channel-request-show', async ({
+    page,
+  }) => {
+    const h = givenRequestPage({ [ME]: 'editor' }, HOST);
+    await projectHeader.S16(page, h.path, ME, { channels: true });
+  });
 
   // A superuser needs a role on the project to open this page at all
-  test(
-    'shared-project-header@S17 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
-      await projectHeader.S17(page, h.path);
-    }
-  );
+  test('shared-project-header@S17 on channel-request-show', async ({
+    page,
+  }) => {
+    const h = givenRequestPage({ [ME]: 'viewer', [THIRD]: 'viewer' }, HOST);
+    await projectHeader.S17(page, h.path);
+  });
 });
 
 // Inherited from shared-local-datetime: the summary's "Started" time, and
@@ -1188,34 +1115,28 @@ test.describe('shared-local-datetime', () => {
 
   test.describe(() => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-    test(
-      'shared-local-datetime@S01 on channel-request-show',
-      PASSING,
-      async ({ page }) => {
-        const timing = await requestAt(page, localDatetime.given.S01);
-        await localDatetime.S01(page, valueOf(timing, 'Started'));
-      }
-    );
+    test('shared-local-datetime@S01 on channel-request-show', async ({
+      page,
+    }) => {
+      const timing = await requestAt(page, localDatetime.given.S01);
+      await localDatetime.S01(page, valueOf(timing, 'Started'));
+    });
   });
 
   for (const id of ['S02', 'S04', 'S05', 'S06'] as const)
-    test(
-      `shared-local-datetime@${id} on channel-request-show`,
-      PASSING,
-      async ({ page }) => {
-        const timing = await requestAt(page, localDatetime.given[id]);
-        await localDatetime[id](page, valueOf(timing, 'Started'));
-      }
-    );
+    test(`shared-local-datetime@${id} on channel-request-show`, async ({
+      page,
+    }) => {
+      const timing = await requestAt(page, localDatetime.given[id]);
+      await localDatetime[id](page, valueOf(timing, 'Started'));
+    });
 
-  test(
-    'shared-local-datetime@S07 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const timing = await requestAt(page, { utc: '2026-01-01 10:00:00' });
-      await localDatetime.S07(page, valueOf(timing, 'Completed'));
-    }
-  );
+  test('shared-local-datetime@S07 on channel-request-show', async ({
+    page,
+  }) => {
+    const timing = await requestAt(page, { utc: '2026-01-01 10:00:00' });
+    await localDatetime.S07(page, valueOf(timing, 'Completed'));
+  });
 
   // shared-local-datetime S03 is not run on this page: Started and
   // Completed use the default format, never relative_detailed.
@@ -1224,26 +1145,24 @@ test.describe('shared-local-datetime', () => {
 // This page puts no flash of its own: it has no action, and its redirects
 // carry none.
 test.describe('shared-flash-messages', () => {
-  test(
-    'shared-flash-messages@S06 on channel-request-show',
-    PASSING,
-    async ({ page }) => {
-      const h = givenRequestPage();
-      const notMine = givenRequestPage({ [OWNER]: 'owner' }, 'Kenya TB');
-      await signInAs(page, ME);
-      await open(page, h.path);
+  test('shared-flash-messages@S06 on channel-request-show', async ({
+    page,
+  }) => {
+    const h = givenRequestPage();
+    const notMine = givenRequestPage({ [OWNER]: 'owner' }, 'Kenya TB');
+    await signInAs(page, ME);
+    await open(page, h.path);
 
-      await flashMessages.S06(
-        page,
-        () => open(page, notMine.path),
-        '/projects',
-        page.getByRole('cell', {
-          name: manifest().projects[0].name,
-          exact: true,
-        })
-      );
-    }
-  );
+    await flashMessages.S06(
+      page,
+      () => open(page, notMine.path),
+      '/projects',
+      page.getByRole('cell', {
+        name: manifest().projects[0].name,
+        exact: true,
+      })
+    );
+  });
 
   // shared-flash-messages S01 to S05 are not run on this page: it shows no
   // info or error flash of its own and no action here redirects with one.

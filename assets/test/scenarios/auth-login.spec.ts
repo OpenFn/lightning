@@ -58,7 +58,7 @@ test.afterEach(() => {
 //   And I click "Log in"
 //   Then I am logged in as "amara@example.org"
 //   And the flow "flow-login-return-to" continues from here
-test('@S01', { tag: '@passing-old' }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   await attemptLogin(page, ME);
 
   await expectSignedInAs(page, ME);
@@ -72,7 +72,7 @@ test('@S01', { tag: '@passing-old' }, async ({ page }) => {
 //   And I see "Invalid email or password"
 //   And I am not logged in
 //   Examples: wrong password; unknown email; empty password
-test('@S02', { tag: '@passing-old' }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const rows = [
     [ME, 'wrong password'],
     ['nobody@example.org', PASSWORD],
@@ -96,7 +96,7 @@ test('@S02', { tag: '@passing-old' }, async ({ page }) => {
 //   Given "amara@example.org" is a registered user with password "a long password"
 //   When I log in with "Amara@Example.org" and "a long password"
 //   Then I am logged in as "amara@example.org"
-test('@S03', { tag: '@passing-old' }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   await attemptLogin(
     page,
     ME.replace(/^./, c => c.toUpperCase())
@@ -113,7 +113,7 @@ test('@S03', { tag: '@passing-old' }, async ({ page }) => {
 //   And I see "<message>"
 //   And I am not logged in
 //   Examples: disabled; scheduled for deletion
-test('@S04', { tag: '@passing-old' }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   disableAccount(ME);
   cleanups.push(scheduledForDeletion(OTHER));
   // The wording is undecided (open question 1), so only that a message shows
@@ -132,7 +132,7 @@ test('@S04', { tag: '@passing-old' }, async ({ page }) => {
 //   When I log in with "amara@example.org" and the right password
 //   Then I am on "/users/two-factor"
 //   And when I visit "/projects" I am sent back to "/users/two-factor"
-test('@S05', { tag: '@passing-old' }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   seedMfaFor(ME);
 
   await attemptLogin(page, ME);
@@ -149,7 +149,7 @@ test('@S05', { tag: '@passing-old' }, async ({ page }) => {
 //   And I had ticked "Keep me logged in for 60 days"
 //   Then a signed remember-me cookie valid for 60 days is set
 //   And after the browser session ends I am still logged in
-test('@S06', { tag: '@passing-old' }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   await attemptLogin(page, ME, PASSWORD, { remember: true });
   await expectAt(page, '/projects');
 
@@ -172,7 +172,7 @@ test('@S06', { tag: '@passing-old' }, async ({ page }) => {
 //   Given "amara@example.org" is a registered user without MFA
 //   When I log in without ticking "Keep me logged in for 60 days"
 //   Then no remember-me cookie is set
-test('@S07', { tag: '@passing-old' }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   await attemptLogin(page, ME);
   await expectAt(page, '/projects');
 
@@ -189,7 +189,7 @@ test('@S07', { tag: '@passing-old' }, async ({ page }) => {
 //   When I log in with the right password and "Keep me logged in for 60 days" ticked
 //   Then no remember-me cookie is set yet
 //   And I am on "/users/two-factor" with my choice carried along
-test('@S08', { tag: '@passing-old' }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   seedMfaFor(ME);
 
   await attemptLogin(page, ME, PASSWORD, { remember: true });
@@ -208,7 +208,7 @@ test('@S08', { tag: '@passing-old' }, async ({ page }) => {
 //   When I log in successfully
 //   Then the session id is renewed
 //   And nothing from the old session remains except the page I was going to
-test('@S09', { tag: '@passing-old' }, async ({ page, browser }) => {
+test('@S09', async ({ page, browser }) => {
   // Asking for a protected page puts the return path in the session
   await page.goto('/profile');
   await expectAt(page, LOGIN);
@@ -245,7 +245,7 @@ test('@S09', { tag: '@passing-old' }, async ({ page, browser }) => {
 //   Given I am logged in
 //   When I open "/users/log_in"
 //   Then I am on "/projects"
-test('@S10', { tag: '@passing-old' }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   await signInAs(page, ME);
 
   await page.goto(LOGIN);
@@ -258,7 +258,7 @@ test('@S10', { tag: '@passing-old' }, async ({ page }) => {
 //   Given I am not logged in
 //   When I open "/users/log_in"
 //   Then I see a "Forgot your password?" link to "/users/reset_password"
-test('@S11', { tag: '@passing-old' }, async ({ page }) => {
+test('@S11', async ({ page }) => {
   await page.goto(LOGIN);
 
   const link = page.getByRole('link', { name: 'Forgot your password?' });
@@ -272,7 +272,7 @@ test('@S11', { tag: '@passing-old' }, async ({ page }) => {
 //   Given the flow "flow-login-return-to" brought me here from a page that needs login
 //   When I log in successfully
 //   Then the flow "flow-login-return-to" continues to the page I asked for
-test('@S12', { tag: '@passing-old' }, async ({ page }) => {
+test('@S12', async ({ page }) => {
   await page.goto('/profile/tokens');
   await expectAt(page, LOGIN);
 
@@ -287,7 +287,7 @@ test('@S12', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open "/users/log_in"
 //   Then I <see> a "Register" link to "/users/register"
 //   Examples: allowed; disabled
-test('@S13', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
   const register = page.getByRole('link', { name: 'Register', exact: true });
 
   const restore = withFlag('allow_signup', true);
@@ -312,7 +312,7 @@ test('@S13', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   When I arrive on "/users/log_in"
 //   Then I see "Password reset successfully."
 //   And I can log in as in S01
-test('@S14', { tag: '@passing-old' }, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const next = 'a brand new password 42';
   await page.goto(resetPasswordLinkFor(ME));
   await field(page, 'New password').fill(next);
@@ -331,7 +331,7 @@ test('@S14', { tag: '@passing-old' }, async ({ page }) => {
 //   Then this browser is on "/users/log_in"
 //   When I log in with my old password
 //   Then I see "Invalid email or password"
-test('@S15', { tag: '@passing-old' }, async ({ page, browser }) => {
+test('@S15', async ({ page, browser }) => {
   await signInAs(page, ME);
   const elsewhere = await otherSession(browser, ME);
   await changePassword(elsewhere, ME, PASSWORD, 'a changed password 42');
@@ -356,7 +356,7 @@ test('@S15', { tag: '@passing-old' }, async ({ page, browser }) => {
 //   When I log out
 //   Then I am on "/users/log_in"
 //   And I see "Logged out successfully."
-test('@S16', { tag: '@passing-old' }, async ({ page }) => {
+test('@S16', async ({ page }) => {
   await signInAs(page, ME);
 
   await logOut(page, ME);
@@ -371,7 +371,7 @@ test('@S16', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open "/users/log_in"
 //   Then I <see> "via external provider"
 //   Examples: configured; not configured
-test('@S17', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
+test('@S17', { tag: ['@serial'] }, async ({ page }) => {
   const button = page.getByRole('link', { name: 'via external provider' });
 
   const remove = withAuthProvider('acme');
@@ -393,7 +393,7 @@ test('@S17', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   When I click "via external provider"
 //   Then I am sent to "/authenticate/acme"
 //   And the flow "flow-sso-login" has started
-test('@S18', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
+test('@S18', { tag: ['@serial'] }, async ({ page }) => {
   const remove = withAuthProvider('acme');
   try {
     await page.goto(LOGIN);
@@ -417,7 +417,7 @@ test('@S18', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   And there is no superuser
 //   When I open "/users/log_in"
 //   Then I am on "/first_setup"
-test('@S19', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
+test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   const restore = firstSetupOpen();
   try {
     await authenticatedSession.S11(page, LOGIN);
@@ -432,7 +432,7 @@ test('@S19', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   When I log in with the right password
 //   Then I am logged in
 //   And the gate in shared-authenticated-session S04 sends me to "/users/confirm-required"
-test('@S20', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
+test('@S20', { tag: ['@serial'] }, async ({ page }) => {
   cleanups.push(unconfirmedSince(ME, 50));
   cleanups.push(withFlag('require_email_verification', true));
 
@@ -452,7 +452,7 @@ test('@S20', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   And I click the eye icon in the password field
 //   Then the password field shows "a long password" as plain text
 //   And clicking the eye again hides it
-test('@S21', { tag: '@passing-old' }, async ({ page }) => {
+test('@S21', async ({ page }) => {
   await page.goto(LOGIN);
   const password = field(page, 'Password');
   await password.fill('a long password');
@@ -482,7 +482,7 @@ test.describe('shared-authenticated-session', () => {
   //   Then I am on "/first_setup"
   test(
     'shared-authenticated-session@S11 on auth-login',
-    { tag: ['@passing-old', '@serial'] },
+    { tag: ['@serial'] },
     async ({ page }) => {
       const restore = firstSetupOpen();
       try {
@@ -500,17 +500,13 @@ test.describe('shared-authenticated-session', () => {
 // (new.html.heex), including the ones carried in by a redirect (S14, S16), so
 // there is no toast to test. They need a LiveView page.
 test.describe('shared-flash-messages', () => {
-  test(
-    'shared-flash-messages@S08 on auth-login',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await page.goto(LOGIN);
-      await flashMessages.S08(
-        page,
-        INVALID,
-        () => submitLogin(page, ME, 'wrong password'),
-        field(page, 'Email')
-      );
-    }
-  );
+  test('shared-flash-messages@S08 on auth-login', async ({ page }) => {
+    await page.goto(LOGIN);
+    await flashMessages.S08(
+      page,
+      INVALID,
+      () => submitLogin(page, ME, 'wrong password'),
+      field(page, 'Email')
+    );
+  });
 });

@@ -47,12 +47,6 @@ const ME = 'editor@openfn.org';
 const OWNER = 'owner@openfn.org';
 const OTHER = 'super@openfn.org';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {};
-const tags = (key: string) => ({
-  tag: [key in STILL_PENDING ? '@pending' : '@passing-old'],
-});
-
 // A page that has to react to something happening elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 // How long an unaffected page is watched for a change that should not come
@@ -116,7 +110,7 @@ const pathOf = (page: Page) => new URL(page.url()).pathname;
 //   Examples: the editor; the health page
 // shared-project-scope S12: they are eventually on the project's workflows
 // page and see "Workflow deleted."
-test('@S01', tags('S01'), async ({ page, browser }) => {
+test('@S01', async ({ page, browser }) => {
   const examples = [
     ['the editor', editorPath],
     ['the health page', healthPath],
@@ -148,7 +142,7 @@ test('@S01', tags('S01'), async ({ page, browser }) => {
 //   When I delete "Intake"
 //   Then their editor channel for "Intake" closes
 //   And their AI assistant channel for "Intake" closes
-test('@S02', tags('S02'), async ({ page, browser }) => {
+test('@S02', async ({ page, browser }) => {
   const { id, intake } = givenProject();
   const other = await otherSession(browser, OTHER);
   const sock = await watchEditorSocket(other);
@@ -170,7 +164,7 @@ test('@S02', tags('S02'), async ({ page, browser }) => {
 //   When I delete "Intake"
 //   Then all of those pages stay where they are
 //   And those channels stay joined
-test('@S03', tags('S03'), async ({ page, browser }) => {
+test('@S03', async ({ page, browser }) => {
   const {
     id,
     others: [sync],
@@ -208,7 +202,7 @@ test('@S03', tags('S03'), async ({ page, browser }) => {
 //   And their editor stays open
 // The database refuses the update that marks "Intake" deleted. No broadcast
 // is read off their editor channel: it is not closed.
-test('@S04', tags('S04'), async ({ page, browser }) => {
+test('@S04', async ({ page, browser }) => {
   const { id, intake } = givenProject();
   cleanups.push(refuseDeletionOf(intake.id));
   const other = await otherSession(browser, OTHER);

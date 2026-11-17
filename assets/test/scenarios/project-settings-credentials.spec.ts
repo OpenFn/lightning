@@ -73,10 +73,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const PROJECT = 'Malawi HIV';
 
-const PENDING = { tag: '@pending' };
-const NEW_ONLY = { tag: '@passing-new' };
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new'] };
-
 let cleanups: (() => unknown)[] = [];
 test.beforeEach(() => {
   cleanups = [];
@@ -170,7 +166,7 @@ const actionsOn = async (page: Page, name: string) =>
 //   When I open the project's settings on the "Credentials" tab
 //   Then I see "DHIS2 prod" with type, owner "amara@example.org" and its environments
 //   And I do not see "Personal sandbox"
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const id = givenProject('viewer');
   credential({
     name: 'DHIS2 prod',
@@ -196,7 +192,7 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 //   When I open the "Credentials" tab of "Malawi HIV"
 //   Then I see "Google" and "Salesforce"
 //   And I do not see "Other"
-test('@S02', PASSING_BOTH, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const id = givenProject('editor');
   const elsewhere = givenProject('owner', {}, 'Kenya TB');
   oauthClient({ name: 'Google', projects: [id] });
@@ -216,7 +212,7 @@ test('@S02', PASSING_BOTH, async ({ page }) => {
 //   When I open the "Credentials" tab of "Malawi HIV"
 //   Then I see "By district" and "$.organization.id"
 //   And I do not see "Other keychain"
-test('@S03', PASSING_BOTH, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const id = givenProject('viewer');
   const elsewhere = givenProject('viewer', {}, 'Kenya TB');
   keychain(id, { name: 'By district', path: '$.organization.id' });
@@ -245,7 +241,7 @@ async function completeCredential(f: Locator, name: string) {
 //   When I complete and save the credential "HTTP API"
 //   Then I am back on the "Credentials" tab of "Malawi HIV"
 //   And "HTTP API" is listed
-test('@S04', PASSING_BOTH, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const id = givenProject('editor');
   removesCreated(['HTTP API']);
   await onCredentials(page, id);
@@ -265,7 +261,7 @@ test('@S04', PASSING_BOTH, async ({ page }) => {
 //   When I choose "Add new" then "Credential" on the "Credentials" tab of "sandbox-project"
 //   Then "sandbox-project" is selected under projects access
 //   And neither "root" nor the intermediate project is selected
-test('@S05', PASSING_BOTH, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const w = given(
     {
       name: 'root',
@@ -294,7 +290,7 @@ test('@S05', PASSING_BOTH, async ({ page }) => {
 //   And "Malawi HIV" allows support access
 //   When I choose "Add new" then "Credential", complete and save it
 //   Then I am back on the "Credentials" tab and the credential is listed
-test('@S06', PASSING_BOTH, async ({ page }) => {
+test('@S06', async ({ page }) => {
   cleanups.push(makeSupportUser(ME));
   const id = givenProject(null, { allowSupportAccess: true });
   removesCreated(['Support fix']);
@@ -315,7 +311,7 @@ test('@S06', PASSING_BOTH, async ({ page }) => {
 //   When I send "show_modal" with target "new_credential" anyway
 //   Then I see "You are not authorized to perform this action"
 //   And no credential form is open
-test('@S07', PASSING_BOTH, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const id = givenProject('viewer');
   const lv = await onCredentials(page, id);
 
@@ -339,7 +335,7 @@ test('@S07', PASSING_BOTH, async ({ page }) => {
 //   When I open "Add new" on the "Credentials" tab
 //   Then "Credential" and "OAuth client" are enabled
 //   And "Keychain" is disabled
-test('@S08', PASSING_BOTH, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const id = givenProject('editor');
   await onCredentials(page, id);
 
@@ -375,7 +371,7 @@ async function fillOauthClient(page: Page, name: string) {
 //   Then the OAuth client form opens with "Malawi HIV" already selected under projects access
 //   When I complete and save it
 //   Then I am back on the "Credentials" tab with "Oauth client created successfully"
-test('@S09', PASSING_BOTH, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const id = givenProject('editor');
   removesCreated([], ['Sheets app']);
   await onCredentials(page, id);
@@ -399,7 +395,7 @@ test('@S09', PASSING_BOTH, async ({ page }) => {
 //   When I choose "Add new" then "Credential" on the "Credentials" tab of "Malawi HIV"
 //   Then the type picker offers "Google"
 //   And it does not offer "Mine only"
-test('@S10', PASSING_BOTH, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const id = givenProject('editor');
   oauthClient({ name: 'Google', projects: [id] });
   oauthClient({ name: 'Mine only' }, ME);
@@ -422,7 +418,7 @@ test('@S10', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Keychain credential created successfully"
 //   And "By district" is listed with me as its creator
 // Fails on today's Lightning: the keychain is saved but this tab shows no message.
-test('@S11', NEW_ONLY, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const id = givenProject('admin');
   credential({ name: 'DHIS2 prod', projects: [id] });
   await onCredentials(page, id);
@@ -457,7 +453,7 @@ test('@S11', NEW_ONLY, async ({ page }) => {
 //   When I enter path "user_id"
 //   Then I see "JSONPath must start with '$'"
 //   And "Create" is disabled
-test('@S12', PASSING_BOTH, async ({ page }) => {
+test('@S12', async ({ page }) => {
   const id = givenProject('admin');
   await onCredentials(page, id);
   const form = await addKeychain(page);
@@ -487,7 +483,7 @@ test('@S12', PASSING_BOTH, async ({ page }) => {
 //   When I submit it with the id of "Elsewhere" as default anyway
 //   Then I see "must belong to the same project"
 //   And no keychain is created
-test('@S13', PASSING_BOTH, async ({ page }) => {
+test('@S13', async ({ page }) => {
   const id = givenProject('admin');
   credential({ name: 'DHIS2 prod', projects: [id] });
   const elsewhere = credential({ name: 'Elsewhere' });
@@ -513,7 +509,7 @@ test('@S13', PASSING_BOTH, async ({ page }) => {
 //   When I create another keychain named "By district" on "Malawi HIV"
 //   Then I see an error on the name
 //   And only one "By district" exists
-test('@S14', PASSING_BOTH, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const id = givenProject('admin');
   keychain(id, { name: 'By district' });
   await onCredentials(page, id);
@@ -535,7 +531,7 @@ test('@S14', PASSING_BOTH, async ({ page }) => {
 //   Then I see "Keychain credential updated successfully"
 //   And the keychain is stored with the new name and path
 // Fails on today's Lightning: the keychain is saved but this tab shows no message.
-test('@S15', NEW_ONLY, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const id = givenProject('admin');
   keychain(id, { name: 'Original Name', path: '$.org_id' });
   await onCredentials(page, id);
@@ -560,7 +556,7 @@ test('@S15', NEW_ONLY, async ({ page }) => {
 //   When I send "edit_keychain_credential" for "Protected"
 //   Then I see "You are not authorized to perform this action"
 //   And no keychain form is open
-test('@S16', PASSING_BOTH, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const id = givenProject('viewer');
   const protectedId = keychain(id, { name: 'Protected' });
   const lv = await onCredentials(page, id);
@@ -579,7 +575,7 @@ test('@S16', PASSING_BOTH, async ({ page }) => {
 //   Then I am back on the "Credentials" tab with "Credential scheduled for deletion"
 //   And "DHIS2 prod" is no longer listed on this tab
 //   And the flow "flow-credential-scheduled-deletion" has started for "DHIS2 prod"
-test('@S17', PASSING_BOTH, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const id = givenProject('editor');
   credential({ name: 'DHIS2 prod', projects: [id] }, ME);
   await onCredentials(page, id);
@@ -607,7 +603,7 @@ test('@S17', PASSING_BOTH, async ({ page }) => {
 //   Then the transfer modal opens for "DHIS2 prod"
 //   And submitting it returns me to the "Credentials" tab
 //   And the flow "flow-credential-transfer" has started for "DHIS2 prod"
-test('@S18', PASSING_BOTH, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const id = givenProject('editor');
   credential({ name: 'DHIS2 prod', projects: [id] }, ME);
   await onCredentials(page, id);
@@ -635,7 +631,7 @@ test('@S18', PASSING_BOTH, async ({ page }) => {
 //   When I start a new credential of type "Google" on the "Credentials" tab and sign in with the provider
 //   Then the flow "flow-oauth-credential-authorize" has started
 //   And the provider's answer is delivered to the credential form on this tab
-test('@S19', PASSING_BOTH, async ({ page, context }) => {
+test('@S19', async ({ page, context }) => {
   const provider = await standInOauth();
   cleanups.push(provider.close);
   const id = givenProject('editor');
@@ -672,19 +668,17 @@ test.describe('shared-credential-index-component', () => {
   //   Given I own credential "DHIS2 prod"
   //   When I open the credential list
   //   Then I see edit, delete and transfer actions for "DHIS2 prod"
-  test(
-    'shared-credential-index-component@S01 on project-settings',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const id = givenProject('viewer');
-      credential({ name: 'DHIS2 prod', projects: [id] }, ME);
-      await onCredentials(page, id);
+  test('shared-credential-index-component@S01 on project-settings', async ({
+    page,
+  }) => {
+    const id = givenProject('viewer');
+    credential({ name: 'DHIS2 prod', projects: [id] }, ME);
+    await onCredentials(page, id);
 
-      expect(await actionsOn(page, 'DHIS2 prod')).toEqual(
-        expect.arrayContaining(['edit', 'delete', 'transfer'])
-      );
-    }
-  );
+    expect(await actionsOn(page, 'DHIS2 prod')).toEqual(
+      expect.arrayContaining(['edit', 'delete', 'transfer'])
+    );
+  });
 
   // @S02
   // Scenario: Another member's credential has no edit actions
@@ -692,20 +686,18 @@ test.describe('shared-credential-index-component', () => {
   //   When I open the project's credential list
   //   Then I see "DHIS2 prod"
   //   And I see no edit, delete or transfer actions for it
-  test(
-    'shared-credential-index-component@S02 on project-settings',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const id = givenProject('admin');
-      credential({ name: 'DHIS2 prod', projects: [id] });
-      await onCredentials(page, id);
+  test('shared-credential-index-component@S02 on project-settings', async ({
+    page,
+  }) => {
+    const id = givenProject('admin');
+    credential({ name: 'DHIS2 prod', projects: [id] });
+    await onCredentials(page, id);
 
-      await expect(row(page, 'DHIS2 prod')).toBeVisible();
-      const actions = await actionsOn(page, 'DHIS2 prod');
-      for (const a of ['edit', 'delete', 'transfer'])
-        expect(actions).not.toContain(a);
-    }
-  );
+    await expect(row(page, 'DHIS2 prod')).toBeVisible();
+    const actions = await actionsOn(page, 'DHIS2 prod');
+    for (const a of ['edit', 'delete', 'transfer'])
+      expect(actions).not.toContain(a);
+  });
 
   // @S03
   // Scenario: Editor cannot manage keychains
@@ -713,20 +705,18 @@ test.describe('shared-credential-index-component', () => {
   //   When I open the project's credential list
   //   Then I see "By district"
   //   And I see no edit or delete actions for it
-  test(
-    'shared-credential-index-component@S03 on project-settings',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const id = givenProject('editor');
-      keychain(id, { name: 'By district' });
-      await onCredentials(page, id);
+  test('shared-credential-index-component@S03 on project-settings', async ({
+    page,
+  }) => {
+    const id = givenProject('editor');
+    keychain(id, { name: 'By district' });
+    await onCredentials(page, id);
 
-      await expect(row(page, 'By district')).toBeVisible();
-      const actions = await actionsOn(page, 'By district');
-      expect(actions).not.toContain('edit');
-      expect(actions).not.toContain('delete');
-    }
-  );
+    await expect(row(page, 'By district')).toBeVisible();
+    const actions = await actionsOn(page, 'By district');
+    expect(actions).not.toContain('edit');
+    expect(actions).not.toContain('delete');
+  });
 
   // @S04
   // Scenario: Admin deletes a keychain
@@ -734,34 +724,28 @@ test.describe('shared-credential-index-component', () => {
   //   When I delete keychain "By district" and confirm
   //   Then I see "Keychain credential deleted"
   //   And "By district" is no longer listed
-  test(
-    'shared-credential-index-component@S04 on project-settings',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const id = givenProject('admin');
-      keychain(id, { name: 'By district' });
-      await onCredentials(page, id);
+  test('shared-credential-index-component@S04 on project-settings', async ({
+    page,
+  }) => {
+    const id = givenProject('admin');
+    keychain(id, { name: 'By district' });
+    await onCredentials(page, id);
 
-      await rowAction(page, row(page, 'By district'), 'Delete');
-      const d = await dialog(page, 'Delete Keychain Credential');
-      await d.getByRole('button', { name: 'Delete', exact: true }).click();
+    await rowAction(page, row(page, 'By district'), 'Delete');
+    const d = await dialog(page, 'Delete Keychain Credential');
+    await d.getByRole('button', { name: 'Delete', exact: true }).click();
 
-      await expect(toast(page, 'Keychain credential deleted')).toBeVisible();
-      await expect(row(page, 'By district')).toHaveCount(0);
-      expect(keychainsOf(id)).toEqual([]);
-    }
-  );
+    await expect(toast(page, 'Keychain credential deleted')).toBeVisible();
+    await expect(row(page, 'By district')).toHaveCount(0);
+    expect(keychainsOf(id)).toEqual([]);
+  });
 
   // S05 (cancel a scheduled deletion) can't be reached on this tab:
   // scheduling a deletion takes the credential out of every project, so it
   // is no longer listed here (S17). It runs on credentials-index.
-  test(
-    'shared-credential-index-component@S05 on project-settings',
-    PENDING,
-    () => {
-      test.skip(true, 'a scheduled credential is not listed on this tab');
-    }
-  );
+  test('shared-credential-index-component@S05 on project-settings', () => {
+    test.skip(true, 'a scheduled credential is not listed on this tab');
+  });
 
   // @S06
   // Scenario: An edit of a credential owned by someone else is refused
@@ -770,24 +754,22 @@ test.describe('shared-credential-index-component', () => {
   //   Then I see "You are not authorized to perform this action"
   // Checked by its effect too: no form opens, the credential is unchanged
   // and its secret never reaches this page
-  test(
-    'shared-credential-index-component@S06 on project-settings',
-    PASSING_BOTH,
-    async ({ page }) => {
-      const id = givenProject('admin');
-      const theirs = credential({
-        name: 'DHIS2 prod',
-        projects: [id],
-        bodies: { main: { password: 'their-secret' } },
-      });
-      const lv = await onCredentials(page, id);
+  test('shared-credential-index-component@S06 on project-settings', async ({
+    page,
+  }) => {
+    const id = givenProject('admin');
+    const theirs = credential({
+      name: 'DHIS2 prod',
+      projects: [id],
+      bodies: { main: { password: 'their-secret' } },
+    });
+    const lv = await onCredentials(page, id);
 
-      await sendCredentialEdit(page, lv, theirs);
+    await sendCredentialEdit(page, lv, theirs);
 
-      await expectRefusal(page, lv, NOT_AUTHORIZED);
-      await expect(page.getByRole('dialog')).toHaveCount(0);
-      expect(credentialNamed(OTHER, 'DHIS2 prod').id).toBe(theirs);
-      expect(await page.content()).not.toContain('their-secret');
-    }
-  );
+    await expectRefusal(page, lv, NOT_AUTHORIZED);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(credentialNamed(OTHER, 'DHIS2 prod').id).toBe(theirs);
+    expect(await page.content()).not.toContain('their-secret');
+  });
 });

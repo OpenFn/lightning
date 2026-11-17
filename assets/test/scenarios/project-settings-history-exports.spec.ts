@@ -28,8 +28,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const PROJECT = 'Malawi HIV';
 
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new'] };
-
 let cleanups: (() => void)[] = [];
 test.beforeEach(() => {
   cleanups = [];
@@ -77,7 +75,7 @@ const NONE = 'No history exports found for this project.';
 //   Then I see a row requested by "Amara Banda" with status "Completed" and the zip's filename
 //   And I see a row requested by "Tomas Silva" with status "In progress" and the filename "Pending"
 //   And each row shows when the export was requested
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const amara = seedUser('amara', { firstName: 'Amara', lastName: 'Banda' });
   const tomas = seedUser('tomas', { firstName: 'Tomas', lastName: 'Silva' });
   cleanups.push(amara.remove, tomas.remove);
@@ -109,7 +107,7 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 // (The flow's own checks are flow-history-export S01, S07 and S08; here the
 // download only has to arrive.)
 for (const role of ['viewer', 'editor', 'admin', 'owner'] as const) {
-  test(`@S02 ${role}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S02 ${role}`, async ({ page }) => {
     const id = givenProject(role);
     const done = givenExport(id, user(OTHER).id, 'completed');
     await onHistoryExports(page, id);
@@ -137,7 +135,7 @@ for (const role of ['viewer', 'editor', 'admin', 'owner'] as const) {
 //   When I open the project's settings on the "History Exports" tab
 //   Then I see "No history exports found for this project."
 //   And I see no exports table
-test('@S03', PASSING_BOTH, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const id = givenProject('editor');
   await onHistoryExports(page, id);
 
@@ -152,7 +150,7 @@ test('@S03', PASSING_BOTH, async ({ page }) => {
 //   And a history export on "Kenya TB" has completed
 //   When I open the settings of "Malawi HIV" on the "History Exports" tab
 //   Then I see "No history exports found for this project."
-test('@S04', PASSING_BOTH, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const id = givenProject('owner');
   const kenya = givenProject('owner', 'Kenya TB');
   givenExport(kenya, user(ME).id, 'completed');
@@ -168,7 +166,7 @@ test('@S04', PASSING_BOTH, async ({ page }) => {
 //   When I open the settings of sandbox "dev" on the "History Exports" tab
 //   Then I see "No history exports found for this project."
 //   And I see the sandbox banner (shared-project-settings-tab-chrome S08, row "History Exports")
-test('@S05', PASSING_BOTH, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const w = seedWorkspace(
     { name: PROJECT, members: { [ME]: 'owner' }, sandboxes: [{ name: 'dev' }] },
     ME

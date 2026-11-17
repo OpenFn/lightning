@@ -47,12 +47,6 @@ type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
 const DHIS2 = '@openfn/language-dhis2@latest';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {};
-const tags = (key: string) => ({
-  tag: [key in STILL_PENDING ? '@pending' : '@passing-old'],
-});
-
 // A page that has to react to something happening elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 // How long a page is watched for a change that should not come
@@ -123,7 +117,7 @@ const madeByMe = (...names: string[]) =>
 //     | rename my credential "DHIS2 prod" to "DHIS2 live" | "DHIS2 live"  | the matching credentials |
 // "DHIS2 prod" is mine, shared with the project, so the keychain row has a
 // matching credential to show first and Amara turns to the others.
-test('@S01', tags('S01'), async ({ page, browser }) => {
+test('@S01', async ({ page, browser }) => {
   test.slow(); // three rows, each with two editors
   const examples: [
     string,
@@ -198,7 +192,7 @@ test('@S01', tags('S01'), async ({ page, browser }) => {
 //   When I save a new DHIS2 credential "DHIS2 test" from step "Fetch" and it is attached
 //   Then "amara@example.org" eventually sees "Fetch" show "DHIS2 test"
 // Saving and attaching is shared-adaptor-credential-config S11.
-test('@S02', tags('S02'), async ({ page, browser }) => {
+test('@S02', async ({ page, browser }) => {
   const wf = givenIntake('viewer');
   madeByMe('DHIS2 test');
   const amara = await amaraOpens(browser, wf);
@@ -231,7 +225,7 @@ test('@S02', tags('S02'), async ({ page, browser }) => {
 //   Then my credential list includes "Salesforce prod"
 // "Salesforce prod" is a raw JSON credential, listed under "Generic
 // Credentials" for a DHIS2 step.
-test('@S03', tags('S03'), async ({ page }) => {
+test('@S03', async ({ page }) => {
   const wf = givenIntake();
   madeByMe('Salesforce prod');
   const sock = await watchEditorSocket(page);

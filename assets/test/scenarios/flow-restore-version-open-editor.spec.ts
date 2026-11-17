@@ -52,12 +52,6 @@ const ME = 'editor@openfn.org';
 const OWNER = 'owner@openfn.org';
 const BEN = 'super@openfn.org';
 
-// Scenarios that don't pass on the old app, and why; the rest pass there
-const STILL_PENDING: Record<string, string> = {};
-const tags = (key: string) => ({
-  tag: [key in STILL_PENDING ? '@pending' : '@passing-old'],
-});
-
 // A page that has to react to something happening elsewhere gets this long
 const EVENTUALLY = { timeout: 15000 };
 // How long a page is watched for a change that should not come
@@ -124,7 +118,7 @@ async function restoreV1(page: Page, wf: EditorWorkflow, told: string) {
 //   Then I see "Restored v1"
 //   And eventually tab B's canvas no longer shows "Notify"
 //   And tab B shows no unsaved changes marker
-test('@S01', tags('S01'), async ({ page, browser }) => {
+test('@S01', async ({ page, browser }) => {
   const wf = givenTwoPublishes();
   const ben = await benOpens(browser, wf);
   await expect(node(ben, 'Notify')).toBeVisible();
@@ -141,7 +135,7 @@ test('@S01', tags('S01'), async ({ page, browser }) => {
 //   And "Ben" has "Fetch cases" open in the code editor in tab B
 //   When I restore v1 in tab A
 //   Then eventually tab B's code editor shows v1's body of "Fetch cases"
-test('@S02', tags('S02'), async ({ page, browser }) => {
+test('@S02', async ({ page, browser }) => {
   const wf = givenTwoPublishes();
   const ben = await otherSession(browser, BEN);
   await openIde(ben, wf.projectId, wf.id, wf.steps['Fetch cases']);
@@ -159,7 +153,7 @@ test('@S02', tags('S02'), async ({ page, browser }) => {
 //   And "Ben" renames step "Fetch cases" to "Fetch all cases" in tab B and saves
 //   Then "Intake" has v1's steps with "Fetch all cases" renamed
 //   And "Intake" does not have the step "Notify"
-test('@S03', tags('S03'), async ({ page, browser }) => {
+test('@S03', async ({ page, browser }) => {
   const wf = givenTwoPublishes();
   const ben = await benOpens(browser, wf);
 
@@ -179,7 +173,7 @@ test('@S03', tags('S03'), async ({ page, browser }) => {
 //   And "Ben" opens the version list again
 //   Then the list is fetched again and shows v3 "Restored v1" with my name
 // Ben has experimental features here: the publishes list is theirs.
-test('@S04', tags('S04'), async ({ page, browser }) => {
+test('@S04', async ({ page, browser }) => {
   setPreferences(BEN, { experimental_features: true });
   const wf = givenTwoPublishes();
   const ben = await benOpens(browser, wf);
@@ -202,7 +196,7 @@ test('@S04', tags('S04'), async ({ page, browser }) => {
 //   When I restore v1 in tab A
 //   Then tab B still shows v2, including the step "Notify"
 //   And "Ben"'s version list includes v3 when he opens it again
-test('@S05', tags('S05'), async ({ page, browser }) => {
+test('@S05', async ({ page, browser }) => {
   setPreferences(BEN, { experimental_features: true });
   const wf = givenTwoPublishes();
   const ben = await benOpens(browser, wf, '?release=2');
@@ -227,7 +221,7 @@ test('@S05', tags('S05'), async ({ page, browser }) => {
 //   Then tab B still shows the workflow as it was
 // The save in between is the database skipping the restore's update of the
 // workflow, which the restore reads as the workflow having moved on.
-test('@S06', tags('S06'), async ({ page, browser }) => {
+test('@S06', async ({ page, browser }) => {
   const wf = givenTwoPublishes();
   const ben = await benOpens(browser, wf);
   await expect(node(ben, 'Notify')).toBeVisible();

@@ -24,7 +24,6 @@ import {
   signInAs,
   sql,
   user,
-  tagFor,
 } from './steps';
 
 const ME = 'owner@openfn.org';
@@ -97,7 +96,7 @@ const struck = (text: Locator) =>
 //   And the first row has event "deleted" and the second has event "created"
 //   And both rows show actor "Amara Diallo" with "amara@example.org" beneath
 //   And both rows show subject "credential" with the first 8 characters of the credential id
-test('@S01', { tag: '@passing-old' }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const { itemId } = seedAuditEvent({
     event: 'created',
     actorId: user(ME).id,
@@ -128,7 +127,7 @@ test('@S01', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open "/settings/audit" as a superuser
 //   Then that row shows actor "(User deleted)"
 //   And beneath it the first 8 characters of the deleted user's id
-test('@S02', { tag: '@passing-old' }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   // No user has this id: the account is gone
   const { itemId, actorId } = seedAuditEvent({ event: 'deleted' });
 
@@ -144,7 +143,7 @@ test('@S02', { tag: '@passing-old' }, async ({ page }) => {
 //   Given a project's "history_retention_period" was changed from 30 to 7 days
 //   When I open "/settings/audit" as a superuser
 //   Then under the "history_retention_period_updated" row I see "history_retention_period" with "30" struck through, an arrow, and "7"
-test('@S03', { tag: '@passing-old' }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   seedAuditEvent({
     event: 'history_retention_period_updated',
     itemType: 'project',
@@ -174,7 +173,7 @@ test('@S03', { tag: '@passing-old' }, async ({ page }) => {
 //   Then fields appear in the order "bar", "baz", "foo"
 //   And "baz" shows only its new value with no arrow
 //   And a field present only before shows its old value struck through with an arrow to an empty value
-test('@S04', { tag: '@passing-old' }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   seedAuditEvent({
     event: 'updated',
     changes: {
@@ -211,7 +210,7 @@ test('@S04', { tag: '@passing-old' }, async ({ page }) => {
 //   Given user "amara@example.org" was created by a superuser
 //   When I open "/settings/audit" as a superuser
 //   Then under the user "created" row each recorded field shows its value with no arrow and nothing struck through
-test('@S05', { tag: '@passing-old' }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const recorded = {
     email: 'amara@example.org',
     first_name: 'Amara',
@@ -243,7 +242,7 @@ test('@S05', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open "/settings/audit" as a superuser
 //   Then under that credential's "updated" row I see "body:production" and "body:staging", in that order, each followed by an encoded value
 //   And I do not see "s3cret-token"
-test('@S06', { tag: '@passing-old' }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   // Recorded by the credential audit writer itself, staging first
   onNode(`
     credential = Lightning.Repo.all(Lightning.Credentials.Credential) |> hd()
@@ -270,7 +269,7 @@ test('@S06', { tag: '@passing-old' }, async ({ page }) => {
 //   When I open "/settings/audit" as a superuser
 //   Then the "webhook_auth_method" "created" row lists "password" and "api_key"
 //   And I do not see "hunter22" or "k-123"
-test('@S07', { tag: '@passing-old' }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   // Recorded by the webhook auth method audit writer itself
   onNode(`
     actor = Lightning.Repo.get_by!(Lightning.Accounts.User, email: "${ME}")
@@ -309,7 +308,7 @@ test('@S07', { tag: '@passing-old' }, async ({ page }) => {
 //     | an existing webhook trigger        | Webhook                           |
 //     | a deleted trigger                  | (Trigger Deleted)                 |
 //     | a service account                  | Service account                   |
-test('@S08', { tag: '@passing-old' }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const project = seedProject(
     'audit-actors-project',
     {},
@@ -378,7 +377,7 @@ test('@S08', { tag: '@passing-old' }, async ({ page }) => {
 //   When I click page "3"
 //   Then the URL has "page=3"
 //   And I see 5 events and "Showing 21 to 25 of 25 total results"
-test('@S09', { tag: '@passing-old' }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   for (let i = 0; i < 25; i++)
     seedAuditEvent({ event: 'snapshot_created', insertedAt: utcAgo(i * 1000) });
   const events = page.getByRole('cell', {
@@ -401,23 +400,15 @@ test('@S09', { tag: '@passing-old' }, async ({ page }) => {
 // Inherited from shared-admin-space: the gate, and the settings layout and
 // side menu with "Audit" current.
 test.describe('shared-admin-space', () => {
-  test(
-    'shared-admin-space@S01 on admin-audit',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await adminSpace.S01(page, PAGE, ME, 'Audit');
-    }
-  );
+  test('shared-admin-space@S01 on admin-audit', async ({ page }) => {
+    await adminSpace.S01(page, PAGE, ME, 'Audit');
+  });
 
-  test(
-    'shared-admin-space@S02 on admin-audit',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await adminSpace.S02(page, PAGE, REGULAR);
-    }
-  );
+  test('shared-admin-space@S02 on admin-audit', async ({ page }) => {
+    await adminSpace.S02(page, PAGE, REGULAR);
+  });
 
-  test('shared-admin-space@S03 on admin-audit', { tag: '@pending' }, () => {
+  test('shared-admin-space@S03 on admin-audit', () => {
     test.skip(
       true,
       'needs a socket-only mount that skips the HTTP check, which no browser action produces'
@@ -425,26 +416,18 @@ test.describe('shared-admin-space', () => {
   });
 
   for (const id of ['S04', 'S05'])
-    test(
-      `shared-admin-space@${id} on admin-audit`,
-      { tag: tagFor(id, ['S01', 'S02', 'S06']) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
-        );
-      }
-    );
+    test(`shared-admin-space@${id} on admin-audit`, () => {
+      test.skip(
+        true,
+        'not reachable here: it is about "/dashboard"; the inherits line names only S01, S02, S03 and S06'
+      );
+    });
 
-  test(
-    'shared-admin-space@S06 on admin-audit',
-    { tag: '@passing-old' },
-    async ({ page, browser }) => {
-      await adminSpace.S06(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-admin-space@S06 on admin-audit', async ({ page, browser }) => {
+    await adminSpace.S06(page, browser, PAGE, ME);
+  });
 
-  test('shared-admin-space@S07 on admin-audit', { tag: '@pending' }, () => {
+  test('shared-admin-space@S07 on admin-audit', () => {
     test.skip(
       true,
       'variant settings-menu-extension is not configured on this instance'
@@ -454,78 +437,57 @@ test.describe('shared-admin-space', () => {
 
 // Inherited from shared-authenticated-session, on "/settings/audit".
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on admin-audit',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on admin-audit', async ({ page }) => {
+    await authenticatedSession.S01(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on admin-audit',
-    { tag: '@passing-old' },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on admin-audit', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on admin-audit',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on admin-audit', async ({ page }) => {
+    await authenticatedSession.S03(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on admin-audit',
-    { tag: '@passing-old' },
-    async ({ page, browser }) => {
-      // The admin menu has no "Credentials"; "Users" is a label it does have
-      await authenticatedSession.S07(
-        page,
-        browser,
-        PAGE,
-        '/settings/users',
-        ME,
-        'Users'
-      );
-    }
-  );
+  test('shared-authenticated-session@S07 on admin-audit', async ({
+    page,
+    browser,
+  }) => {
+    // The admin menu has no "Credentials"; "Users" is a label it does have
+    await authenticatedSession.S07(
+      page,
+      browser,
+      PAGE,
+      '/settings/users',
+      ME,
+      'Users'
+    );
+  });
 
   for (const [id, variant] of [
     ['S04', 'require-email-verification'],
     ['S05', 'require-email-verification'],
     ['S06', 'require-email-verification'],
   ])
-    test(
-      `shared-authenticated-session@${id} on admin-audit`,
-      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07']) },
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-audit`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 
   for (const id of ['S08', 'S09', 'S10', 'S11'])
-    test(
-      `shared-authenticated-session@${id} on admin-audit`,
-      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07']) },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line says S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on admin-audit`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line says S08 to S10 are not on the settings layout, and S11 is a first-setup redirect before any page'
+      );
+    });
 });
 
 // Inherited from shared-flash-messages.
 test.describe('shared-flash-messages', () => {
-  test('shared-flash-messages@S07 on admin-audit', { tag: '@pending' }, () => {
+  test('shared-flash-messages@S07 on admin-audit', () => {
     test.skip(
       true,
       'no action on this page or on a page that lands on it puts a flash ("this view sets no flash of its own"), so there is no toast to click'
@@ -533,51 +495,28 @@ test.describe('shared-flash-messages', () => {
   });
 
   for (const id of ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S08'])
-    test(
-      `shared-flash-messages@${id} on admin-audit`,
-      { tag: '@pending' },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line names only S07 for the settings layout'
-        );
-      }
-    );
+    test(`shared-flash-messages@${id} on admin-audit`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line names only S07 for the settings layout'
+      );
+    });
 });
 
 // Inherited from shared-project-header: the global picker, the confirmation
 // banner and the account menu (no-project parts).
 test.describe('shared-project-header', () => {
   for (const id of ['S04', 'S06', 'S08', 'S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on admin-audit`,
-      {
-        tag: tagFor(id, [
-          'S04',
-          'S06',
-          'S08',
-          'S11',
-          'S12',
-          'S13',
-          'S18',
-          'S10',
-        ]),
-      },
-      async ({ page }) => {
-        await projectHeader[id](page, PAGE, ME);
-      }
-    );
+    test(`shared-project-header@${id} on admin-audit`, async ({ page }) => {
+      await projectHeader[id](page, PAGE, ME);
+    });
 
   // The Examples row "the projects list or my profile | the workflows page"
-  test(
-    'shared-project-header@S10 on admin-audit',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await projectHeader.S10(page, PAGE, ME, '/w');
-    }
-  );
+  test('shared-project-header@S10 on admin-audit', async ({ page }) => {
+    await projectHeader.S10(page, PAGE, ME, '/w');
+  });
 
-  test('shared-project-header@S14 on admin-audit', { tag: '@pending' }, () => {
+  test('shared-project-header@S14 on admin-audit', () => {
     test.skip(
       true,
       'variant require-email-verification is not configured on this instance'
@@ -595,27 +534,12 @@ test.describe('shared-project-header', () => {
     'S16',
     'S17',
   ])
-    test(
-      `shared-project-header@${id} on admin-audit`,
-      {
-        tag: tagFor(id, [
-          'S04',
-          'S06',
-          'S08',
-          'S11',
-          'S12',
-          'S13',
-          'S18',
-          'S10',
-        ]),
-      },
-      () => {
-        test.skip(
-          true,
-          'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
-        );
-      }
-    );
+    test(`shared-project-header@${id} on admin-audit`, () => {
+      test.skip(
+        true,
+        'not reachable here: the inherits line takes only the no-project parts (S04, S06, S08, S10 to S14, S18)'
+      );
+    });
 });
 
 // Inherited from shared-local-datetime: the "Occurred" column.
@@ -634,29 +558,21 @@ test.describe('shared-local-datetime', () => {
 
   test.describe(() => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-    test(
-      'shared-local-datetime@S01 on admin-audit',
-      { tag: '@passing-old' },
-      async ({ page }) => {
-        await localDatetime.S01(
-          page,
-          await occurred(page, localDatetime.given.S01)
-        );
-      }
-    );
+    test('shared-local-datetime@S01 on admin-audit', async ({ page }) => {
+      await localDatetime.S01(
+        page,
+        await occurred(page, localDatetime.given.S01)
+      );
+    });
   });
 
   for (const id of ['S02', 'S04', 'S05'] as const)
-    test(
-      `shared-local-datetime@${id} on admin-audit`,
-      { tag: tagFor(id, ['S01', 'S02', 'S04', 'S05']) },
-      async ({ page }) => {
-        await localDatetime[id](
-          page,
-          await occurred(page, localDatetime.given[id])
-        );
-      }
-    );
+    test(`shared-local-datetime@${id} on admin-audit`, async ({ page }) => {
+      await localDatetime[id](
+        page,
+        await occurred(page, localDatetime.given[id])
+      );
+    });
 
   for (const [id, why] of [
     [
@@ -666,14 +582,10 @@ test.describe('shared-local-datetime', () => {
     ['S06', 'audit_events.inserted_at is stored to the whole second'],
     ['S07', 'every audit event has an inserted_at'],
   ])
-    test(
-      `shared-local-datetime@${id} on admin-audit`,
-      { tag: tagFor(id, ['S01', 'S02', 'S04', 'S05']) },
-      () => {
-        test.skip(
-          true,
-          `not reachable here: ${why}; the inherits line takes S01 to S05`
-        );
-      }
-    );
+    test(`shared-local-datetime@${id} on admin-audit`, () => {
+      test.skip(
+        true,
+        `not reachable here: ${why}; the inherits line takes S01 to S05`
+      );
+    });
 });

@@ -57,11 +57,6 @@ const ME = 'editor@openfn.org';
 const OTHER = 'owner@openfn.org';
 const PROJECT = 'Malawi HIV';
 
-const PASSING_OLD = { tag: '@passing-old' };
-const PASSING_BOTH = { tag: ['@passing-old', '@passing-new'] };
-const SERIAL_OLD = { tag: ['@passing-old', '@serial'] };
-const SERIAL = { tag: ['@passing-old', '@passing-new', '@serial'] };
-
 let cleanups: (() => void)[] = [];
 test.beforeEach(() => {
   cleanups = [];
@@ -167,7 +162,7 @@ const UPDATED = /Project user updated success/;
 //   When I open the collaboration tab
 //   Then I see "Amara Banda" with her email and role "Editor"
 //   And I see each collaborator's failure alert and digest setting
-test('@S01', PASSING_BOTH, async ({ page }) => {
+test('@S01', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const id = givenProject('viewer');
   givenMember(id, amara.id, 'editor', { failureAlert: true, digest: 'daily' });
@@ -192,7 +187,7 @@ test('@S01', PASSING_BOTH, async ({ page }) => {
 //   And "amara@example.org" appears in the list with role "Editor"
 //   And an audit event "collaborator_added" is recorded against me
 //   And the flow "flow-collaborator-added-email" has started for "amara@example.org"
-test('@S02', PASSING_BOTH, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const id = givenProject('admin');
   await onCollaboration(page, id);
@@ -219,7 +214,7 @@ test('@S02', PASSING_BOTH, async ({ page }) => {
 //   And I click "Save collaborators"
 //   Then I see "Collaborators added successfully"
 //   And all three appear in the list with those roles
-test('@S03', PASSING_BOTH, async ({ page }) => {
+test('@S03', async ({ page }) => {
   const people = [
     givenPerson('Amara', 'Banda'),
     givenPerson('Tomas', 'Silva'),
@@ -251,7 +246,7 @@ test('@S03', PASSING_BOTH, async ({ page }) => {
 //   When I open the collaboration tab
 //   Then the "Add collaborator(s)" button is disabled with tooltip "You are not authorized to perform this action"
 //   And sending "toggle_collaborators_modal" does not open the add form
-test('@S04', PASSING_BOTH, async ({ page }) => {
+test('@S04', async ({ page }) => {
   const id = givenProject('editor');
   const lv = await onCollaboration(page, id);
 
@@ -269,7 +264,7 @@ test('@S04', PASSING_BOTH, async ({ page }) => {
 //   When I open the add form
 //   Then the role options are "Viewer", "Editor" and "Admin"
 //   And submitting role "owner" anyway shows "is invalid"
-test('@S05', PASSING_BOTH, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const id = givenProject('admin');
   const lv = await onCollaboration(page, id);
@@ -297,7 +292,7 @@ test('@S05', PASSING_BOTH, async ({ page }) => {
 //   When I submit the add form with "amara@example.org"
 //   Then I see "This account is already part of this project"
 //   And nothing is saved
-test('@S06', PASSING_BOTH, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const id = givenProject('admin');
   givenMember(id, amara.id, 'editor');
@@ -325,8 +320,7 @@ test('@S06', PASSING_BOTH, async ({ page }) => {
 //   When I type "not-an-email" in the add form
 //   Then I see "Email address not valid."
 //   And the save button is disabled
-// Old only: the design-system form says "has invalid format".
-test('@S07', PASSING_OLD, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const id = givenProject('owner');
   await onCollaboration(page, id);
 
@@ -345,7 +339,7 @@ test('@S07', PASSING_OLD, async ({ page }) => {
 //   When I submit the add form with "new.person@example.org" as "Editor"
 //   Then I see "This collaborator does not have an OpenFn account. Invite them to join OpenFn and grant access to the project."
 //   And the "Invite new user(s) to join OpenFn" form opens with that email and role filled in
-test('@S08', PASSING_BOTH, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const email = nobodysEmail();
   const id = givenProject('owner');
   await onCollaboration(page, id);
@@ -372,7 +366,7 @@ test('@S08', PASSING_BOTH, async ({ page }) => {
 //   Then "amara@example.org" is added to the project
 //   And I see "1 out of 2 collaborators have OpenFn accounts and have been added to your project. You can invite others to join OpenFn and grant them access to this project."
 //   And the invite form opens for "new.person@example.org" only
-test('@S09', PASSING_BOTH, async ({ page }) => {
+test('@S09', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const email = nobodysEmail();
   const id = givenProject('owner');
@@ -418,7 +412,7 @@ async function reachInviteForm(
 //   And "Non Exists" appears in the list with role "Editor"
 //   And no "You now have access to" email is sent to them
 //   And the flow "flow-invite-new-collaborator" has started for "new.person@example.org"
-test('@S10', PASSING_BOTH, async ({ page }) => {
+test('@S10', async ({ page }) => {
   const email = nobodysEmail();
   const id = givenProject('admin');
   await onCollaboration(page, id);
@@ -445,7 +439,7 @@ test('@S10', PASSING_BOTH, async ({ page }) => {
 //   When I change the email to that of a registered user and submit
 //   Then I see "This email is already taken"
 //   And no email is sent
-test('@S11', PASSING_BOTH, async ({ page }) => {
+test('@S11', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const email = nobodysEmail();
   const id = givenProject('owner');
@@ -472,7 +466,7 @@ const CAP = 'You can only have 3 collaborators in this project';
 //   When I open the collaboration tab
 //   Then the "Add collaborator(s)" button is disabled
 //   And its tooltip says "You can only have 3 collaborators in this project"
-test('@S12', SERIAL, async ({ page }) => {
+test('@S12', { tag: ['@serial'] }, async ({ page }) => {
   cleanups.push(withLimiterRefusing('new_user', CAP));
   const id = givenProject('admin');
   await onCollaboration(page, id);
@@ -490,9 +484,7 @@ test('@S12', SERIAL, async ({ page }) => {
 //   And the save button is disabled
 //   When I remove a row
 //   Then the message goes away
-// Old only: the design-system form shows the limit when you save, not as
-// rows are added.
-test('@S13', SERIAL_OLD, async ({ page }) => {
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
   cleanups.push(withLimiterRefusing('new_user', CAP, { over: 2 }));
   const id = givenProject('admin');
   await onCollaboration(page, id);
@@ -527,7 +519,7 @@ async function removeAndConfirm(page: Page, who: string) {
 //   And an audit event "collaborator_removed" is recorded against me
 //   And her open project pages are handed to shared-project-scope S07
 // (The hand-off is shared-project-scope S07, run in the Setup spec.)
-test('@S14', PASSING_BOTH, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const id = givenProject('admin');
   givenMember(id, amara.id, 'viewer');
@@ -556,7 +548,7 @@ test('@S14', PASSING_BOTH, async ({ page }) => {
 //   When I confirm
 //   Then neither credential is available in project "Malawi HIV"
 // owner@openfn.org plays "Amy Admin", as the credentials need a seeded owner.
-test('@S15', PASSING_BOTH, async ({ page }) => {
+test('@S15', async ({ page }) => {
   const w = seedWorkspace(
     {
       name: PROJECT,
@@ -593,7 +585,7 @@ test('@S15', PASSING_BOTH, async ({ page }) => {
 //   Then every "Remove collaborator" button is disabled with tooltip "You do not have permission to remove a user"
 //   And sending "remove_project_user" for a member shows "You are not authorized to perform this action."
 //   And the member is still on the project
-test('@S16', PASSING_BOTH, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const id = givenProject('editor');
   const member = givenMember(id, amara.id, 'viewer');
@@ -622,7 +614,7 @@ test('@S16', PASSING_BOTH, async ({ page }) => {
 //   When I open the collaboration tab
 //   Then the owner's "Remove collaborator" button is disabled with tooltip "You cannot remove an owner"
 //   And sending "remove_project_user" for the owner is refused
-test('@S17', PASSING_BOTH, async ({ page }) => {
+test('@S17', async ({ page }) => {
   const id = givenProject('admin');
   const lv = await onCollaboration(page, id);
 
@@ -642,7 +634,7 @@ test('@S17', PASSING_BOTH, async ({ page }) => {
 //   When I open the collaboration tab
 //   Then my own "Remove collaborator" button is disabled with tooltip "You cannot remove yourself"
 //   And sending "remove_project_user" for my row is refused
-test('@S18', PASSING_BOTH, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const id = givenProject('admin');
   const lv = await onCollaboration(page, id);
 
@@ -664,7 +656,7 @@ test('@S18', PASSING_BOTH, async ({ page }) => {
 //   When I open the collaboration tab of "dev"
 //   Then "Parent Admin"'s "Remove collaborator" button is disabled with tooltip "Cannot remove a user who is admin or owner on the parent project"
 // owner@openfn.org plays "Parent Admin".
-test('@S19', PASSING_BOTH, async ({ page }) => {
+test('@S19', async ({ page }) => {
   const w = seedWorkspace(
     {
       name: PROJECT,
@@ -692,7 +684,7 @@ test('@S19', PASSING_BOTH, async ({ page }) => {
 //   When I confirm removing "Amara Banda"
 //   Then I see "You are not authorized to perform this action."
 //   And she is still on the project
-test('@S20', PASSING_BOTH, async ({ page }) => {
+test('@S20', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const id = givenProject('admin');
   givenMember(id, amara.id, 'viewer');
@@ -717,7 +709,7 @@ test('@S20', PASSING_BOTH, async ({ page }) => {
 //   Then I see "You are not authorized to perform this action."
 //   And Bob's membership is unchanged
 for (const kind of ['remove', 'alert', 'digest'] as const) {
-  test(`@S21 ${kind}`, PASSING_BOTH, async ({ page }) => {
+  test(`@S21 ${kind}`, async ({ page }) => {
     const bob = givenPerson('Bob', 'Mwale');
     const id = givenProject('admin');
     const kenya = seedWorkspace(
@@ -759,7 +751,7 @@ const setMine = (id: string, failureAlert: boolean, digest: string) =>
 //   And my failure alert shows "Enabled"
 //   And the flow "flow-failure-alert-email" uses my new setting
 // (The flow reads the stored setting, checked here.)
-test('@S22', PASSING_BOTH, async ({ page }) => {
+test('@S22', async ({ page }) => {
   const id = givenProject('editor');
   setMine(id, false, 'weekly');
   await onCollaboration(page, id);
@@ -779,7 +771,7 @@ test('@S22', PASSING_BOTH, async ({ page }) => {
 //   Given I am a viewer on project "Malawi HIV" with digest "Never"
 //   When I set my digest to "Weekly"
 //   Then my digest shows "Weekly"
-test('@S23', PASSING_BOTH, async ({ page }) => {
+test('@S23', async ({ page }) => {
   const id = givenProject('viewer');
   setMine(id, false, 'never');
   await onCollaboration(page, id);
@@ -802,7 +794,7 @@ test('@S23', PASSING_BOTH, async ({ page }) => {
 //   Then Amara's failure alert and digest are shown as text, not selects
 //   And sending "set_failure_alert" or "set_digest" for her row shows "You are not authorized to perform this action."
 //   And her settings are unchanged
-test('@S24', PASSING_BOTH, async ({ page }) => {
+test('@S24', async ({ page }) => {
   const amara = givenPerson('Amara', 'Banda');
   const id = givenProject('admin');
   const member = givenMember(id, amara.id, 'editor', {
@@ -831,7 +823,7 @@ test('@S24', PASSING_BOTH, async ({ page }) => {
 //   And I have failure alerts enabled
 //   When I open the collaboration tab
 //   Then my failure alert shows "Unavailable" and cannot be changed
-test('@S25', SERIAL, async ({ page }) => {
+test('@S25', { tag: ['@serial'] }, async ({ page }) => {
   cleanups.push(withLimiterRefusing('alert_failure', 'No failure alerts'));
   const id = givenProject('editor');
   setMine(id, true, 'weekly');
@@ -852,7 +844,7 @@ test('@S25', SERIAL, async ({ page }) => {
 //   Then I see "Revoked access to support users successfully"
 //   And open support sessions are handed to shared-project-scope S09
 // (The hand-off is shared-project-scope S09, run in the Setup spec.)
-test('@S26', PASSING_BOTH, async ({ page }) => {
+test('@S26', async ({ page }) => {
   const id = givenProject('admin');
   await onCollaboration(page, id);
 
@@ -875,7 +867,7 @@ test('@S26', PASSING_BOTH, async ({ page }) => {
 //   Given I am an editor on project "Malawi HIV"
 //   When I open the collaboration tab
 //   Then I do not see "Grant support access"
-test('@S27', PASSING_BOTH, async ({ page }) => {
+test('@S27', async ({ page }) => {
   const id = givenProject('editor');
   await onCollaboration(page, id);
 
@@ -890,7 +882,7 @@ test('@S27', PASSING_BOTH, async ({ page }) => {
 //   Given I am a viewer on project "Malawi HIV"
 //   When I open the collaboration tab
 //   Then I see "Role based permissions: You cannot modify this project's collaboration settings, but you can change your notification preferences."
-test('@S28', PASSING_BOTH, async ({ page }) => {
+test('@S28', async ({ page }) => {
   const id = givenProject('viewer');
   await onCollaboration(page, id);
 
@@ -904,7 +896,7 @@ test('@S28', PASSING_BOTH, async ({ page }) => {
 //   Given I am the owner of sandbox "dev" of project "Malawi HIV"
 //   When I open the collaboration tab of "dev"
 //   Then I see "Changes you make here only apply to this sandbox and do not sync to the parent project on merge."
-test('@S29', PASSING_BOTH, async ({ page }) => {
+test('@S29', async ({ page }) => {
   const w = seedWorkspace(
     { name: PROJECT, members: { [ME]: 'owner' }, sandboxes: [{ name: 'dev' }] },
     ME

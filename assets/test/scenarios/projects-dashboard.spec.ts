@@ -30,7 +30,6 @@ import {
   sql,
   submittingExtraField,
   user,
-  tagFor,
   watchLiveView,
 } from './steps';
 
@@ -162,7 +161,7 @@ function threeProjects() {
 //   When I open "/projects"
 //   Then I see rows for "project-1" and "project-2"
 //   And I do not see "project-3"
-test('@S01', { tag: '@passing-old' }, async ({ page }) => {
+test('@S01', async ({ page }) => {
   given('project-1', { [ME]: 'owner' });
   given('project-2', { [ME]: 'admin' });
   given('project-3', { [OTHER]: 'owner' });
@@ -184,7 +183,7 @@ test('@S01', { tag: '@passing-old' }, async ({ page }) => {
 //   And workflows "2"
 //   And collaborators "2", linking to "/projects/<project-2 id>/settings#collaboration"
 //   And last updated at "2023-10-05 12:00:00 UTC", shown per shared-local-datetime
-test('@S02', { tag: '@passing-old' }, async ({ page }) => {
+test('@S02', async ({ page }) => {
   const project2 = given(
     'project-2',
     { [OTHER]: 'owner', [ME]: 'admin' },
@@ -230,7 +229,7 @@ test('@S02', { tag: '@passing-old' }, async ({ page }) => {
 //   Then I see "project-1" with role "Owner"
 //   And I see "project-4" with role "Support"
 //   And I do not see "project-3"
-test('@S03', { tag: '@passing-old' }, async ({ page }) => {
+test('@S03', async ({ page }) => {
   cleanups.push(makeSupportUser(ME));
   given('project-1', { [ME]: 'owner' });
   given('project-4', { [OTHER]: 'owner' }, { allowSupportAccess: true });
@@ -250,7 +249,7 @@ test('@S03', { tag: '@passing-old' }, async ({ page }) => {
 //   Then I see "No projects found." and "Create a new one."
 //   When I click "Create a new one."
 //   Then the "Create a new project" modal opens
-test('@S04', { tag: '@passing-old' }, async ({ page }) => {
+test('@S04', async ({ page }) => {
   // super@openfn.org is seeded with no projects
   const NOBODY = 'super@openfn.org';
   expect(
@@ -274,7 +273,7 @@ test('@S04', { tag: '@passing-old' }, async ({ page }) => {
 //   Then they are listed Z to A
 //   When I click it again
 //   Then they are listed A to Z
-test('@S05', { tag: '@passing-old' }, async ({ page }) => {
+test('@S05', async ({ page }) => {
   const { byName } = threeProjects();
 
   await signedIn(page);
@@ -294,7 +293,7 @@ test('@S05', { tag: '@passing-old' }, async ({ page }) => {
 //   Then the projects are listed oldest change first
 //   When I click it again
 //   Then they are listed newest change first
-test('@S06', { tag: '@passing-old' }, async ({ page }) => {
+test('@S06', async ({ page }) => {
   const { byLastUpdated } = threeProjects();
   await signedIn(page);
 
@@ -313,7 +312,7 @@ test('@S06', { tag: '@passing-old' }, async ({ page }) => {
 //   When a "sort" event arrives with a column that does not exist
 //   Then the list stays sorted by name, A to Z
 //   And the page keeps working
-test('@S07', { tag: '@passing-old' }, async ({ page }) => {
+test('@S07', async ({ page }) => {
   const { byName, byLastUpdated } = threeProjects();
   const liveView = watchLiveView(page);
   await signedIn(page);
@@ -340,7 +339,7 @@ test('@S07', { tag: '@passing-old' }, async ({ page }) => {
 //   Then I am on "/projects/<project-1 id>/settings#collaboration"
 //   When I go back and click "History" on that row
 //   Then I am on "/projects/<project-1 id>/history"
-test('@S08', { tag: '@passing-old' }, async ({ page }) => {
+test('@S08', async ({ page }) => {
   const project1 = given('project-1', { [ME]: 'editor' });
   await signedIn(page);
 
@@ -367,7 +366,7 @@ test('@S08', { tag: '@passing-old' }, async ({ page }) => {
 //   And I click "Create project"
 //   Then I am on "/projects" and see "Project created successfully"
 //   And "my-awesome-project" is listed with role "Owner"
-test('@S09', { tag: '@passing-old' }, async ({ page }) => {
+test('@S09', async ({ page }) => {
   await signedIn(page);
 
   const modal = await fillCreateForm(
@@ -390,7 +389,7 @@ test('@S09', { tag: '@passing-old' }, async ({ page }) => {
 //   Given the "Create a new project" modal is open
 //   When I type "My Awesome Project" in "Name"
 //   Then I see "Your project will be named my-awesome-project."
-test('@S10', { tag: '@passing-old' }, async ({ page }) => {
+test('@S10', async ({ page }) => {
   await signedIn(page);
 
   const modal = await fillCreateForm(page, 'My Awesome Project');
@@ -410,7 +409,7 @@ test('@S10', { tag: '@passing-old' }, async ({ page }) => {
 // Fails on Lightning: once "!!!" is typed the name is invalid and "Create
 // project" is disabled, so the form can't be submitted. The error shows and
 // nothing is created.
-test('@S11', { tag: ['@pending', '@serial'] }, async ({ page }) => {
+test('@S11', { tag: ['@serial'] }, async ({ page }) => {
   const before = projectCount();
   await signedIn(page);
 
@@ -429,7 +428,7 @@ test('@S11', { tag: ['@pending', '@serial'] }, async ({ page }) => {
 //   And no project is created
 // Fails on Lightning: the long description disables "Create project", so the
 // form can't be submitted. The error shows and nothing is created.
-test('@S12', { tag: ['@pending', '@serial'] }, async ({ page }) => {
+test('@S12', { tag: ['@serial'] }, async ({ page }) => {
   const before = projectCount();
   await signedIn(page);
 
@@ -452,7 +451,7 @@ test('@S12', { tag: ['@pending', '@serial'] }, async ({ page }) => {
 //   When I click "Cancel"
 //   Then I am on "/projects"
 //   And no project has been created
-test('@S13', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
+test('@S13', { tag: ['@serial'] }, async ({ page }) => {
   const before = projectCount();
   await signedIn(page);
   const modal = await fillCreateForm(
@@ -473,7 +472,7 @@ test('@S13', { tag: ['@passing-old', '@serial'] }, async ({ page }) => {
 //   Given "other-project" exists and I have no role on it
 //   When I submit the create form with an extra "parent_id" of "other-project"
 //   Then a top-level project is created with me as its only member
-test('@S14', { tag: '@passing-old' }, async ({ page }) => {
+test('@S14', async ({ page }) => {
   const other = given('other-project', { [OTHER]: 'owner' });
   const submit = await submittingExtraField(page, 'parent_id', other.id);
   await signedIn(page);
@@ -497,7 +496,7 @@ test('@S14', { tag: '@passing-old' }, async ({ page }) => {
 // Scenario: Creating a project does not email me that I was added to it
 //   When I create project "my-awesome-project"
 //   Then the flow "flow-collaborator-added-email" has not started for me
-test('@S15', { tag: '@passing-old' }, async ({ page, request }) => {
+test('@S15', async ({ page, request }) => {
   const sentBefore = (await mailbox(request)).length;
   await signedIn(page);
 
@@ -525,7 +524,7 @@ test('@S15', { tag: '@passing-old' }, async ({ page, request }) => {
 //   When I open "/projects"
 //   Then I eventually see a greeting with my first name
 //   And a link to "docs.openfn.org" and a link to "community.openfn.org", each opening in a new tab
-test('@S16', { tag: '@passing-old' }, async ({ page }) => {
+test('@S16', async ({ page }) => {
   const [{ first_name }] = sql<{ first_name: string }>(
     `select first_name from users where id = '${user(ME).id}'`
   );
@@ -547,7 +546,7 @@ test('@S16', { tag: '@passing-old' }, async ({ page }) => {
 //   Given I am logged in
 //   When I visit "/"
 //   Then I am on "/projects"
-test('@S17', { tag: '@passing-old' }, async ({ page }) => {
+test('@S17', async ({ page }) => {
   await signInAs(page, ME);
 
   await page.goto('/');
@@ -562,7 +561,7 @@ const deleteModal = (page: Page) => modal(page, 'Delete project');
 //   Given the flow "flow-schedule-project-deletion" has been completed by me for "project-1"
 //   Then I am on "/projects"
 //   And I see "Project scheduled for deletion"
-test('@S18', { tag: '@passing-old' }, async ({ page }) => {
+test('@S18', async ({ page }) => {
   const project1 = given('project-1', { [ME]: 'owner' });
   await signInAs(page, ME);
 
@@ -583,7 +582,7 @@ test('@S18', { tag: '@passing-old' }, async ({ page }) => {
 //   Given the flow "flow-invite-new-collaborator" has added me as an editor of "Malawi HIV"
 //   And I have signed in
 //   Then I am on "/projects" and see "Malawi HIV" with role "Editor"
-test('@S19', { tag: '@passing-old' }, async ({ page }) => {
+test('@S19', async ({ page }) => {
   // The flow's outcome: I am an editor of "Malawi HIV"
   given('Malawi HIV', { [OTHER]: 'owner', [ME]: 'editor' });
 
@@ -595,37 +594,31 @@ test('@S19', { tag: '@passing-old' }, async ({ page }) => {
 
 // Inherited from shared-authenticated-session, on "/projects".
 test.describe('shared-authenticated-session', () => {
-  test(
-    'shared-authenticated-session@S01 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await authenticatedSession.S01(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S01 on projects-dashboard', async ({
+    page,
+  }) => {
+    await authenticatedSession.S01(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S02 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page, browser }) => {
-      await authenticatedSession.S02(page, browser, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S02 on projects-dashboard', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S02(page, browser, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S03 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await authenticatedSession.S03(page, PAGE, ME);
-    }
-  );
+  test('shared-authenticated-session@S03 on projects-dashboard', async ({
+    page,
+  }) => {
+    await authenticatedSession.S03(page, PAGE, ME);
+  });
 
-  test(
-    'shared-authenticated-session@S07 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page, browser }) => {
-      await authenticatedSession.S07(page, browser, PAGE, '/credentials', ME);
-    }
-  );
+  test('shared-authenticated-session@S07 on projects-dashboard', async ({
+    page,
+    browser,
+  }) => {
+    await authenticatedSession.S07(page, browser, PAGE, '/credentials', ME);
+  });
 
   for (const [id, variant] of [
     ['S04', 'require-email-verification'],
@@ -636,57 +629,36 @@ test.describe('shared-authenticated-session', () => {
     ['S10', 'gdpr-banner'],
     ['S11', 'first-setup-open'],
   ])
-    test(
-      `shared-authenticated-session@${id} on projects-dashboard`,
-      { tag: tagFor(id, ['S01', 'S02', 'S03', 'S07']) },
-      () => {
-        test.skip(
-          true,
-          `variant ${variant} is not configured on this instance`
-        );
-      }
-    );
+    test(`shared-authenticated-session@${id} on projects-dashboard`, () => {
+      test.skip(true, `variant ${variant} is not configured on this instance`);
+    });
 });
 
 // Inherited from shared-project-header: the global picker, the role menu and
 // the account menu on a page without a project.
 test.describe('shared-project-header', () => {
   for (const id of ['S11', 'S12', 'S13', 'S18'] as const)
-    test(
-      `shared-project-header@${id} on projects-dashboard`,
-      { tag: tagFor(id, ['S11', 'S12', 'S13', 'S18', 'S10', 'S17']) },
-      async ({ page }) => {
-        await projectHeader[id](page, PAGE, ME);
-      }
-    );
+    test(`shared-project-header@${id} on projects-dashboard`, async ({
+      page,
+    }) => {
+      await projectHeader[id](page, PAGE, ME);
+    });
 
   // The Examples row "the projects list or my profile | the workflows page"
-  test(
-    'shared-project-header@S10 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await projectHeader.S10(page, PAGE, ME, '/w');
-    }
-  );
+  test('shared-project-header@S10 on projects-dashboard', async ({ page }) => {
+    await projectHeader.S10(page, PAGE, ME, '/w');
+  });
 
-  test(
-    'shared-project-header@S17 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await projectHeader.S17(page, PAGE);
-    }
-  );
+  test('shared-project-header@S17 on projects-dashboard', async ({ page }) => {
+    await projectHeader.S17(page, PAGE);
+  });
 
-  test(
-    'shared-project-header@S14 on projects-dashboard',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'variant require-email-verification is not configured on this instance'
-      );
-    }
-  );
+  test('shared-project-header@S14 on projects-dashboard', () => {
+    test.skip(
+      true,
+      'variant require-email-verification is not configured on this instance'
+    );
+  });
 });
 
 // Inherited from shared-local-datetime: the "Last Updated" column.
@@ -713,52 +685,40 @@ test.describe('shared-local-datetime', () => {
 
   test.describe(() => {
     test.use({ timezoneId: localDatetime.given.S01.timezoneId });
-    test(
-      'shared-local-datetime@S01 on projects-dashboard',
-      { tag: '@passing-old' },
-      async ({ page }) => {
-        await localDatetime.S01(
-          page,
-          await lastUpdated(page, localDatetime.given.S01)
-        );
-      }
-    );
+    test('shared-local-datetime@S01 on projects-dashboard', async ({
+      page,
+    }) => {
+      await localDatetime.S01(
+        page,
+        await lastUpdated(page, localDatetime.given.S01)
+      );
+    });
   });
 
   // S06 fails on this page: "Last Updated" is read back at whole seconds, so
   // the tooltip and the copy both read "2026-10-14 08:30:07 UTC".
   for (const id of ['S02', 'S04', 'S05', 'S06'] as const)
-    test(
-      `shared-local-datetime@${id} on projects-dashboard`,
-      { tag: tagFor(id, ['S01', 'S02', 'S04', 'S05']) },
-      async ({ page }) => {
-        await localDatetime[id](
-          page,
-          await lastUpdated(page, localDatetime.given[id])
-        );
-      }
-    );
+    test(`shared-local-datetime@${id} on projects-dashboard`, async ({
+      page,
+    }) => {
+      await localDatetime[id](
+        page,
+        await lastUpdated(page, localDatetime.given[id])
+      );
+    });
 
   // A project with no workflows has no last change.
   // Fails on this page: it renders its own "N/A" instead of "--".
-  test(
-    'shared-local-datetime@S07 on projects-dashboard',
-    { tag: '@pending' },
-    async ({ page }) => {
-      await localDatetime.S07(page, await lastUpdated(page, {}));
-    }
-  );
+  test('shared-local-datetime@S07 on projects-dashboard', async ({ page }) => {
+    await localDatetime.S07(page, await lastUpdated(page, {}));
+  });
 
-  test(
-    'shared-local-datetime@S03 on projects-dashboard',
-    { tag: '@pending' },
-    () => {
-      test.skip(
-        true,
-        'not reachable here: "Last Updated" always uses the default format, never relative_detailed'
-      );
-    }
-  );
+  test('shared-local-datetime@S03 on projects-dashboard', () => {
+    test.skip(
+      true,
+      'not reachable here: "Last Updated" always uses the default format, never relative_detailed'
+    );
+  });
 });
 
 // Inherited from shared-flash-messages: the message after creating a project,
@@ -767,69 +727,45 @@ test.describe('shared-flash-messages', () => {
   const CREATED_FLASH = 'Project created successfully';
   const create = (page: Page) => () => createProject(page);
 
-  test(
-    'shared-flash-messages@S01 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await signedIn(page);
-      await flashMessages.S01(page, CREATED_FLASH, create(page));
-    }
-  );
+  test('shared-flash-messages@S01 on projects-dashboard', async ({ page }) => {
+    await signedIn(page);
+    await flashMessages.S01(page, CREATED_FLASH, create(page));
+  });
 
-  test(
-    'shared-flash-messages@S02 on projects-dashboard',
-    { tag: '@pending' },
-    () => {
-      test.skip(true, 'not reachable here: this page puts no error flash');
-    }
-  );
+  test('shared-flash-messages@S02 on projects-dashboard', () => {
+    test.skip(true, 'not reachable here: this page puts no error flash');
+  });
 
-  test(
-    'shared-flash-messages@S03 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await signedIn(page);
-      await flashMessages.S03(page, CREATED_FLASH, create(page));
-    }
-  );
+  test('shared-flash-messages@S03 on projects-dashboard', async ({ page }) => {
+    await signedIn(page);
+    await flashMessages.S03(page, CREATED_FLASH, create(page));
+  });
 
-  test(
-    'shared-flash-messages@S04 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await signedIn(page);
-      await flashMessages.S04(page, CREATED_FLASH, create(page), async () => {
-        // Sorting makes the list render again
-        await sortHeader(page, 'Name').click();
-        await expect(row(page, CREATED)).toBeVisible();
-      });
-    }
-  );
+  test('shared-flash-messages@S04 on projects-dashboard', async ({ page }) => {
+    await signedIn(page);
+    await flashMessages.S04(page, CREATED_FLASH, create(page), async () => {
+      // Sorting makes the list render again
+      await sortHeader(page, 'Name').click();
+      await expect(row(page, CREATED)).toBeVisible();
+    });
+  });
 
-  test(
-    'shared-flash-messages@S05 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      await signedIn(page);
-      await flashMessages.S05(page, CREATED_FLASH, create(page), PAGE);
-    }
-  );
+  test('shared-flash-messages@S05 on projects-dashboard', async ({ page }) => {
+    await signedIn(page);
+    await flashMessages.S05(page, CREATED_FLASH, create(page), PAGE);
+  });
 
-  test(
-    'shared-flash-messages@S06 on projects-dashboard',
-    { tag: '@passing-old' },
-    async ({ page }) => {
-      const notMine = given('not-my-project', { [OTHER]: 'owner' });
-      await signInAs(page, ME);
-      await open(page, '/profile');
+  test('shared-flash-messages@S06 on projects-dashboard', async ({ page }) => {
+    const notMine = given('not-my-project', { [OTHER]: 'owner' });
+    await signInAs(page, ME);
+    await open(page, '/profile');
 
-      await flashMessages.S06(
-        page,
-        () => open(page, `/projects/${notMine.id}/w`),
-        PAGE,
-        // the list of my projects
-        row(page, manifest().projects[0].name)
-      );
-    }
-  );
+    await flashMessages.S06(
+      page,
+      () => open(page, `/projects/${notMine.id}/w`),
+      PAGE,
+      // the list of my projects
+      row(page, manifest().projects[0].name)
+    );
+  });
 });
