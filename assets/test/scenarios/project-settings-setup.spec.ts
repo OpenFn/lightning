@@ -11,6 +11,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  chooseTab,
   closeButton,
   concurrencyForm,
   concurrencySwitch,
@@ -54,6 +55,7 @@ import {
   seedWorkspace,
   setSupportAccessOnNode,
   signInAs,
+  standInGithub,
   sql,
   submit,
   submitButton,
@@ -293,7 +295,7 @@ test('@S06', async ({ page }) => {
 //   When I open project settings
 //   Then "Project name", "Project description" and the concurrency switch are disabled
 //   And the identity "Save" button is disabled
-//   And I see "Role based permissions: You cannot modify this project's basic settings, but you can export a copy."
+//   And I see "Role based permissions: You cannot modify this project's basic settings."
 //   When "save" is sent anyway
 //   Then I see "You are not authorized to perform this action."
 //   Examples: viewer, editor
@@ -313,7 +315,7 @@ for (const role of ['viewer', 'editor'] as const)
       identityForm(page).getByRole('button', { name: 'Save' })
     ).toBeDisabled();
     await expect(roleNotice(panel(page, 'Setup'))).toContainText(
-      'basic settings, but you can export a copy.'
+      'basic settings.'
     );
 
     await sendIdentitySave(page, lv, 'renamed');
@@ -389,22 +391,26 @@ test('@S10', async ({ page }) => {
 });
 
 // @S11
-// Scenario: Any member can export the project
+// Scenario: The Setup tab no longer carries the export card
 //   Given I am a viewer on project "project-1"
 //   When I open project settings
-//   Then I see "Export your project as code, to save this version or edit your project locally."
-//   And "Export project" links to "/download/yaml?id=<project_id>" in a new tab
-//   And clicking it starts the flow "flow-export-project-yaml"
+//   Then I do not see "Export your project" or "Export project" on the Setup tab
+//   And the Sync tab offers "Export project", which starts the flow "flow-export-project-yaml" (project-settings-github-sync S49)
 // The flow has started when that address answers with the project as YAML.
 test('@S11', async ({ page }) => {
   const p = givenProject('viewer');
   await onSettings(page, p.id);
 
   const setup = panel(page, 'Setup');
-  await expect(setup).toContainText(
-    'Export your project as code, to save this version or edit your project locally.'
+  await expect(setup).not.toContainText('Export your project');
+  await expect(setup.getByRole('link', { name: 'Export project' })).toHaveCount(
+    0
   );
-  const link = setup.getByRole('link', { name: 'Export project' });
+
+  await chooseTab(page, 'Sync');
+  const link = panel(page, 'Sync').getByRole('link', {
+    name: 'Export project',
+  });
   await expect(link).toHaveAttribute('href', `/download/yaml?id=${p.id}`);
   await expect(link).toHaveAttribute('target', '_blank');
 
@@ -740,14 +746,22 @@ test.describe('shared-project-settings-tab-chrome', () => {
     await tabChrome.S05(page, p.id);
   });
 
+  // The Sync tab shows its notice only when the instance has a GitHub app,
+  // which a stand-in sets for the whole instance
   for (const [role, label, message] of tabChrome.S06_EXAMPLES)
-    test(`shared-project-settings-tab-chrome@S06 (${role}, ${label}) on project-settings-setup`, async ({
-      page,
-    }) => {
-      const p = givenProject(role, 'Malawi HIV');
-      await signInAs(page, ME);
-      await tabChrome.S06(page, p.id, label, message);
-    });
+    test(
+      `shared-project-settings-tab-chrome@S06 (${role}, ${label}) on project-settings-setup`,
+      {
+        tag: label === 'Sync' ? ['@serial'] : [],
+      },
+      async ({ page }) => {
+        if (label === 'Sync')
+          cleanups.push(standInGithub({ installations: [] }).restore);
+        const p = givenProject(role, 'Malawi HIV');
+        await signInAs(page, ME);
+        await tabChrome.S06(page, p.id, label, message);
+      }
+    );
 
   test('shared-project-settings-tab-chrome@S07 on project-settings-setup', async ({
     page,

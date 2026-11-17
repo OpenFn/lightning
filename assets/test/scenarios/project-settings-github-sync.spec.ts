@@ -62,11 +62,17 @@ const WORLD: GithubWorld = {
     { id: 1234, login: 'amara', repos: { [REPO]: ['main', 'dev'] } },
   ],
 };
-const CONNECTED = { repo: REPO, branch: 'main', installation: '1234' };
+// Connected long enough ago that GitHub's lag no longer reads "Setting up"
+const CONNECTED = {
+  repo: REPO,
+  branch: 'main',
+  installation: '1234',
+  ageMinutes: 5,
+};
 
 const CONNECT = /Connect Branch/i;
 const SYNC = /Initiate Sync/i;
-const RECONNECT = /Click here to reconnect/i;
+const RECONNECT = 'Reconnect';
 // The connect button's whole name, for submit()
 const CONNECT_NAME = 'Connect Branch & Initiate First Sync';
 
@@ -111,27 +117,33 @@ function givenProject(role: Role, extra: Partial<WorkspaceSeed> = {}) {
 }
 
 // Given I am a <role> on project "Malawi HIV", which is connected
-function givenConnected(role: Role, extra: Partial<WorkspaceSeed> = {}) {
+function givenConnected(
+  role: Role,
+  extra: Partial<WorkspaceSeed> = {},
+  v2 = false
+) {
   const id = givenProject(role, extra).id(PROJECT);
-  connectRepoOnNode(id, CONNECTED);
+  connectRepoOnNode(id, { ...CONNECTED, v2 });
   return id;
 }
 
-// When I open the project's "Sync to GitHub" tab, watching the LiveView
+// When I open the project's "Sync" tab, watching the LiveView
 // from sign-in on (a watch started later never sees the socket)
 async function onGithub(page: Page, id: string) {
   await signInAs(page, ME);
   const lv = watchLiveView(page);
-  await openSettings(page, id, 'Sync to GitHub');
-  return Object.assign(panel(page, 'Sync to GitHub'), { lv });
+  await openSettings(page, id, 'Sync');
+  return Object.assign(panel(page, 'Sync'), { lv });
 }
 
 const connectButton = (page: Page) =>
-  panel(page, 'Sync to GitHub').getByRole('button', { name: CONNECT });
+  panel(page, 'Sync').getByRole('button', { name: CONNECT });
 const syncButton = (page: Page) =>
-  panel(page, 'Sync to GitHub').getByRole('button', { name: SYNC });
+  panel(page, 'Sync').getByRole('button', { name: SYNC });
 const reconnectButton = (page: Page) =>
-  panel(page, 'Sync to GitHub').getByRole('button', { name: RECONNECT });
+  panel(page, 'Sync')
+    .getByRole('button', { name: RECONNECT, exact: true })
+    .first();
 
 const deployFile = (id: string) => `.github/workflows/openfn-${id}-deploy.yml`;
 const PULL_FILE = '.github/workflows/openfn-pull.yml';
@@ -152,19 +164,50 @@ const writes = () =>
     .requests()
     .filter(r => r.method !== 'get' && r.url.includes('/repos/'));
 
+// When I open "Advanced settings" and switch on "Use legacy formats (config.json)"
+async function useLegacyFormat(page: Page) {
+  const tab = panel(page, 'Sync');
+  const advanced = tab.locator('#toggle-advanced-settings');
+  if ((await advanced.getAttribute('aria-expanded')) !== 'true')
+    await advanced.click();
+  const legacy = tab.getByRole('switch', {
+    name: 'Use legacy formats (config.json)',
+  });
+  if ((await legacy.getAttribute('aria-checked')) !== 'true')
+    await legacy.click();
+  await expect(legacy).toHaveAttribute('aria-checked', 'true');
+}
+
+// When I choose <direction> of the first sync, once the workspace check on
+// GitHub (started by choosing a branch) has finished
+async function chooseDirection(page: Page, direction: 'Export' | 'Import') {
+  const tab = panel(page, 'Sync');
+  await expect(
+    tab.getByText('Checking the workspace on GitHub...')
+  ).toHaveCount(0);
+  await tab
+    .getByRole('radio', { name: new RegExp(`${direction} (to|from) GitHub`) })
+    .check();
+  await expect(
+    tab.getByRole('radio', {
+      name: new RegExp(`${direction} (to|from) GitHub`),
+    })
+  ).toBeChecked();
+}
+
 // When I choose <direction> and tick the confirmation
 async function confirmDirection(
   page: Page,
   direction: 'Export' | 'Import',
   configPath?: string
 ) {
-  const tab = panel(page, 'Sync to GitHub');
-  await tab
-    .getByRole('radio', {
-      name: new RegExp(`${direction} from|${direction} to`),
-    })
-    .check();
-  if (configPath !== undefined) await configPathBox(tab).fill(configPath);
+  const tab = panel(page, 'Sync');
+  await chooseDirection(page, direction);
+  // A legacy-format connection names its config path under Advanced settings
+  if (configPath !== undefined) {
+    await useLegacyFormat(page);
+    await configPathBox(tab).fill(configPath);
+  }
   await acceptBox(tab).check();
 }
 
@@ -222,7 +265,7 @@ test('@S02', { tag: ['@serial'] }, async ({ page }) => {
   await onGithub(page, id);
 
   await chooseRepo(page, AMARA, REPO, 'main');
-  await confirmDirection(page, 'Import', './config.json');
+  await confirmDirection(page, 'Import');
   await connectButton(page).click();
 
   await expect(
@@ -289,10 +332,7 @@ for (const [direction, destroyed] of [
     const tab = await onGithub(page, id);
 
     await chooseRepo(page, AMARA, REPO, 'main');
-    await tab
-      .getByRole('radio', { name: new RegExp(`${direction} (to|from) GitHub`) })
-      .check();
-    if (direction === 'Import') await configPathBox(tab).fill('./config.json');
+    await chooseDirection(page, direction);
 
     const warning = tab.getByText(/I understand that/);
     await expect(warning).toContainText(PULL_FILE);
@@ -510,7 +550,7 @@ test('@S10', { tag: ['@serial'] }, async ({ page }) => {
 // @S11
 // Scenario: Admin without installations is told to install the GitHub App
 //   Given I am an admin with a connected GitHub account and no GitHub App installations
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I see "No GitHub installations found"
 //   And I see "You haven't installed the OpenFn GitHub App yet, or you may have uninstalled it."
 //   And "Install or manage GitHub app installations" opens the app's GitHub page in a new tab
@@ -542,7 +582,7 @@ test('@S11', { tag: ['@serial'] }, async ({ page }) => {
 // Scenario: A GitHub outage while loading installations is reported
 //   Given I am an admin with a connected GitHub account
 //   And GitHub returns an error when listing my installations
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I see "Unable to load GitHub installations"
 //   And I see "There was a problem connecting to GitHub. Refresh the page or contact support if the problem persists."
 //   And "GitHub Installation" is disabled
@@ -576,7 +616,7 @@ test('@S12', { tag: ['@serial'] }, async ({ page }) => {
 // Scenario: Admin without a GitHub account is asked to connect one
 //   Given I am an admin on project "Malawi HIV" with no GitHub account connected
 //   And the project has no GitHub connection
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I see "Connect your OpenFn account to GitHub"
 //   And I see a "Connect your GitHub Account" link that opens GitHub in a new tab
 //   And the flow "flow-github-connect" can start from this link
@@ -599,7 +639,7 @@ test('@S13', { tag: ['@serial'] }, async ({ page }) => {
 // Scenario: Admin with an expired GitHub token is asked to reconnect it
 //   Given I am an admin whose GitHub refresh token has expired
 //   And the project has no GitHub connection
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I see "Reconnect your GitHub Account"
 //   And I do not see the connect form
 test('@S14', { tag: ['@serial'] }, async ({ page }) => {
@@ -616,7 +656,7 @@ test('@S14', { tag: ['@serial'] }, async ({ page }) => {
 // Scenario Outline: Only admins see how to connect a project
 //   Given I am a <role> on project "Malawi HIV", which has no GitHub connection
 //   And I have a connected GitHub account
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I do not see "Connect your OpenFn account to GitHub"
 //   And I do not see "Create/update GitHub installations or modify permissions."
 //
@@ -648,7 +688,7 @@ for (const role of ['viewer', 'editor'] as const) {
 // Scenario: An instance without a GitHub app says so
 //   Given the instance has no GitHub app configured
 //   And I am a viewer on project "Malawi HIV"
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I see "Version Control is not configured for this Lightning instance. Contact the superuser for more information."
 test('@S16', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
@@ -667,13 +707,13 @@ test('@S16', { tag: ['@serial'] }, async ({ page }) => {
 // Scenario: Everyone on the project sees the saved connection
 //   Given project "Malawi HIV" is connected to "amara/hiv-sync" branch "main" through installation "1234"
 //   And I am a viewer on the project
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I see "Repository:" linking to "https://www.github.com/amara/hiv-sync"
 //   And I see "Branch:" "main", "GitHub Installation ID:" "1234", "Path to config:" and "Sync version:"
 //   And I do not see the connect form
 test('@S17', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
-  const id = givenConnected('viewer');
+  const id = givenConnected('viewer', {}, true);
   const tab = await onGithub(page, id);
 
   await expect(tab.getByRole('link', { name: REPO })).toHaveAttribute(
@@ -682,26 +722,28 @@ test('@S17', { tag: ['@serial'] }, async ({ page }) => {
   );
   await expect.poll(() => shownIn(tab)).toMatch(/Branch:\s*main/);
   await expect.poll(() => shownIn(tab)).toMatch(/Installation ID:\s*1234/);
-  await expect.poll(() => shownIn(tab)).toContain('Path to config:');
-  await expect.poll(() => shownIn(tab)).toContain('Sync version:');
+  await expect.poll(() => shownIn(tab)).toContain('Workspace:');
+  expect(await shownIn(tab)).not.toContain('Path to config:');
+  expect(await shownIn(tab)).not.toContain('legacy sync format');
   await expect(connectButton(page)).toHaveCount(0);
 });
 
 // @S18
 // Scenario: A healthy connection is confirmed
 //   Given project "Malawi HIV" is connected and the repo has its workflow files, config and API secret
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I eventually see "Your repository is properly configured."
-//   And I do not see "Click here to reconnect"
+//   And I do not see "Reconnect"
 test('@S18', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   givenMyGithub();
   const id = givenConnected('admin');
   const tab = await onGithub(page, id);
 
+  await expect.poll(() => shownIn(tab)).toContain('Sync healthy');
   await expect
     .poll(() => shownIn(tab))
-    .toContain('Your repository is properly configured.');
+    .toContain('Repository configured (workflow files and secret)');
   await expect(reconnectButton(page)).toHaveCount(0);
 });
 
@@ -709,34 +751,39 @@ test('@S18', { tag: ['@serial'] }, async ({ page }) => {
 // Scenario: A broken connection is flagged and admins can reconnect
 //   Given project "Malawi HIV" is connected but the deploy workflow file is missing on the branch
 //   And I am an admin whose GitHub account can access the connection's installation
-//   When I open the "Sync to GitHub" tab
-//   Then I eventually see "Your GitHub project is not properly connected with Lightning."
+//   When I open the "Sync" tab
+//   Then I eventually see "Your GitHub repository is not properly connected with Lightning."
 //   And I see "There was a problem connecting to GitHub"
-//   And I see "Click here to reconnect"
+//   And I see "Reconnect"
 //   And "Initiate Sync to Branch" is disabled
 // (Whether sync stays off on a broken connection is not the Value, which is
 // that the team finds out and can repair it.)
+// Fails on Lightning: a missing file shows "GitHub Error: <file> does not exist in the main branch", not "There was a problem connecting to GitHub"
 test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   givenMyGithub();
   const id = givenConnected('admin');
   givenGithub({ ...WORLD, missing: [deployFile(id)] });
   const tab = await onGithub(page, id);
 
+  await expect.poll(() => shownIn(tab)).toContain('Needs attention');
   await expect
     .poll(() => shownIn(tab))
-    .toContain('Your GitHub project is not properly connected with Lightning.');
-  await expect
-    .poll(() => shownIn(tab))
-    .toContain('There was a problem connecting to GitHub');
+    .toContain(
+      'Your GitHub repository is not properly connected with Lightning.'
+    );
   await expect(reconnectButton(page)).toBeVisible();
+  await expect(syncButton(page)).toBeDisabled();
+  expect(await shownIn(tab)).toContain(
+    'There was a problem connecting to GitHub'
+  );
 });
 
 // @S20
 // Scenario Outline: Reconnect is offered only to admins who can reach the installation
 //   Given project "Malawi HIV" has a broken GitHub connection
 //   And I am a <role> who <access> the connection's installation
-//   When I open the "Sync to GitHub" tab
-//   Then I do not see "Click here to reconnect"
+//   When I open the "Sync" tab
+//   Then I do not see "Reconnect"
 //
 //   Examples:
 //     | role   | access              |
@@ -762,7 +809,7 @@ for (const [role, access] of [
     await expect
       .poll(() => shownIn(tab))
       .toContain(
-        'Your GitHub project is not properly connected with Lightning.'
+        'Your GitHub repository is not properly connected with Lightning.'
       );
     await expect(reconnectButton(page)).toHaveCount(0);
   });
@@ -772,7 +819,7 @@ for (const [role, access] of [
 // Scenario: Admin reconnects a broken connection
 //   Given project "Malawi HIV" has a broken GitHub connection
 //   And I am an admin whose GitHub account can access its installation
-//   When I click "Click here to reconnect"
+//   When I click "Reconnect"
 //   And in "Reconnect to GitHub" I keep "OpenFn --> GitHub" selected, tick the confirmation and click "Reconnect"
 //   Then I see "Connected to GitHub"
 //   And the flow "flow-github-sync-actions" has started for project "Malawi HIV"
@@ -824,9 +871,9 @@ test('@S22', { tag: ['@serial'] }, async ({ page }) => {
 // Scenario: Viewers can't start a sync and are told who can
 //   Given project "Malawi HIV" is connected
 //   And I am a viewer on the project
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then "Initiate Sync to Branch" is disabled with the tooltip "Contact an editor or admin to sync."
-//   And I do not see "Remove Integration."
+//   And I do not see "Remove integration"
 test('@S23', { tag: ['@serial'] }, async ({ page }) => {
   givenGithub();
   const id = givenConnected('viewer');
@@ -901,7 +948,7 @@ for (const [role, kind] of [
 // Scenario: Admin removes the integration after confirming
 //   Given project "Malawi HIV" is connected to "amara/hiv-sync"
 //   And I am an admin on the project
-//   When I click "Remove Integration."
+//   When I click "Remove integration"
 //   Then I see "Remove Integration?" and "You are about to disconnect this project from GitHub."
 //   When I click "Disconnect"
 //   Then I see "Connection removed successfully"
@@ -916,7 +963,7 @@ test('@S25', { tag: ['@serial'] }, async ({ page }) => {
   await removeIntegration(page).click();
   const dialog = githubDialog(page, 'Remove Integration?');
   await expect(dialog).toContainText(
-    'You are about to disconnect this project from GitHub.'
+    'You are about to disconnect this project from GitHub, disabling two-way sync. You can reconnect at any time.'
   );
   await dialog.getByRole('button', { name: 'Disconnect', exact: true }).click();
 
@@ -956,7 +1003,7 @@ test('@S26', { tag: ['@serial'] }, async ({ page }) => {
 // Scenario: A GitHub sync plan limit blocks connecting and syncing and says why
 //   Given the usage limiter refuses GitHub sync for project "Malawi HIV" with a banner message
 //   And I am an admin on the project
-//   When I open the "Sync to GitHub" tab
+//   When I open the "Sync" tab
 //   Then I see the limiter's banner message
 //   And "Connect Branch & Initiate First Sync" is disabled
 // (Blocking is checked by its effect: a connect sent past the form makes

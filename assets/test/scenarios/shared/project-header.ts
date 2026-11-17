@@ -134,7 +134,7 @@ export async function S10(
     await signInAs(page, email);
     await open(page, path);
 
-    await page.keyboard.press('ControlOrMeta+p');
+    await openPicker(page);
     await picker(page).fill('Kenya TB');
     await page.getByRole('option', { name: 'Kenya TB' }).click();
 
@@ -152,7 +152,7 @@ export async function S12(page: Page, path: string, email: string) {
   await signInAs(page, email);
   await open(page, path);
 
-  await page.keyboard.press('ControlOrMeta+p');
+  await openPicker(page);
   await page.getByRole('option', { name: 'View all projects' }).click();
 
   await expectAt(page, '/projects');

@@ -20,7 +20,7 @@ repo root:
 assets/test/scenarios/start      # e2e Lightning on :4003, seeded; a few minutes the first time
 cd assets
 ./test/scenarios/run             # all tests, then writes STATUS.md
-./test/scenarios/run channels-index.spec.ts   # one file (or file:line, --grep)
+./test/scenarios/run channels-index.spec.ts   # one file (or file:line, --grep); leaves STATUS.md alone
 cd .. && bin/e2e stop
 ```
 

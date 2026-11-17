@@ -91,7 +91,7 @@ export async function S04(page: Page, projectId: string) {
 // @S05 Read-only members still see every tab
 //   Given I am a viewer on project "Malawi HIV"
 //   When I open the project's settings
-//   Then I see the tabs "Setup", "Credentials", "Collections", "Webhook Security", "Collaboration", "Security", "Sync to GitHub", "Data Storage" and "History Exports"
+//   Then I see the tabs "Setup", "Credentials", "Collections", "Webhook Security", "Collaboration", "Security", "Sync", "Data Storage" and "History Exports"
 //   And none of them is disabled
 export async function S05(page: Page, projectId: string) {
   await openSettings(page, projectId);
@@ -120,7 +120,7 @@ export async function S06(
 
 // The role notice examples: role, tab, the end of the notice
 export const S06_EXAMPLES: ['viewer' | 'editor', TabLabel, string][] = [
-  ['viewer', 'Setup', 'basic settings, but you can export a copy.'],
+  ['viewer', 'Setup', 'basic settings.'],
   ['viewer', 'Credentials', 'available credentials.'],
   ['editor', 'Collections', 'available collections.'],
   ['editor', 'Webhook Security', 'webhook auth methods.'],
@@ -130,10 +130,10 @@ export const S06_EXAMPLES: ['viewer' | 'editor', TabLabel, string][] = [
     'collaboration settings, but you can change your notification preferences.',
   ],
   ['editor', 'Security', 'multi-factor authentication settings.'],
-  ['viewer', 'Sync to GitHub', 'version control configuration.'],
+  ['viewer', 'Sync', 'version control configuration.'],
   [
     'editor',
-    'Sync to GitHub',
+    'Sync',
     'version control configuration but you can initiate a sync.',
   ],
   ['editor', 'Data Storage', 'data storage settings.'],
@@ -174,7 +174,7 @@ const MERGED =
 export const S08_EXAMPLES: [TabLabel, string][] = [
   ['Setup', LOCAL],
   ['Collaboration', LOCAL],
-  ['Sync to GitHub', LOCAL],
+  ['Sync', LOCAL],
   ['Data Storage', LOCAL],
   ['History Exports', LOCAL],
   ['Credentials', MERGED],

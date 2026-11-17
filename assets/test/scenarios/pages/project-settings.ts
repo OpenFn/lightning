@@ -23,7 +23,7 @@ export const TABS = {
   'Webhook Security': 'webhook_security',
   Collaboration: 'collaboration',
   Security: 'security',
-  'Sync to GitHub': 'vcs',
+  Sync: 'vcs',
   'Data Storage': 'data-storage',
   'History Exports': 'history-exports',
 } as const;
@@ -63,34 +63,30 @@ export async function chooseTab(page: Page, label: TabLabel) {
 
 // The panel tab <label> shows. Hidden panels have hidden headings, so nothing
 // a user sees names one; both versions give each panel the id
-// "<fragment>-panel". The design-system page draws Sync to GitHub's
+// "<fragment>-panel". The design-system page draws Sync's
 // new-connection form beside its panel rather than in it, so that tab's
 // panel is both (one element wherever the form isn't shown).
 export const panel = (page: Page, label: TabLabel) =>
   page.locator(
-    label === 'Sync to GitHub'
+    label === 'Sync'
       ? '[role="tabpanel"]#vcs-panel, #project-settings-vcs-hosted'
       : `[role="tabpanel"]#${TABS[label]}-panel`
   );
 
-// What <tab> shows, spaces collapsed. Sync to GitHub's panel can be two
+// What <tab> shows, spaces collapsed. Sync's panel can be two
 // elements on the design-system page (see panel()), so its text is read
 // whole rather than asserted on one element.
 export const shownIn = async (tab: Locator) =>
   (await tab.allTextContents()).join(' ').replace(/\s+/g, ' ');
 
-// When the Sync to GitHub tab has finished checking the saved connection.
-// Today's tab asks GitHub and then says "Your repository is properly
-// configured."; the design-system page doesn't check, so this waits for the
-// repository it shows.
+// When the Sync tab has finished checking the saved connection.
+// Today's tab asks GitHub and then says "Sync healthy"; the design-system
+// page doesn't check, so this waits for the repository it shows.
 export async function connectionChecked(page: Page) {
-  const tab = panel(page, 'Sync to GitHub');
+  const tab = panel(page, 'Sync');
   if (await isDesignSystem(page))
     await expect.poll(() => shownIn(tab)).toContain('Repository:');
-  else
-    await expect
-      .poll(() => shownIn(tab))
-      .toContain('Your repository is properly configured.');
+  else await expect.poll(() => shownIn(tab)).toContain('Sync healthy');
 }
 
 // When I change a data storage setting: picks the retention policy that
@@ -812,7 +808,7 @@ export async function sendDataStorageSave(
   });
 }
 
-// The Sync to GitHub tab's three pickers. Today each is a button that opens
+// The Sync tab's three pickers. Today each is a button that opens
 // a listbox, and the label points at the listbox, so nothing names the
 // button; both are found through the listbox's id. A rebuild that draws a
 // select or combobox named by its label is found by that.
@@ -824,13 +820,13 @@ const GITHUB_PICKERS = {
 export type GithubPicker = keyof typeof GITHUB_PICKERS;
 
 const pickerList = (page: Page, picker: GithubPicker) =>
-  panel(page, 'Sync to GitHub').locator(`ul#${GITHUB_PICKERS[picker]}`);
+  panel(page, 'Sync').locator(`ul#${GITHUB_PICKERS[picker]}`);
 
 export const githubPicker = (page: Page, picker: GithubPicker) =>
   pickerList(page, picker)
     .locator('xpath=preceding-sibling::button')
     .or(
-      panel(page, 'Sync to GitHub').getByRole('combobox', {
+      panel(page, 'Sync').getByRole('combobox', {
         name: picker,
         exact: true,
       })
@@ -845,7 +841,7 @@ export async function offeredIn(page: Page, picker: GithubPicker) {
   const today = pickerList(page, picker);
   const options = (await today.count())
     ? today.getByRole('option', { includeHidden: true })
-    : panel(page, 'Sync to GitHub').getByRole('option');
+    : panel(page, 'Sync').getByRole('option');
   const texts = await options.allInnerTexts();
   return texts.map(t => t.trim()).filter(t => t && !PROMPT.test(t));
 }
@@ -864,7 +860,7 @@ export async function chooseIn(
 ) {
   await githubPicker(page, picker).click();
   const today = pickerList(page, picker);
-  const list = (await today.count()) ? today : panel(page, 'Sync to GitHub');
+  const list = (await today.count()) ? today : panel(page, 'Sync');
   await (
     option === null
       ? list.getByRole('option').first()
@@ -905,7 +901,7 @@ export const refreshButton = (
         : '#refresh-installation-button'
     )
     .or(
-      panel(page, 'Sync to GitHub').getByRole('button', {
+      panel(page, 'Sync').getByRole('button', {
         name: new RegExp(`refresh.*${picker}`, 'i'),
       })
     );
@@ -925,11 +921,11 @@ export const configPathBox = (within: Locator) =>
     .getByRole('textbox', { name: /Path to config/ })
     .or(within.locator('input[name="connection[config_path]"]'));
 
-// The "Remove Integration." control: a link today
+// The "Remove integration" button
 export const removeIntegration = (page: Page) =>
-  panel(page, 'Sync to GitHub')
+  panel(page, 'Sync')
     .getByRole('link')
-    .or(panel(page, 'Sync to GitHub').getByRole('button'))
+    .or(panel(page, 'Sync').getByRole('button'))
     .filter({ hasText: /Remove Integration/i });
 
 // The open dialog titled <title>. Today's title holds the close button too,

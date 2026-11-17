@@ -1087,7 +1087,10 @@ export function changeRoleOnNode(
 export function setSupportAccessOnNode(projectId: string, allowed: boolean) {
   onNodeOk([
     `project = Lightning.Projects.get_project!("${projectId}")`,
-    `{:ok, _} = Lightning.Projects.update_project(project, %{allow_support_access: ${allowed}})`,
+    // The audit event needs an actor: any user will do
+    `require Ecto.Query`,
+    `actor = Lightning.Repo.one!(Ecto.Query.from(u in Lightning.Accounts.User, limit: 1))`,
+    `{:ok, _} = Lightning.Projects.update_project(project, %{allow_support_access: ${allowed}}, actor)`,
   ]);
 }
 
@@ -4212,7 +4215,10 @@ export function standInGithub(world: GithubWorld = {}): StandInGithub {
               do: {200, %{full_name: "#{owner}/#{name}", default_branch: hd(branches)}}, else: not_found
 
           {"get", ["repos", _, _, "contents" | file]} ->
-            if Enum.join(file, "/") in world["missing"], do: not_found, else: {200, %{sha: "file-sha"}}
+            path = Enum.join(file, "/")
+            # A repo with no CLI workspace in it yet: no checkout, no project copies
+            if path in world["missing"] or String.contains?(path, ".openfn/") or String.ends_with?(path, ".projects"),
+              do: not_found, else: {200, %{sha: "file-sha"}}
 
           {"delete", ["repos", _, _, "contents" | _]} -> {200, %{}}
 
@@ -4327,6 +4333,11 @@ export type RepoConnection = {
   branch: string;
   installation: string;
   configPath?: string;
+  // The v2 (CLI workspace) format, which a new connection uses
+  v2?: boolean;
+  // How long ago it was connected; GitHub can lag a pushed file, so a
+  // connection under two minutes old reads "Setting up", not "Needs attention"
+  ageMinutes?: number;
 };
 
 // Given project <projectId> is connected to GitHub <repo> branch <branch>
@@ -4334,7 +4345,8 @@ export type RepoConnection = {
 export function connectRepoOnNode(projectId: string, c: RepoConnection) {
   onNodeOk([
     `alias Lightning.VersionControl.ProjectRepoConnection`,
-    `%ProjectRepoConnection{} |> ProjectRepoConnection.create_changeset(%{project_id: ${ex(projectId)}, repo: ${ex(c.repo)}, branch: ${ex(c.branch)}, github_installation_id: ${ex(c.installation)}, config_path: ${ex(c.configPath ?? null)}, accept: true, sync_direction: :pull}) |> Lightning.Repo.insert!()`,
+    `at = DateTime.utc_now() |> DateTime.add(-60 * ${c.ageMinutes ?? 0}) |> DateTime.truncate(:second)`,
+    `%ProjectRepoConnection{inserted_at: at, updated_at: at} |> ProjectRepoConnection.create_changeset(%{project_id: ${ex(projectId)}, repo: ${ex(c.repo)}, branch: ${ex(c.branch)}, github_installation_id: ${ex(c.installation)}, config_path: ${ex(c.configPath ?? null)}, sync_version: ${c.v2 ?? false}, accept: true, sync_direction: :pull}) |> Lightning.Repo.insert!()`,
   ]);
 }
 

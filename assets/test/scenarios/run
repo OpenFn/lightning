@@ -10,5 +10,6 @@ SCENARIO_REPORT=$reports/parallel.json npx playwright test -c $config --project=
 parallel=$?
 SCENARIO_REPORT=$reports/serial.json npx playwright test -c $config --project=serial --project=admin --workers=1 --pass-with-no-tests "$@"
 serial=$?
-node test/scenarios/status.mjs
+# STATUS.md describes a full run only.
+[ $# -eq 0 ] && node test/scenarios/status.mjs
 [ $parallel -eq 0 ] && [ $serial -eq 0 ]
