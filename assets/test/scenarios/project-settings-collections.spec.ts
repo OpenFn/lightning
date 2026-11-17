@@ -258,9 +258,6 @@ test('@S05', PASSING_BOTH, async ({ page }) => {
 //   When I create a collection named "patients"
 //   Then I see "Collection created"
 //   And "patients" is in the list
-//   And the flow "flow-collection-api-name-resolution" has started for "patients"
-// The flow is the Collections API's; here only that both projects now hold
-// a "patients".
 test('@S06', PASSING_BOTH, async ({ page }) => {
   const id = givenProject('admin');
   const kenya = givenProject(null, 'Kenya TB');
