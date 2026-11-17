@@ -525,7 +525,7 @@ Feature: Sync a project to GitHub
     When I open the "Sync" tab
     Then I eventually see "Needs attention"
     And I see "Your GitHub repository is not properly connected with Lightning."
-    And I see "There was a problem connecting to GitHub"
+    And I see "GitHub Error: <deploy workflow file> does not exist in the main branch"
     And I see a "Reconnect" button
     And "Initiate Sync to Branch" is disabled
     # a connection under two minutes old shows "Setting up" instead, as GitHub can lag a pushed file (S39)

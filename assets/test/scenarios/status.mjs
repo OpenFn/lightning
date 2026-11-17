@@ -24,6 +24,19 @@ const record = (annotation, id, entry) => {
   if (!ids[id] || entry.status === 'failed') ids[id] = entry;
 };
 
+// The "// Fails on Lightning: ..." comment above a test, if any: the known
+// Lightning behaviour that makes it fail.
+const sources = {};
+const knownBug = (file, line) => {
+  const lines = (sources[file] ??= existsSync(join(here, file))
+    ? readFileSync(join(here, file), 'utf8').split('\n')
+    : []);
+  for (let i = line - 2; i >= 0 && lines[i]?.trim().startsWith('//'); i--) {
+    const m = lines[i].match(/\/\/ Fails on Lightning: (.*)/);
+    if (m) return m[1].trim();
+  }
+};
+
 const walk = (suite, file) => {
   for (const s of suite.suites ?? []) walk(s, s.file ?? file);
   for (const spec of suite.specs ?? []) {
@@ -40,10 +53,11 @@ const walk = (suite, file) => {
       .split('\n')
       .find((l) => l.trim());
     const page = basename(spec.file ?? file, '.spec.ts');
+    const known = status === 'failed' ? knownBug(spec.file ?? file, spec.line) : undefined;
     const shared = spec.title.match(/(shared-[a-z-]+)@(S\d+)/);
     const own = spec.title.match(/^@(S\d+)/);
-    if (shared) record(shared[1], shared[2], { status, where: page, error });
-    else if (own) record(page, own[1], { status, where: page, error });
+    if (shared) record(shared[1], shared[2], { status, where: page, error, known });
+    else if (own) record(page, own[1], { status, where: page, error, known });
   }
 };
 for (const f of readdirSync(reports).filter((f) => f.endsWith('.json')))
@@ -91,11 +105,16 @@ for (const a of names) {
   const ids = byAnnotation[a];
   out += `| ${a} | ${count(ids, 'passed')} | ${count(ids, 'failed')} | ${count(ids, 'skipped')} | ${count(ids, 'no test')} |\n`;
 }
-out += '\n## Failing\n\n';
-for (const a of names)
-  for (const [id, e] of Object.entries(byAnnotation[a]).sort())
-    if (e.status === 'failed')
-      out += `- ${a} ${id}${e.where !== a ? ` (on ${e.where})` : ''}: ${e.error ?? 'no message'}\n`;
+const failing = names.flatMap((a) =>
+  Object.entries(byAnnotation[a])
+    .sort()
+    .filter(([, e]) => e.status === 'failed')
+    .map(([id, e]) => [`${a} ${id}${e.where !== a ? ` (on ${e.where})` : ''}`, e])
+);
+out += '\n## Known Lightning bugs\n\nThe test is right and Lightning does something else. Each test says what, in a `// Fails on Lightning:` comment.\n\n';
+for (const [name, e] of failing.filter(([, e]) => e.known)) out += `- ${name}: ${e.known}\n`;
+out += '\n## Failing, not yet explained\n\n';
+for (const [name, e] of failing.filter(([, e]) => !e.known)) out += `- ${name}: ${e.error ?? 'no message'}\n`;
 
 writeFileSync(join(here, 'STATUS.md'), out);
 console.log(`STATUS.md: ${totals.join(' / ')} (passing / failing / skipped / no test)`);

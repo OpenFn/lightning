@@ -234,8 +234,9 @@ Feature: Account details on the user profile
     Given I am on "/profile"
     When I clear "First name"
     Then I see "This field can't be blank." under "First name"
-    When I set "First name" to "Kylian" followed by a bell character and click "Save"
+    When I set "First name" to "Kylian" followed by a bell character
     Then I see "can't contain control characters"
+    And "Save" is disabled
     And my name is unchanged
     # user.ex:102-110; utils/validators.ex:81-90; errors.po:1-2
     # profile_live_test.exs:66-86
@@ -258,9 +259,9 @@ Feature: Account details on the user profile
     # Value: an email change needs the current password.
     Given I am signed in as "amara@example.org"
     When I set "New email address" to "other@example.org"
-    And I set "Enter password to confirm" to a wrong password
-    And I click "Update email"
+    And I set "Enter password to confirm" to a wrong password and leave the field
     Then "Enter password to confirm" shows an error
+    And "Update email" is disabled
     And no email is sent
     # accounts.ex:849-857; form_component.ex:28-31, :41-42
     # profile_live_test.exs:156-168 (asserts the copy listed in 6.1)

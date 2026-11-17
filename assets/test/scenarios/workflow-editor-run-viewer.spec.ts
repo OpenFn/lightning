@@ -348,6 +348,7 @@ test('@S04', async ({ page }) => {
 //   And "Transform" is highlighted in the step list
 //   And the "Input" and "Output" tabs show "Transform"'s data and the "Logs" tab marks its lines (shared-log-viewer S05)
 // "Transform"'s input is "Fetch"'s output.
+// Fails on Lightning: selecting a step also marks the last log line of the step before it.
 test('@S05', async ({ page }) => {
   const { id, run } = givenRun({
     steps: [
@@ -486,6 +487,7 @@ test('@S07', async ({ page }) => {
 //   Then the run panel is faded and the run chip turns to its warning style
 //   And the chip's tooltip reads "Notify was not part of this run. Pick another job or deselect the run."
 //   But while "R" is still running the panel is not faded
+// Fails on Lightning: the run chip's warning tooltip never opens.
 test('@S08', async ({ page }) => {
   const { id, run } = givenRun({ jobs: ['Notify'] });
   await signInAs(page, ME);
@@ -543,6 +545,7 @@ test('@S09', async ({ page }) => {
 //   And a job that ran three times shows a "3" badge
 // "Fetch" is the job that ran three times. Annotation 6.1 expects today's
 // page to read "Started by unknown" for a run opened by its URL.
+// Fails on Lightning: the start badge reads "Started by unknown" instead of the person who started the run.
 test('@S10', async ({ page }) => {
   const { id, run } = givenRun({
     createdBy: AMARA,
@@ -756,6 +759,7 @@ test.describe('shared-log-viewer', () => {
   // Steps are chosen in "Run Steps". The editor has no way to clear a step
   // without choosing another, so the last When picks "Fetch" instead, and
   // only "Fetch"'s lines are then marked.
+  // Fails on Lightning: selecting a step also marks the last log line of the step before it.
   test(name('S05'), async ({ page }) => {
     const lines = {
       // Short lines: the log panel is narrow and wraps long ones

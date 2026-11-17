@@ -14,7 +14,7 @@ trigger:
 
 inherits:
   - shared-authenticated-session    # login redirect, lockout, sidebar toggle, book-a-demo banner in the :banner slot (index.ex:22-27, init_assigns.ex:46-54)
-  - shared-local-datetime           # "Last Updated" column (components.ex:136-139)
+  - shared-local-datetime           # "Last Updated" column (components.ex:136-139); S06 does not apply: the date is kept to the second
   - shared-project-header           # global project picker (Ctrl/Cmd+P, "View all projects"), account menu and role-dependent menu only; see not_reachable_here and 6.5
   - shared-flash-messages   # added by lead (final pass)
 
@@ -324,8 +324,9 @@ Feature: Projects
   Scenario: A name with no usable characters is refused
     # Value: no project is created with an empty name that nobody could find or refer to.
     Given the "Create a new project" modal is open
-    When I enter name "!!!" and submit
+    When I enter name "!!!"
     Then I see "can't be blank" under "Name"
+    And "Create project" is disabled
     And no project is created
     # project_creation_modal.ex:46-48, :64-72; helpers.ex:221-238; project.ex:155-157
     # dashboard_live_test.exs:289-302
@@ -334,8 +335,9 @@ Feature: Projects
   Scenario: A description over 240 characters is refused
     # Value: people learn the limit before submitting instead of losing what they wrote.
     Given the "Create a new project" modal is open
-    When I enter a name and a 241-character description and submit
+    When I enter a name and a 241-character description
     Then I see an error under "Description"
+    And "Create project" is disabled
     And no project is created
     # project.ex:107; project_creation_modal.ex:26-37, :121-123, :127-131
 

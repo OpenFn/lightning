@@ -130,8 +130,7 @@ test('@S01', async ({ page }) => {
 //   And I see "Scan the QR code" and a QR code
 //   When I click "this secret key"
 //   Then I see "Your two-factor secret" and a secret in base32
-// Fails on Lightning: the switch is drawn on but tells assistive technology
-// nothing (a bare aria-checked), so it reads as off.
+// Fails on Lightning: the switch is drawn on but tells assistive technology nothing (a bare aria-checked), so it reads as off.
 test('@S02', async ({ page }) => {
   await signedIn(page);
   await startSetup(page);
@@ -219,8 +218,7 @@ test('@S05', async ({ page }) => {
 //   And I see "Setup another device instead"
 //   And I see "Recovery codes" with a "View" button
 //   And I do not see "Scan the QR code"
-// Fails on Lightning: the switch is drawn on but tells assistive technology
-// nothing (a bare aria-checked), so it reads as off.
+// Fails on Lightning: the switch is drawn on but tells assistive technology nothing (a bare aria-checked), so it reads as off.
 test('@S06', async ({ page }) => {
   const me = await signedIn(page);
   seedMfa(me);
@@ -322,8 +320,7 @@ test('@S08', async ({ page }) => {
 //   When I click "Cancel"
 //   Then I no longer see "Disable MFA"
 //   And my account still has MFA enabled
-// Fails on Lightning: the switch is drawn on but tells assistive technology
-// nothing (a bare aria-checked), so it reads as off.
+// Fails on Lightning: the switch is drawn on but tells assistive technology nothing (a bare aria-checked), so it reads as off.
 test('@S09', async ({ page }) => {
   const me = await signedIn(page);
   seedMfa(me);

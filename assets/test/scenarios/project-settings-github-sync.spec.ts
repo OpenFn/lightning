@@ -753,12 +753,11 @@ test('@S18', { tag: ['@serial'] }, async ({ page }) => {
 //   And I am an admin whose GitHub account can access the connection's installation
 //   When I open the "Sync" tab
 //   Then I eventually see "Your GitHub repository is not properly connected with Lightning."
-//   And I see "There was a problem connecting to GitHub"
+//   And I see "GitHub Error: <deploy workflow file> does not exist in the main branch"
 //   And I see "Reconnect"
 //   And "Initiate Sync to Branch" is disabled
 // (Whether sync stays off on a broken connection is not the Value, which is
 // that the team finds out and can repair it.)
-// Fails on Lightning: a missing file shows "GitHub Error: <file> does not exist in the main branch", not "There was a problem connecting to GitHub"
 test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   givenMyGithub();
   const id = givenConnected('admin');
@@ -774,7 +773,7 @@ test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   await expect(reconnectButton(page)).toBeVisible();
   await expect(syncButton(page)).toBeDisabled();
   expect(await shownIn(tab)).toContain(
-    'There was a problem connecting to GitHub'
+    `GitHub Error: ${deployFile(id)} does not exist in the main branch`
   );
 });
 

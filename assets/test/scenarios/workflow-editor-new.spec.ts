@@ -416,7 +416,7 @@ test('@S05', async ({ page }) => {
 //     | still connecting     | Still connecting |
 // Still connecting first: the server's answer to the join is held back.
 // Then it is let through, and the connection dropped.
-// Fails on Lightning: while the join is pending it shows "Not connected", because the session store attaches its status handler after the provider has already emitted "connecting"
+// Fails on Lightning: while the join is pending it shows "Not connected".
 test('@S06', async ({ page }) => {
   const id = givenProject();
   const sock = await watchEditorSocket(page);

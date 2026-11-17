@@ -387,7 +387,7 @@ test('@S06', async ({ page }) => {
 //   When I press Ctrl+Y, or Cmd+Shift+Z on a Mac
 //   Then the step is back
 //   And "Undo" and "Redo" say "Nothing to undo" and "Nothing to redo" when there is nothing to take back
-// Fails on Lightning: the disabled undo and redo buttons show no "Nothing to undo" or "Nothing to redo" tooltip, because tippy gets no pointer events from a disabled button
+// Fails on Lightning: the disabled undo and redo buttons show no "Nothing to undo" or "Nothing to redo" tooltip.
 test('@S07', async ({ page }) => {
   const { wf } = givenIntake();
   await openAs(page, wf);
@@ -710,7 +710,7 @@ test('@S15', async ({ page }) => {
 //   And the canvas is read-only with "This workflow is live. Switch to draft or edit in a sandbox to make changes."
 //   When I click "Switch to draft" and confirm
 //   Then the badge says "Draft", the triggers are disabled and I can edit again
-// Fails on Lightning: the disabled undo button shows no "This workflow is live..." tooltip, because tippy gets no pointer events from a disabled button
+// Fails on Lightning: the disabled undo button shows no "This workflow is live..." tooltip.
 test('@S16', async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake({ [ME]: 'editor' }, { enabled: false });
@@ -1071,7 +1071,7 @@ test.describe('shared-editor-session', () => {
       await editorSession[id](page, ME, wf);
     });
 
-  // Fails on Lightning: the shared copy of the workflow is still open 100 seconds after its last editor left
+  // Fails on Lightning: after the last editor leaves and the workflow is saved elsewhere, opening it again still shows the old unsaved draft (unsure).
   test(name('S04'), async ({ page }) => {
     const { wf, by } = givenIntake();
     await editorSession.S04(page, ME, wf, () =>
@@ -1192,7 +1192,7 @@ test.describe('shared-editor-session', () => {
     await editorSession.S17(page, her, secondTab, ME, nameOf(THIRD), wf);
   });
 
-  // Fails on Lightning: her pointer is not shared until the diagram next re-renders, because the pointer tracker is handed containerRef.current while it is still null on the first render
+  // Fails on Lightning: her pointer is not shared until the diagram next re-renders.
   test(name('S18'), async ({ page, browser }) => {
     const { wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
     const her = await otherSession(browser, THIRD);

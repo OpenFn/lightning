@@ -141,7 +141,6 @@ test('@S02', async ({ browser, request }) => {
 });
 
 // @S03
-// Fails on Lightning: the editor opens on "Intake v2" but still shows the unsaved job rename "Fetch draft"
 // Scenario: The next person to open the editor sees the API's change, not an old draft
 //   Given "amara@example.org" renamed a job in "Intake" without saving and closed the tab
 //   And I renamed "Intake" to "Intake v2" through the API

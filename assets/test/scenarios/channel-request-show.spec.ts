@@ -560,7 +560,7 @@ test('@S13', async ({ page }) => {
 //   And destination auth reads "(deleted)"
 // Both are deleted from the database as Lightning deletes them, after the
 // request was stored.
-// Fails on Lightning: client auth reads "API key" instead of "(deleted) (API key)"
+// Fails on Lightning: client auth reads "API key" and destination auth reads "None", with no "(deleted)" label
 test('@S14', async ({ page }) => {
   const { id: projectId } = givenProject(
     { [ME]: 'viewer' },

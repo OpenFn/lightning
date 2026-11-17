@@ -5,8 +5,10 @@ annotation (a page, a shared part or a flow) has scenarios with ids (`@S01`,
 `@S02`, ...); each test here is named after the scenario it checks. They test
 today's Lightning, end to end, against a running instance.
 
-- `STATUS.md`: what passed, failed or has no test on the last run, and the
-  Lightning commit it ran against. Generated; don't edit.
+- `STATUS.md`: what passed, failed or has no test on the last full run, and the
+  Lightning commit it ran against. Its "Known Lightning bugs" list is every test
+  that fails because Lightning does something other than its annotation says.
+  Generated; don't edit.
 - `<annotation>.spec.ts`: the tests for one annotation. `steps.ts`, `pages/` and
   `shared/` hold the steps and page objects they share.
 - `annotations/TEMPLATE.md`: the annotation format.
@@ -34,5 +36,8 @@ tagged `@serial` change instance-wide state and run afterwards, alone.
 - When Lightning changes: update the scenarios of the annotations it affects
   (keep ids, add new ones with the next free id), update their tests, then run
   and commit the new `STATUS.md`.
+- A test that fails because of a Lightning bug stays failing, with one line
+  above it: `// Fails on Lightning: <what the user sees instead>`. Don't skip
+  it. When Lightning is fixed, remove the comment.
 - A page test that also covers a shared scenario says so with
   `// covers shared-x@S01 with @S05`.

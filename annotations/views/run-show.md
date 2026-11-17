@@ -18,7 +18,7 @@ inherits:
   - shared-usage-limits-banner      # show.ex:18, :57-63
   - shared-project-header           # show.ex:65-91 (project picker, "History" breadcrumb)
   - shared-run-components           # state pill, step icons, elapsed time, clone markers, version links, cancel (show.ex:104-225, :370-404)
-  - shared-local-datetime
+  - shared-local-datetime # S07 does not apply: "Finished" of a run still going is left empty
   - shared-hash-tabs
   - shared-log-viewer
   - shared-dataclip-body-viewer

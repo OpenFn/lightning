@@ -166,7 +166,7 @@ test('@S01', async ({ page }) => {
   const r = await newRun(wf.id, 0);
   expect(r.starting_job_id).toBe(wf.steps.Fetch);
   await expect.poll(() => editorQuery(page).run).toBe(r.id);
-  expect(editorQuery(page).panel).toBeUndefined();
+  await expect.poll(() => editorQuery(page).panel).toBeUndefined();
   // The collapsed history panel names the selected run
   await expect(canvasRunChip(page, r.id)).toBeVisible();
   await expandHistory(page);

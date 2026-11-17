@@ -17,7 +17,7 @@ trigger:
 inherits:
   - shared-authenticated-session    # login redirect, lockout, sidebar, banners; S01 to S10, as profile-account
   - shared-project-header           # no-project header only: S11, S12, S13, S14, S17, S18, as profile-account
-  - shared-local-datetime           # the "Created" date on the profile behind the modal (components.ex:17); S01, S04, S05
+  - shared-local-datetime           # the "Created" date on the profile behind the modal (components.ex:17); S01 only (the open dialog covers the date, so S04 and S05 are checked on profile-account)
   - shared-user-deletion-modal
   - shared-flash-messages   # added by lead (final pass)
 

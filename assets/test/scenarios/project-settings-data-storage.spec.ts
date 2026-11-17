@@ -217,8 +217,7 @@ test('@S04', async ({ page }) => {
 //   Then I see "dataclip retention period must be less or equal to the history retention period"
 //   And the "Save" button is disabled
 //   And project "Malawi HIV" still keeps history for 30 days
-// Fails on Lightning: Save turns off but no message shows until
-// the I/O period is touched.
+// Fails on Lightning: Save turns off but no message shows until the I/O period is touched.
 test('@S05', async ({ page }) => {
   const id = givenProject('admin', {
     history_retention_period: 30,

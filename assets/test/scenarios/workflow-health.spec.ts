@@ -145,11 +145,14 @@ function failures(
 
 const noFailures = (days: string) => `No failures in the last ${days}`;
 
-// Drill-down links open History in this tab
+// Drill-down links open History in a new tab; this tab stays on the health page
 async function opensHistory(page: Page, click: () => Promise<void>) {
+  const opened = page.context().waitForEvent('page');
   await click();
-  await page.waitForURL(/\/history/);
-  return page;
+  const tab = await opened;
+  await tab.waitForURL(/\/history/);
+  expect(page.url()).toMatch(/\/health/);
+  return tab;
 }
 
 // @S01
@@ -532,8 +535,7 @@ test('@S13', async ({ page }) => {
 //   Given the triage row "fail:RuntimeError @ Load" shows 2
 //   When I click "View history" on that row
 //   Then the flow "flow-workflow-health-drilldown" has started (its S01)
-//   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
-// Fails on Lightning: History opens in a new tab, and this tab stays on the health page.
+//   And History opens in a new tab, and this tab stays on the health page
 test('@S14', async ({ page }) => {
   const h = givenHealth();
   const loads = failures(h.wf, 'Load', 'RuntimeError', 2);
@@ -555,8 +557,7 @@ test('@S14', async ({ page }) => {
 //   Given "Outcomes" shows "Failed 6"
 //   When I click "Failed" in the "Outcomes" legend
 //   Then the flow "flow-workflow-health-drilldown" has started
-//   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
-// Fails on Lightning: History opens in a new tab, and this tab stays on the health page.
+//   And History opens in a new tab, and this tab stays on the health page
 test('@S15', async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, n: number) =>
@@ -1024,9 +1025,8 @@ test('@S27', async ({ page }) => {
 //   Given the "Runs" tab shows a bar with a "Failed" band of 2
 //   And an earlier bar has a failure too
 //   When I click the "Failed" band of the bar with 2
-//   Then History opens in this tab with the 2 work orders whose runs failed in that bar's slot
+//   Then History opens in a new tab with the 2 work orders whose runs failed in that bar's slot
 //   And not the earlier failure, nor the successes in the same bar
-// Fails on Lightning: History opens in a new tab, and this tab stays on the health page.
 test('@S28', async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, minutesAgo: number) =>

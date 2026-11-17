@@ -1356,7 +1356,7 @@ test('@S39', async ({ page }) => {
 //   When I publish again
 //   Then the same template is updated and I see "Template updated"
 // A support user is instance-wide.
-// Fails on Lightning: the second publish shows "Workflow published as template" again, because the editor keeps offering "Publish Template" and does not learn that the workflow now has a template until it is reloaded
+// Fails on Lightning: the second publish shows "Workflow published as template" again.
 test('@S40', { tag: ['@serial'] }, async ({ page }) => {
   const { wf } = givenIntake();
   cleanups.push(() => removeTemplatesOf(wf.id));
@@ -1389,7 +1389,7 @@ test('@S40', { tag: ['@serial'] }, async ({ page }) => {
 //   And a "publish_template" request from me is refused with "You don't have permission to publish templates"
 // The refusal is checked on a second workflow with nothing unsaved, by its
 // effect: no template. A support user is instance-wide.
-// Fails on Lightning: "Publish Template" stays enabled after a step is renamed, because it compares lock versions, which only change when the workflow is saved
+// Fails on Lightning: "Publish Template" stays enabled after a step is renamed.
 test('@S41', { tag: ['@serial'] }, async ({ page }) => {
   const { id, by, wf } = givenIntake();
   const saved = seedEditorWorkflow(id, by, { name: 'Intake saved' });

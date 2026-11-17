@@ -704,6 +704,7 @@ test('@S10', async ({ page }) => {
 //   Then the panel is still titled "Pick a custom input"
 //   When I run with the "Empty" tab
 //   Then the work order starts at "Fetch"
+// Fails on Lightning: after "Run with custom input" the page address has no runMode=custom-input (unsure).
 test('@S11', async ({ page }) => {
   const { wf } = givenIntake();
   seedEarlierInputs(wf, 'Fetch', [

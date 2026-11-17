@@ -893,7 +893,7 @@ test('@S17', async ({ page }) => {
 //   When I pick "Load" in the job selector
 //   Then the run chip shows a warning with "Load was not part of this run. Pick another job or deselect the run."
 //   And "Run" is disabled with "Selected job was not part of this run"
-// Fails on Lightning: the run chip's warning tooltip never opens, because RunBadge does not pass the tooltip trigger's props on to the DOM
+// Fails on Lightning: the run chip's warning tooltip never opens.
 test('@S18', async ({ page }) => {
   const { id, run } = givenRun(
     { [ME]: 'editor' },

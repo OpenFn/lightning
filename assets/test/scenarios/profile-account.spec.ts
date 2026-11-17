@@ -152,11 +152,10 @@ test('@S02', async ({ page }) => {
 //   Given I am on "/profile"
 //   When I clear "First name"
 //   Then I see "This field can't be blank." under "First name"
-//   When I set "First name" to "Kylian" followed by a bell character and click "Save"
+//   When I set "First name" to "Kylian" followed by a bell character
 //   Then I see "can't contain control characters"
+//   And "Save" is disabled
 //   And my name is unchanged
-// Fails on Lightning: once the bell is typed the name is invalid and Save is
-// disabled, so it can't be clicked. The error shows and the name is unchanged.
 test('@S03', async ({ page }) => {
   const before = me();
   await signedIn(page);
@@ -167,11 +166,11 @@ test('@S03', async ({ page }) => {
   ).toBeVisible();
 
   await field(page, 'First name').fill('Kylian\u0007');
-  await clickIfYouCan(page.getByRole('button', { name: 'Save' }));
 
   await expect(
     page.getByText("can't contain control characters")
   ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
   expect(me().first_name).toBe(before.first_name);
 });
 
@@ -184,8 +183,7 @@ test('@S03', async ({ page }) => {
 //   Then I see "You will receive an email with instructions shortly."
 //   And my email is still "amara@example.org"
 //   And the flow "flow-change-email-confirm" has started for "amara@new.example.org"
-// Fails on Lightning: the form's LiveComponent puts the message without a
-// redirect, and LiveView passes no such flash to the page. The flow starts.
+// Fails on Lightning: after "Update email" no confirmation message shows, though the emails are sent.
 test('@S04', { tag: ['@serial'] }, async ({ page, request }) => {
   const NEW = 'amara@new.example.org';
   const sentBefore = (await mailbox(request)).length;
@@ -225,22 +223,24 @@ test('@S04', { tag: ['@serial'] }, async ({ page, request }) => {
 // Scenario: An email change with the wrong password is refused
 //   Given I am signed in as "amara@example.org"
 //   When I set "New email address" to "other@example.org"
-//   And I set "Enter password to confirm" to a wrong password
-//   And I click "Update email"
+//   And I set "Enter password to confirm" to a wrong password and leave the field
 //   Then "Enter password to confirm" shows an error
+//   And "Update email" is disabled
 //   And no email is sent
-// Fails on Lightning: the password is checked when the field loses focus,
-// which disables "Update email", so it can't be clicked. The field shows
-// "Your passwords do not match." and nothing is sent.
 test('@S05', { tag: ['@serial'] }, async ({ page, request }) => {
   const sentBefore = (await mailbox(request)).length;
   await signedIn(page);
 
-  await requestEmailChange(page, 'other@example.org', 'not-my-password');
+  await field(page, 'New email address').fill('other@example.org');
+  await field(page, 'Enter password to confirm').fill('not-my-password');
+  await field(page, 'Enter password to confirm').blur();
 
   await expect(
     fieldBlock(page, 'Enter password to confirm').getByRole('paragraph')
   ).not.toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Update email' })
+  ).toBeDisabled();
   await expect(
     page.getByText('You will receive an email with instructions shortly.')
   ).toHaveCount(0);
@@ -276,7 +276,7 @@ test('@S06', { tag: ['@serial'] }, async ({ page, request }) => {
 //   Given the mailer is failing
 //   When I request an email change with my correct password
 //   Then I see "Failed to request email update"
-// Fails on Lightning: same as @S04, the error flash never reaches the page.
+// Fails on Lightning: when the email can't be sent no error message shows.
 test('@S07', { tag: ['@serial'] }, async ({ page }) => {
   await signedIn(page);
   const restoreMailer = mailerFailing();
@@ -301,10 +301,7 @@ test('@S07', { tag: ['@serial'] }, async ({ page }) => {
 //   And I see "Password changed successfully."
 //   And I can sign in with "a much longer phrase"
 //   And the flow "flow-account-revocation-teardown" has started for my account
-// Fails on Lightning: the change closes this browser's socket before the
-// redirect arrives, so the page stays on /profile for about ten seconds, then
-// reloads to /users/log_in with no message. The rest holds. The same on the
-// port.
+// Fails on Lightning: the page stays on /profile for about ten seconds, then reloads to the log-in page with no message.
 test('@S08', async ({ page, browser }) => {
   const NEW = 'a much longer phrase';
   const elsewhere = await otherSession(browser, ME);
@@ -519,7 +516,7 @@ test.describe('shared-flash-messages', () => {
     await flashMessages.S01(page, SAVED, saveName(page));
   });
 
-  // Fails on this page: its only error flash never renders (see @S07).
+  // Fails on Lightning: when the email can't be sent no error message shows.
   test(
     'shared-flash-messages@S02 on profile-account',
     { tag: ['@serial'] },

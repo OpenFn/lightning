@@ -425,6 +425,7 @@ test('@S05', async ({ page }) => {
 // features). The failing save is tried first, so the same edit is then saved;
 // saves fail while the adaptor catalogue is unavailable, which is
 // instance-wide.
+// Fails on Lightning: "Cancel" on the "You have unsaved changes" question does not close it (unsure).
 test('@S06', { tag: ['@serial'] }, async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake();
@@ -532,6 +533,7 @@ test('@S08', async ({ page }) => {
 //   And "Intake" is still live with v1's job bodies
 //   And the version list shows a new v3 "Restored v1"
 //   And choosing "Restore" did not also pin v1
+// Fails on Lightning: after the restore the version list has no new v3 "Restored v1" row (unsure).
 test('@S09', async ({ page }) => {
   experimental();
   const { wf, by } = givenIntake();
@@ -782,6 +784,7 @@ test('@S15', async ({ page }) => {
 //   When I have unsaved changes in a sandbox or draft and pick a run of older content there
 //   Then I am asked before my edits are thrown away
 // The last two lines are tried on a draft, "Billing".
+// Fails on Lightning: picking a run of older content on a draft with unsaved changes shows no "You have unsaved changes" question (unsure).
 test('@S16', async ({ page }) => {
   experimental();
   const { id, wf, by } = givenIntake();
@@ -1286,6 +1289,7 @@ test('@S29', async ({ page }) => {
 // Experimental features lock a live workflow for me, so the unsaved change
 // is made by Ben (without them) in the shared copy, as shared-editor-session
 // S20 does. Also S20 in this view's terms.
+// Fails on Lightning: "Save and switch" does not save the unsaved rename (unsure).
 test('@S30', async ({ page, browser }) => {
   experimental();
   experimental(BEN, false);

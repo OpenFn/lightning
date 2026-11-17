@@ -239,9 +239,8 @@ same policy.
   (`workflow_health_controller.ex:41-53`)
 - Drill-down links open History in a new tab (`TriageTable.tsx:158-167`;
   `Donut.tsx:72-76`, `:131-134`; `VolumeBars.tsx:182-191`)
-  - **Changed on purpose in the port:** the ported page opens these links in the
-    same tab, because a new tab is jarring. Don't restore the new tab for
-    parity.
+  - Deliberate: the page you triage from stays open while History loads in the
+    other tab.
 
 **Deferred side effects**
 
@@ -425,7 +424,7 @@ Feature: Workflow health
     Given the triage row "fail:RuntimeError @ Load" shows 2
     When I click "View history" on that row
     Then the flow "flow-workflow-health-drilldown" has started (its S01)
-    And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
+    And History opens in a new tab, and this tab stays on the health page
     # TriageTable.tsx:130-137, :154-196; historyUrl.ts:13-36
 
   @S15
@@ -434,7 +433,7 @@ Feature: Workflow health
     Given "Outcomes" shows "Failed 6"
     When I click "Failed" in the "Outcomes" legend
     Then the flow "flow-workflow-health-drilldown" has started
-    And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
+    And History opens in a new tab, and this tab stays on the health page
     # Donut.tsx:72-76, :128-152; OutcomesDonut.tsx:57-76; FailureBreakdownDonut.tsx:66; historyUrl.ts:47-56
     # OutcomesDonut.test.tsx:154-195; FailureBreakdownDonut.test.tsx:133-150
 
@@ -575,9 +574,8 @@ Feature: Workflow health
     Given the "Runs" tab shows a bar with a "Failed" band of 2
     And an earlier bar has a failure too
     When I click the "Failed" band of the bar with 2
-    Then History opens in this tab with the 2 work orders whose runs failed in that bar's slot
+    Then History opens in a new tab with the 2 work orders whose runs failed in that bar's slot
     And not the earlier failure, nor the successes in the same bar
-    # Changed on purpose: Lightning opened a new tab.
     # VolumeBars.tsx:182-190, :249-265; historyUrl.ts:13-36; VolumeBars.test.tsx:170-
 ```
 
@@ -673,16 +671,15 @@ Feature: Workflow health
 ## Proposed flows
 
 - **flow-workflow-health-drilldown** (new): a legend row or wedge in "Outcomes"
-  or "Failure breakdown" opens History (in a new tab in Lightning today; in the
-  same tab in the port, chosen on purpose) with `filters[workflow_id]`,
-  `filters[log]=true`, `filters[date_after]` set to the slice's window start and
-  one `filters[<state>]=true` per state the slice counts (all six failure states
-  for "Failed"); History lists those work orders (`Donut.tsx:72-76`, `:128-152`;
-  `OutcomesDonut.tsx:57-76`; `FailureBreakdownDonut.tsx:61-67`;
-  `historyUrl.ts:13-56`; `OutcomesDonut.test.tsx:154-195`).
-  flow-workflow-health-drilldown lists these links as outside its scope (its
-  6.5); the lead may fold them in instead. Surfaces: workflow-health,
-  history-work-orders.
+  or "Failure breakdown" opens History (in a new tab) with
+  `filters[workflow_id]`, `filters[log]=true`, `filters[date_after]` set to the
+  slice's window start and one `filters[<state>]=true` per state the slice
+  counts (all six failure states for "Failed"); History lists those work orders
+  (`Donut.tsx:72-76`, `:128-152`; `OutcomesDonut.tsx:57-76`;
+  `FailureBreakdownDonut.tsx:61-67`; `historyUrl.ts:13-56`;
+  `OutcomesDonut.test.tsx:154-195`). flow-workflow-health-drilldown lists these
+  links as outside its scope (its 6.5); the lead may fold them in instead.
+  Surfaces: workflow-health, history-work-orders.
 - **flow-login-return-to** (referenced; proposed by
   shared-authenticated-session): a signed-out visitor following the failure
   alert's or digest's health link is sent to log in and returned to the health
