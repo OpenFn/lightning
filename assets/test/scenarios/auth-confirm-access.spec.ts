@@ -132,6 +132,7 @@ test('@S01', async ({ page }) => {
 // The flow continuing is the backup codes page opening with the token
 // (profile-backup-codes). "Replacing in history": going back from there
 // skips "Confirm access" and lands on the page I was on before.
+// Fails on Lightning: going back lands on "Confirm access" again.
 test('@S02', async ({ page }) => {
   const amara = me();
   await signInAs(page, amara.email);

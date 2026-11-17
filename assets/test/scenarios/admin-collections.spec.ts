@@ -394,64 +394,64 @@ test('@S08', async ({ page }) => {
 });
 
 // @S09
-// Scenario: Superuser moves a collection to another project
+// Scenario: A collection stays in the project it was created in
 //   Given I am a superuser
 //   And "Malawi HIV" has a collection "patients" with 3 records
 //   When I click "Edit" on "patients"
-//   Then the "Project" field shows "Malawi HIV"
-//   When I choose "Kenya TB" as the project
-//   And I click "Save"
+//   Then the "Project" field shows "Malawi HIV" and is disabled
+//   When I change the name to "patients-2024" and click "Save"
 //   Then I see "Collection updated successfully"
-//   And I see a row "patients" with project "Kenya TB"
-//   And "patients" still has its 3 records
-//   And the flow "flow-admin-collection-reaches-project" has started for "patients"
+//   And I see a row "patients-2024" with project "Malawi HIV"
+//   And "patients-2024" still has its 3 records
 test('@S09', async ({ page }) => {
   const malawi = project('malawi-hiv');
-  const kenya = project('kenya-tb');
-  const patients = `patients-${hex()}`;
-  const id = seedCollection(malawi.id, patients, { records: 3 });
+  const h = hex();
+  const id = seedCollection(malawi.id, `patients-${h}`, { records: 3 });
+  const renamed = `patients-2024-${h}`;
 
   await signedIn(page);
-  const d = await openEdit(page, patients);
+  const d = await openEdit(page, `patients-${h}`);
 
   await expect.poll(() => chosenOption(field(d, 'Project'))).toBe(malawi.name);
+  await expect(field(d, 'Project')).toBeDisabled();
 
-  await field(d, 'Project').selectOption({ label: kenya.name });
+  await field(d, 'Name').fill(renamed);
   await submit(d, 'Save');
 
   await expect(
     flashMessages.toast(page, 'Collection updated successfully')
   ).toBeVisible();
-  await expect(await cells(page, patients, 'Project')).toHaveText(kenya.name);
+  await expect(await cells(page, renamed, 'Project')).toHaveText(malawi.name);
   expect(collectionById(id)).toEqual({
-    name: patients,
-    project_id: kenya.id,
+    name: renamed,
+    project_id: malawi.id,
     records: 3,
   });
 });
 
 // @S10
-// Scenario: A move into a project that already has that name is refused
+// Scenario: A rename to a name the project already uses is refused
 //   Given I am a superuser
-//   And "Malawi HIV" and "Kenya TB" each have a collection "patients"
-//   When I move the "Malawi HIV" collection "patients" to "Kenya TB"
+//   And "Malawi HIV" has collections "patients" and "patients-old"
+//   When I rename "patients-old" to "patients"
 //   Then I see "A collection with this name already exists" under the name
-//   And each project still has its own "patients"
+//   And "Malawi HIV" still has both its collections, named as before
 test('@S10', async ({ page }) => {
   const malawi = project('malawi-hiv');
-  const kenya = project('kenya-tb');
-  const patients = `patients-${hex()}`;
-  const malawiId = seedCollection(malawi.id, patients);
-  const kenyaId = seedCollection(kenya.id, patients);
+  const h = hex();
+  const patients = `patients-${h}`;
+  const old = `patients-old-${h}`;
+  const patientsId = seedCollection(malawi.id, patients);
+  const oldId = seedCollection(malawi.id, old);
 
   await signedIn(page);
-  const d = await openEdit(page, patients, malawi.name);
-  await field(d, 'Project').selectOption({ label: kenya.name });
+  const d = await openEdit(page, old, malawi.name);
+  await field(d, 'Name').fill(patients);
   await submit(d, 'Save');
 
   await expect(d.getByText(ALREADY_EXISTS)).toBeVisible();
-  expect(collectionById(malawiId)?.project_id).toBe(malawi.id);
-  expect(collectionById(kenyaId)?.project_id).toBe(kenya.id);
+  expect(collectionById(patientsId)?.name).toBe(patients);
+  expect(collectionById(oldId)?.name).toBe(old);
 });
 
 // @S11

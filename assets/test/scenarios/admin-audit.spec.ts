@@ -246,9 +246,10 @@ test('@S06', async ({ page }) => {
   // Recorded by the credential audit writer itself, staging first
   onNode(`
     credential = Lightning.Repo.all(Lightning.Credentials.Credential) |> hd()
+    user = Lightning.Repo.all(Lightning.Accounts.User) |> hd()
     bodies = [{"staging", %{"token" => "s3cret-token"}}, {"production", %{"token" => "s3cret-token"}}]
     {:ok, _} =
-      Lightning.Credentials.Audit.user_initiated_event("updated", credential, %{}, bodies)
+      Lightning.Credentials.Audit.user_initiated_event("updated", credential, user, %{}, bodies: bodies)
       |> Lightning.Credentials.Audit.save()
   `);
 

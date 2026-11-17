@@ -168,8 +168,7 @@ async function edit(page: Page, p: { id: string; name: string }) {
   await expectAt(page, `${PAGE}/${p.id}`);
 }
 
-const ONE_OWNER =
-  'Every project must have exactly one owner. Please specify one below.';
+const ONE_OWNER = 'Every project must have exactly one owner.';
 const TWO_OWNERS = 'A project can have only one owner.';
 
 // @S01
@@ -332,10 +331,10 @@ test('@S05', async ({ page }) => {
 // @S06
 // Scenario: A project cannot be saved without exactly one owner
 //   Given I am on "/settings/projects/new"
-//   Then I do not see "Every project must have exactly one owner. Please specify one below."
+//   Then I do not see "Every project must have exactly one owner."
 //   And "Save" is disabled
 //   When I change the form without choosing an owner
-//   Then I see "Every project must have exactly one owner. Please specify one below."
+//   Then I see "Every project must have exactly one owner."
 //   When I set two users to owner
 //   Then I see "A project can have only one owner."
 //   When I submit with no owner

@@ -212,6 +212,7 @@ test('@S03', { tag: ['@serial'] }, async ({ page }) => {
 // turns it off) and then sends each save past the form, and checks the
 // database. The URL message may be either wording: the translation of
 // "must be a valid HTTP/s URL", or it untranslated.
+// Fails on Lightning: the message differs from the annotation.
 test('@S04', { tag: ['@serial'] }, async ({ page }) => {
   const idp = await noProviderYet();
   const examples: [Partial<ProviderValues>, string, string | RegExp][] = [
