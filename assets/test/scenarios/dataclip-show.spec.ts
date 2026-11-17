@@ -600,7 +600,7 @@ test.describe('shared-project-header', () => {
 
   // A dataclip is reached from History, so that is the area it belongs to.
   // Today the page marks no area (shared-project-header 6.2).
-  // Fails on today's Lightning: no side-menu link is marked current.
+  // Fails on Lightning: no side-menu link is marked current.
   test('shared-project-header@S15 on dataclip-show', async ({ page }) => {
     const h = givenDataclipPage({ [ME]: 'viewer' }, HOST);
     await projectHeader.S15(page, h.path, ME, h.id, 'History');

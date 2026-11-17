@@ -417,7 +417,7 @@ test('@S10', async ({ page }) => {
 //   And I choose "Create"
 //   Then I see "Keychain credential created successfully"
 //   And "By district" is listed with me as its creator
-// Fails on today's Lightning: the keychain is saved but this tab shows no message.
+// Fails on Lightning: the keychain is saved but this tab shows no message.
 test('@S11', async ({ page }) => {
   const id = givenProject('admin');
   credential({ name: 'DHIS2 prod', projects: [id] });
@@ -530,7 +530,7 @@ test('@S14', async ({ page }) => {
 //   When I edit it to name "Updated Name" and path "$.updated_path" and choose "Save changes"
 //   Then I see "Keychain credential updated successfully"
 //   And the keychain is stored with the new name and path
-// Fails on today's Lightning: the keychain is saved but this tab shows no message.
+// Fails on Lightning: the keychain is saved but this tab shows no message.
 test('@S15', async ({ page }) => {
   const id = givenProject('admin');
   keychain(id, { name: 'Original Name', path: '$.org_id' });

@@ -533,6 +533,7 @@ test('@S13', async ({ page }) => {
 //   When I click "View history" on that row
 //   Then the flow "flow-workflow-health-drilldown" has started (its S01)
 //   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
+// Fails on Lightning: History opens in a new tab, and this tab stays on the health page.
 test('@S14', async ({ page }) => {
   const h = givenHealth();
   const loads = failures(h.wf, 'Load', 'RuntimeError', 2);
@@ -555,6 +556,7 @@ test('@S14', async ({ page }) => {
 //   When I click "Failed" in the "Outcomes" legend
 //   Then the flow "flow-workflow-health-drilldown" has started
 //   And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
+// Fails on Lightning: History opens in a new tab, and this tab stays on the health page.
 test('@S15', async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, n: number) =>
@@ -854,12 +856,14 @@ test('@S23', async ({ page }) => {
 //     | I am a viewer on "Malawi HIV"                                               | 200 |
 //     | I am a support user and "Malawi HIV" allows support access                  | 200 |
 //     | I am not signed in                                                          | 401 |
-//     | I am signed in but not on "Malawi HIV"                                      | 404 |
-//     | I am a support user and "Malawi HIV" does not allow support access          | 404 |
-//     | "Malawi HIV" requires MFA and I have not enrolled                           | 404 |
-//     | "Malawi HIV" is scheduled for deletion                                      | 404 |
-//     | "Daily sync" has been deleted                                               | 404 |
-//     | the request names "Daily sync" under project "Kenya TB", which I am not on  | 404 |
+//     | I am signed in but not on "Malawi HIV"                                      | 403 |
+//     | I am a support user and "Malawi HIV" does not allow support access          | 403 |
+//     | I am a superuser with no role on "Malawi HIV"                               | 403 |
+//     | "Malawi HIV" requires MFA and I have not enrolled                           | 403 |
+//     | "Malawi HIV" is scheduled for deletion                                      | 409 |
+//     | "Daily sync" has been deleted and I am a viewer on "Malawi HIV"             | 404 |
+//     | the request names "Daily sync" under project "Kenya TB", which I am not on  | 403 |
+//     | the request names a workflow that is not in "Malawi HIV", which I am on     | 404 |
 test('@S24', { tag: ['@serial'] }, async ({ page, request }) => {
   removeMfaOf(ME);
   const asked = async (
@@ -918,15 +922,15 @@ test('@S24', { tag: ['@serial'] }, async ({ page, request }) => {
   expect(
     await asked(api, others.project.id, others.wf.id),
     'not on the project'
-  ).toEqual(all(404));
+  ).toEqual(all(403));
   expect(
     await asked(api, mfa.project.id, mfa.wf.id),
     'MFA required, not enrolled'
-  ).toEqual(all(404));
+  ).toEqual(all(403));
   expect(
     await asked(api, wound.project.id, wound.wf.id),
     'project scheduled for deletion'
-  ).toEqual(all(404));
+  ).toEqual(all(409));
   expect(
     await asked(api, gone.project.id, gone.wf.id),
     'workflow deleted'
@@ -934,7 +938,7 @@ test('@S24', { tag: ['@serial'] }, async ({ page, request }) => {
   expect(
     await asked(api, others.project.id, viewer.wf.id),
     "the workflow under a project I'm not on"
-  ).toEqual(all(404));
+  ).toEqual(all(403));
   expect(
     await asked(api, mine.project.id, mine.wf.id),
     'a viewer on the other project'
@@ -952,7 +956,7 @@ test('@S24', { tag: ['@serial'] }, async ({ page, request }) => {
   expect(
     await asked(api, unsupported.project.id, unsupported.wf.id),
     'support user, support access off'
-  ).toEqual(all(404));
+  ).toEqual(all(403));
 });
 
 // @S25
@@ -1022,6 +1026,7 @@ test('@S27', async ({ page }) => {
 //   When I click the "Failed" band of the bar with 2
 //   Then History opens in this tab with the 2 work orders whose runs failed in that bar's slot
 //   And not the earlier failure, nor the successes in the same bar
+// Fails on Lightning: History opens in a new tab, and this tab stays on the health page.
 test('@S28', async ({ page }) => {
   const h = givenHealth();
   const seed = (state: string, minutesAgo: number) =>

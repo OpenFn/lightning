@@ -67,14 +67,13 @@ async function amaraOpens(page: Page, wf: EditorWorkflow) {
   await openEditor(page, wf.projectId, wf.id);
 }
 
-const conflict = (wf: EditorWorkflow) => ({
-  id: wf.id,
-  errors: {
-    workflow: [
-      `Cannot save a workflow (${wf.name}) while it is being edited on the App UI`,
-    ],
-  },
-});
+const conflict = {
+  type: 'about:blank',
+  title: 'Conflict',
+  status: 409,
+  code: 'being_edited',
+  detail: 'This workflow is open in the editor.',
+};
 
 // @S01
 // Scenario Outline: An API update is refused while the workflow is open in the editor
@@ -82,7 +81,7 @@ const conflict = (wf: EditorWorkflow) => ({
 //   And I hold an API token for an editor on the project
 //   When I send a <method> to "/api/projects/<project_id>/workflows/<Intake id>" renaming it to "Intake v2"
 //   Then the response status is 409
-//   And the response body is {"id": "<Intake id>", "errors": {"workflow": ["Cannot save a workflow (Intake) while it is being edited on the App UI"]}}
+//   And the response body is a problem document with status 409, title "Conflict", code "being_edited" and detail "This workflow is open in the editor."
 //   And "Intake" is still named "Intake" with its lock version unchanged
 //   And the open editor still shows "Intake" with no new message
 //   Examples: PATCH, PUT
@@ -102,7 +101,7 @@ test('@S01', async ({ page, request }) => {
       });
 
       expect.soft(res.status(), method).toBe(409);
-      expect.soft(await res.json(), method).toEqual(conflict(wf));
+      expect.soft(await res.json(), method).toEqual(conflict);
       expect.soft(storedWorkflow(wf.id), method).toMatchObject({
         name: 'Intake',
         lock_version: version,
@@ -142,12 +141,14 @@ test('@S02', async ({ browser, request }) => {
 });
 
 // @S03
+// Fails on Lightning: the editor opens on "Intake v2" but still shows the unsaved job rename "Fetch draft"
 // Scenario: The next person to open the editor sees the API's change, not an old draft
 //   Given "amara@example.org" renamed a job in "Intake" without saving and closed the tab
 //   And I renamed "Intake" to "Intake v2" through the API
 //   When "amara@example.org" opens "Intake" in the editor again
 //   Then the editor shows "Intake v2"
 //   And the unsaved job rename is gone
+// Fails on Lightning: the editor opens on "Intake v2" but still shows the unsaved job rename "Fetch draft"
 test('@S03', async ({ browser, request }) => {
   const wf = givenIntake();
   const amara = await otherSession(browser, AMARA);

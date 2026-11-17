@@ -1288,6 +1288,7 @@ test.describe('shared-local-datetime', () => {
     });
 
   // "Finished" of a run that is still going.
+  // Fails on Lightning: "Finished" is blank instead of "--".
   test('shared-local-datetime@S07 on run-show', async ({ page }) => {
     const { id: projectId } = givenProject();
     const run = givenRun(projectId, {

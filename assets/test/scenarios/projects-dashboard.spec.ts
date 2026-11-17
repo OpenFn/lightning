@@ -695,8 +695,7 @@ test.describe('shared-local-datetime', () => {
     });
   });
 
-  // S06 fails on this page: "Last Updated" is read back at whole seconds, so
-  // the tooltip and the copy both read "2026-10-14 08:30:07 UTC".
+  // S06 fails on Lightning: "Last Updated" reads "2026-10-14 08:30:07 UTC", without milliseconds.
   for (const id of ['S02', 'S04', 'S05', 'S06'] as const)
     test(`shared-local-datetime@${id} on projects-dashboard`, async ({
       page,
@@ -708,7 +707,7 @@ test.describe('shared-local-datetime', () => {
     });
 
   // A project with no workflows has no last change.
-  // Fails on this page: it renders its own "N/A" instead of "--".
+  // Fails on Lightning: a project with no workflows shows "N/A" instead of "--".
   test('shared-local-datetime@S07 on projects-dashboard', async ({ page }) => {
     await localDatetime.S07(page, await lastUpdated(page, {}));
   });

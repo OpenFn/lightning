@@ -1571,6 +1571,7 @@ test('@S47', () => {
 //   Then the merge target shows "Select a project"
 //   And the "Merge" button is disabled
 //   And nothing is merged
+// Fails on Lightning: the page reloads and the merge dialog never opens.
 test('@S48', async ({ page }) => {
   const w = given(
     {

@@ -327,8 +327,7 @@ test('@S06', async ({ page }) => {
 //   And I enter different bodies on "main" and "staging"
 //   And I save the credential
 //   Then the credential has bodies named "main" and "staging" with the values I entered
-// Fails on today's Lightning: the raw JSON of an environment that isn't open
-// when saving is stored empty.
+// Fails on Lightning: the saved credential's "main" environment is empty.
 test('@S07', async ({ page }) => {
   removesCreated(['Mailchimp']);
   await onCredentials(page);
@@ -1057,7 +1056,7 @@ test.describe('shared-credential-index-component', () => {
   //   When I send "edit_credential" for "DHIS2 prod"
   //   Then I see "You are not authorized to perform this action"
   // Checked by its effect: the other owner's credential never opens and its values are not on the page
-  // Fails on today's Lightning: the page reloads instead of showing the message.
+  // Fails on Lightning: the page reloads instead of showing the message.
   test('shared-credential-index-component@S06 on credentials-index', async ({
     page,
   }) => {
@@ -1159,7 +1158,7 @@ test.describe('shared-flash-messages', () => {
   });
 
   // A refusal: opening someone else's credential from a request sent outside the page
-  // Fails on today's Lightning: the page reloads instead of showing the message.
+  // Fails on Lightning: the page reloads instead of showing the message.
   test('shared-flash-messages@S02 on credentials-index', async ({ page }) => {
     credential({ name: 'Mine' });
     const theirs = credential({ name: 'Theirs' }, OTHER);
