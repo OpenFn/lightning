@@ -209,7 +209,7 @@ export async function S02(
 ) {
   const runs = runsOfWorkflow(run.workflowId).length;
   const workOrders = workOrdersOf(run.workflowId);
-  await expect(runButton(header)).toHaveText(/Retry/);
+  await expect(runButton(header)).toHaveText(/Retry/, { useInnerText: true });
 
   await start(page, header, how);
 
@@ -237,7 +237,7 @@ export async function S03(
 ) {
   const runs = runsOfWorkflow(run.workflowId).length;
   const version = lockVersionOf(run.workflowId);
-  await expect(runButton(header)).toHaveText(/Retry/);
+  await expect(runButton(header)).toHaveText(/Retry/, { useInnerText: true });
   await page.mouse.move(0, 0);
   await runButton(header).hover();
   await expect(
@@ -269,12 +269,14 @@ export async function S04(
   surface: Locator,
   change: () => Promise<void>
 ) {
-  await expect(runButton(surface)).toHaveText(/Retry/);
+  await expect(runButton(surface)).toHaveText(/Retry/, { useInnerText: true });
   await expect(runOptions(surface)).toBeVisible();
 
   await change();
 
-  await expect(runButton(surface)).toHaveText(/^\s*Run/);
+  await expect(runButton(surface)).toHaveText(/^\s*Run/, {
+    useInnerText: true,
+  });
   await expect(runOptions(surface)).toHaveCount(0);
 }
 
@@ -296,7 +298,7 @@ export async function S05(
 ) {
   const runs = runsOfWorkflow(run.workflowId).length;
   const workOrders = workOrdersOf(run.workflowId);
-  await expect(runButton(surface)).toHaveText(/Retry/);
+  await expect(runButton(surface)).toHaveText(/Retry/, { useInnerText: true });
   await runButton(surface).click();
 
   const retry = await newRun(run.workflowId, runs);
@@ -309,7 +311,7 @@ export async function S05(
 
   await reopen();
   const onR = runsOfWorkOrder(run.workOrderId).length;
-  await expect(runButton(surface)).toHaveText(/Retry/);
+  await expect(runButton(surface)).toHaveText(/Retry/, { useInnerText: true });
   if (how === 'menu') {
     await runOptions(surface).click();
     await newWorkOrderItem(page).click();
@@ -362,11 +364,20 @@ export async function S07(
   fetchJobId: string,
   openIde?: () => Promise<void>
 ) {
-  const runsFromFetch = async () => {
+  const runsFromFetch = async (ide = false) => {
     const runs = runsOfWorkflow(workflowId).length;
     await expect(runButton(header)).toBeDisabled();
 
     await page.keyboard.press(RUN_KEYS);
+    // The IDE opens its run panel first; a run starts once an input is chosen
+    if (ide) {
+      await page
+        .getByRole('tab', { name: 'Empty', exact: true })
+        .or(page.getByRole('button', { name: 'Empty', exact: true }))
+        .first()
+        .click();
+      await page.keyboard.press(RUN_KEYS);
+    }
 
     const run = await newRun(workflowId, runs);
     expect(run.starting_job_id).toBe(fetchJobId);
@@ -377,7 +388,7 @@ export async function S07(
   await runsFromFetch();
   if (!openIde) return;
   await openIde();
-  await runsFromFetch();
+  await runsFromFetch(true);
 }
 
 // @S08 A run never starts if the workflow can't be saved first
@@ -420,7 +431,6 @@ export const given = {
   S10: {
     disconnected: 'You are disconnected. Reconnecting...',
     viewer: 'You do not have permission to run workflows',
-    deleted: 'Workflow has been deleted',
     pinned: 'You are viewing a pinned version of this workflow',
     unsaved: 'Create this workflow before running it',
   },
@@ -520,15 +530,17 @@ export async function S13(page: Page, surface: Locator, workflowId: string) {
   await runButton(surface).click({ clickCount: 2 });
   await page.keyboard.press(RUN_KEYS);
 
-  await expect(runButton(surface)).toHaveText(/Processing/);
+  // The button stacks its labels and shows one, so the text read is the one on screen
+  const shown = { useInnerText: true };
+  await expect(runButton(surface)).toHaveText(/Processing/, shown);
   await expect(runButton(surface)).toBeDisabled();
   const run = await newRun(workflowId, runs);
   await expectNoNewRun(workflowId, runs + 1);
-  await expect(runButton(surface)).toHaveText(/Processing/);
+  await expect(runButton(surface)).toHaveText(/Processing/, shown);
 
   finishRun(run.id);
 
-  await expect(runButton(surface)).not.toHaveText(/Processing/);
+  await expect(runButton(surface)).not.toHaveText(/Processing/, shown);
   await expect(runButton(surface)).toBeEnabled();
 }
 
@@ -546,6 +558,14 @@ export function finishRun(runId: string, state = 'success') {
           do: run |> Ecto.Changeset.change(state: :claimed, claimed_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)) |> Lightning.Repo.update!(),
           else: run
       {:ok, run} = if run.state == :claimed, do: Lightning.Runs.start_run(run), else: {:ok, run}
+      # A worker runs the job it was asked to start from; a run that finishes
+      # without that step reads as not having run the job
+      if run.state == :started and run.starting_job_id do
+        step_id = Ecto.UUID.generate()
+        {:ok, _} = Lightning.Runs.start_step(run, %{"job_id" => run.starting_job_id, "step_id" => step_id, "input_dataclip_id" => run.dataclip_id})
+        run = Lightning.Repo.preload(run, work_order: [:workflow])
+        {:ok, _} = Lightning.Runs.complete_step(%{"run_id" => run.id, "step_id" => step_id, "project_id" => run.work_order.workflow.project_id, "reason" => "success"}, run.options)
+      end
       {:ok, run} =
         if run.state in Lightning.Run.final_states(),
           do: {:ok, run},

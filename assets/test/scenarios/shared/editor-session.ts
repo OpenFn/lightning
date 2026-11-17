@@ -643,11 +643,11 @@ export async function S19(
 //   Given I am an editor with experimental features and unsaved changes in "Intake"
 //   When I close the tab
 //   Then the browser asks me to confirm leaving
-//   When I instead leave by choosing a sandbox from "Edit in sandbox"
-//   Then I am not asked
+//   When I instead leave by creating a sandbox from "Edit in sandbox" and choosing "Switch" in its own "You have unsaved changes" dialog
+//   Then the browser does not ask
 // Experimental features lock a live workflow for me, so the unsaved change
 // is made by `colleague` (without them) in the shared copy. `sandbox` is the
-// name of a sandbox of the project.
+// name of a sandbox of the project; the sandbox made is named after it.
 export async function S20(
   page: Page,
   colleague: Page,
@@ -676,7 +676,14 @@ export async function S20(
   });
   await openEditor(again, w.projectId, w.id);
   await headerButton(again, 'Edit in sandbox').click();
-  await again.getByRole('button', { name: sandbox }).first().click();
+  await again
+    .getByRole('textbox', { name: 'Sandbox name' })
+    .fill(`${sandbox} copy`);
+  await again.getByRole('button', { name: 'Create sandbox' }).click();
+  await again
+    .getByRole('dialog', { name: 'You have unsaved changes' })
+    .getByRole('button', { name: 'Switch', exact: true })
+    .click();
   await expect
     .poll(() => new URL(again.url()).pathname)
     .not.toBe(editorPath(w.projectId, w.id));

@@ -100,10 +100,15 @@ export async function openConfigure(page: Page, box: Locator) {
 }
 
 export async function closeConfigure(page: Page) {
-  await configure(page)
-    .getByRole('button', { name: 'Close', exact: true })
-    .click();
-  await expect(configureTitle(page)).toBeHidden();
+  // A click while the dialog is still filling in can be lost: click again
+  await expect(async () => {
+    if (await configureTitle(page).isVisible())
+      await configure(page)
+        .getByRole('button', { name: 'Close', exact: true })
+        .last()
+        .click({ timeout: 2000 });
+    await expect(configureTitle(page)).toBeHidden({ timeout: 2000 });
+  }).toPass();
 }
 
 async function pick(page: Page, adaptor: RegExp) {
@@ -623,6 +628,10 @@ export async function S14(
   await expect
     .poll(() => keychainsOf(step.projectId).map(k => [k.name, k.path]))
     .toContainEqual(['Per facility', '$.facility_id']);
+  // The configuration dialog comes back once the credential is made
+  await configureTitle(page)
+    .waitFor({ state: 'visible', timeout: 5000 })
+    .catch(() => undefined);
   if (await configureTitle(page).isVisible()) await closeConfigure(page);
   await save();
   await expect
@@ -680,7 +689,9 @@ export async function S17(page: Page, box: Locator) {
 
   await page.keyboard.press('Escape');
   await expect(pickerSearch(page)).toBeHidden();
-  await expect(box).toBeVisible();
+  // The step is still open under the dialog (the IDE hides it from the
+  // accessibility tree while a dialog is open, so it is read from the URL)
+  expect(new URL(page.url()).searchParams.get('job')).not.toBeNull();
 }
 
 // @S18 Read-only viewers see the configuration but cannot change it

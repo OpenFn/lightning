@@ -244,7 +244,7 @@ export async function failTemplateLoading(page: Page) {
 // ---------------------------------------------------------------------------
 
 export const aiPrompt = (page: Page) =>
-  page.getByRole('textbox', { name: 'Build with AI' });
+  page.getByRole('combobox', { name: 'Build with AI' });
 
 export const aiDisclaimer = (page: Page) =>
   page.getByText(/Please use AI responsibly/);

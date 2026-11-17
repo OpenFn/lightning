@@ -333,7 +333,8 @@ test('@S24', async ({ page }) => {
 
   await expect(landingHeading(page)).toBeVisible();
   await expect(page.getByText('Lab results')).toHaveCount(0);
-  await expect(panelHeading(page, 'Workflow settings')).toHaveCount(0);
+  // The settings panel is mounted but slid off screen
+  await expect(panelHeading(page, 'Workflow settings')).not.toBeInViewport();
   await expect(closeIdeButton(page)).toHaveCount(0);
   await expect(aiPanel(page)).toHaveCount(0);
 
@@ -415,6 +416,7 @@ test('@S05', async ({ page }) => {
 //     | still connecting     | Still connecting |
 // Still connecting first: the server's answer to the join is held back.
 // Then it is let through, and the connection dropped.
+// Fails on Lightning: while the join is pending it shows "Not connected", because the session store attaches its status handler after the provider has already emitted "connecting"
 test('@S06', async ({ page }) => {
   const id = givenProject();
   const sock = await watchEditorSocket(page);

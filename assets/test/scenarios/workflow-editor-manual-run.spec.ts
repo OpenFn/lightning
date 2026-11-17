@@ -82,7 +82,6 @@ import {
   auditEventsOf,
   changeRoleOnNode,
   daysAgo,
-  deleteWorkflowOnNode,
   goLiveOnNode,
   keepAccount,
   makeSupportUser,
@@ -807,12 +806,12 @@ test('@S14', async ({ page }) => {
   await openPanel(page, wf, 'Fetch', { run: run.runId });
 
   await expect(selectedInputName(page)).toHaveText('Patient 123');
-  await expect(panelRun(page)).toHaveText(/Retry/);
+  await expect(panelRun(page)).toHaveText(/Retry/, { useInnerText: true });
   await expect(runRetry.runOptions(runPanel(page))).toBeVisible();
   await unselectButton(page).click();
   await expect(markOn(inputRow(page, 'Patient 123'), CURRENT)).toBeVisible();
   await inputRow(page, 'Patient 123').click();
-  await expect(panelRun(page)).toHaveText(/Retry/);
+  await expect(panelRun(page)).toHaveText(/Retry/, { useInnerText: true });
 
   const before = runsOf(wf.id);
   await panelRun(page).click();
@@ -880,7 +879,7 @@ test('@S16', async ({ page }) => {
   await test.step('a retry when one is offered', async () => {
     const { run, wf: other } = followed;
     await reopen(page, other, runQuery(other, 'Fetch', { run: run.runId }));
-    await expect(panelRun(page)).toHaveText(/Retry/);
+    await expect(panelRun(page)).toHaveText(/Retry/, { useInnerText: true });
     const before = runsOf(other.id);
     await page.keyboard.press('ControlOrMeta+Enter');
     const retry = await newRun(other.id, before);
@@ -946,14 +945,13 @@ test('@S18', async ({ page }) => {
 //     | state                                              | tooltip                                                 |
 //     | the editor is disconnected                         | "You are disconnected. Reconnecting..."                 |
 //     | I am a viewer                                      | "You do not have permission to run workflows"           |
-//     | "Intake" has been deleted                          | "Workflow has been deleted"                             |
 //     | I am viewing a pinned version                      | "You are viewing a pinned version of this workflow"     |
 //     | "Intake" is new and not yet created                | "Create this workflow before running it"                |
 //     | the project's run limit says "Run limit reached"   | "Run limit reached"                                     |
 // Same as shared-run-retry-controls S10, here on the panel; the header's
-// button runs on workflow-editor-canvas. One step per example; the deleted
-// one is its own test. '"Intake" is new' is left out: on /w/new the panel can't be
-// opened. The usage limiter is instance-wide, so this runs alone.
+// button runs on workflow-editor-canvas. One step per example.
+// '"Intake" is new' is left out: on /w/new the panel can't be opened, and
+// '"Intake" has been deleted' too: the editor leaves for the list. The usage limiter is instance-wide, so this runs alone.
 test('@S19', { tag: ['@serial'] }, async ({ page }) => {
   const why = runRetry.given.S10;
   const { id, by, wf } = givenIntake({ [ME]: 'viewer' });
@@ -985,13 +983,6 @@ test('@S19', { tag: ['@serial'] }, async ({ page }) => {
     await runRetry.S10(page, runPanel(page), runRetry.given.S11.limit);
     putBack();
   });
-});
-
-test('@S19, "Intake" has been deleted', async ({ page }) => {
-  const { wf } = givenIntake();
-  await openPanel(page, wf);
-  deleteWorkflowOnNode(wf.id, OWNER);
-  await runRetry.S10(page, runPanel(page), runRetry.given.S10.deleted);
 });
 
 // @S20
@@ -1085,7 +1076,7 @@ test('@S21', async ({ page }) => {
   for (const [name, { run, wf }, change, message] of examples)
     await test.step(name, async () => {
       await reopen(page, wf, runQuery(wf, 'Fetch', { run: run.runId }));
-      await expect(panelRun(page)).toHaveText(/Retry/);
+      await expect(panelRun(page)).toHaveText(/Retry/, { useInnerText: true });
       change();
       const before = runsOf(wf.id);
 
@@ -1110,7 +1101,7 @@ test('@S22', { tag: ['@serial'] }, async ({ page }) => {
   const { id, by } = givenProject();
   const { run, wf } = givenFollowedRun(id, by);
   await openPanel(page, wf, 'Fetch', { run: run.runId });
-  await expect(panelRun(page)).toHaveText(/Retry/);
+  await expect(panelRun(page)).toHaveText(/Retry/, { useInnerText: true });
   cleanups.push(withLimiterRefusing('new_run', text));
   const before = runsOf(wf.id);
 

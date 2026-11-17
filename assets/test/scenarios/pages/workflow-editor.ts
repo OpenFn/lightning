@@ -202,15 +202,18 @@ export async function clickEmptyCanvas(page: Page) {
 export async function expectInvalidTarget(
   page: Page,
   name: string,
-  reason: string
+  reason: string,
+  // Soft, so an outline's other examples are still checked; hard when the
+  // caller retries the drag
+  soft = true
 ) {
-  // Soft, so an outline's other examples are still checked
+  const check = soft ? expect.soft : expect;
   const marked = node(page, name).locator('[data-valid-drop-target="false"]');
-  await expect.soft(marked, `${name} marked invalid`).toHaveCount(1);
+  await check(marked, `${name} marked invalid`).toHaveCount(1);
   if (reason)
-    await expect
-      .soft(node(page, name).getByText(reason, { exact: true }))
-      .toBeVisible();
+    await check(
+      node(page, name).getByText(reason, { exact: true })
+    ).toBeVisible();
 }
 
 // When I drag step <name> by <dx>, <dy> pixels

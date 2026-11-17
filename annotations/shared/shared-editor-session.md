@@ -479,8 +479,8 @@ Feature: Collaborative editor session
     Given I am an editor with experimental features and unsaved changes in "Intake"
     When I close the tab
     Then the browser asks me to confirm leaving
-    When I instead leave by choosing a sandbox from "Edit in sandbox"
-    Then I am not asked
+    When I instead leave by creating a sandbox from "Edit in sandbox" and choosing "Switch" in its own "You have unsaved changes" dialog
+    Then the browser does not ask
     # useUnloadWarning.ts:11-32; unloadGuard.ts:1-19; EditInSandboxPicker.tsx:372; CollaborativeEditor.tsx:134
     # useUnloadWarning.test.tsx:52-117
 

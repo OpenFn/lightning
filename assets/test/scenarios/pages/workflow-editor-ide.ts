@@ -147,10 +147,15 @@ export const codeFocused = (page: Page) =>
       el.classList.contains('focused') || el.contains(document.activeElement)
   );
 
+// Monaco on a Mac goes to the top and bottom of the code with Cmd+Up and Cmd+Down
+const MAC = process.platform === 'darwin';
+const CODE_START = MAC ? 'Meta+ArrowUp' : 'Control+Home';
+const CODE_END = MAC ? 'Meta+ArrowDown' : 'Control+End';
+
 // When I put my cursor at the end of line <n>
 export async function cursorToEndOfLine(page: Page, n: number) {
   await focusCode(page);
-  await page.keyboard.press('ControlOrMeta+Home');
+  await page.keyboard.press(CODE_START);
   for (let i = 1; i < n; i++) await page.keyboard.press('ArrowDown');
   await page.keyboard.press('End');
 }
@@ -158,7 +163,7 @@ export async function cursorToEndOfLine(page: Page, n: number) {
 // When I put my cursor at the end of the code
 export async function cursorToEnd(page: Page) {
   await focusCode(page);
-  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press(CODE_END);
 }
 
 // When I type <text> where my cursor is. Inserted as one piece, so the

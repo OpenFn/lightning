@@ -572,7 +572,6 @@ Feature: Manual run panel
       | state                                              | tooltip                                                 |
       | the editor is disconnected                         | "You are disconnected. Reconnecting..."                 |
       | I am a viewer                                      | "You do not have permission to run workflows"           |
-      | "Intake" has been deleted                          | "Workflow has been deleted"                             |
       | I am viewing a pinned version                      | "You are viewing a pinned version of this workflow"     |
       | "Intake" is new and not yet created                | "Create this workflow before running it"                |
       | the project's run limit says "Run limit reached"   | "Run limit reached"                                     |

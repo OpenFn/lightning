@@ -98,7 +98,6 @@ import {
   addWebhookAuthMethodOnNode,
   catalogueUnavailable,
   changeRoleOnNode,
-  deleteWorkflowOnNode,
   field,
   fieldBlock,
   goLiveOnNode,
@@ -561,7 +560,8 @@ test('@S12', async ({ page, browser }) => {
 //   Then no credential form opens and "credential_modal_closed" is pushed back
 // Same as shared-adaptor-credential-config S13.
 test('@S13', async ({ page }) => {
-  const { id, wf } = givenIntake();
+  // The credential's owner must be on the project to share it with it
+  const { id, wf } = givenIntake({ [ME]: 'editor', [THIRD]: 'editor' });
   const secret = 'amara-only-4471';
   const credentialId = givenCredential(id, 'DHIS2 prod', {
     owner: THIRD,
@@ -1356,6 +1356,7 @@ test('@S39', async ({ page }) => {
 //   When I publish again
 //   Then the same template is updated and I see "Template updated"
 // A support user is instance-wide.
+// Fails on Lightning: the second publish shows "Workflow published as template" again, because the editor keeps offering "Publish Template" and does not learn that the workflow now has a template until it is reloaded
 test('@S40', { tag: ['@serial'] }, async ({ page }) => {
   const { wf } = givenIntake();
   cleanups.push(() => removeTemplatesOf(wf.id));
@@ -1388,6 +1389,7 @@ test('@S40', { tag: ['@serial'] }, async ({ page }) => {
 //   And a "publish_template" request from me is refused with "You don't have permission to publish templates"
 // The refusal is checked on a second workflow with nothing unsaved, by its
 // effect: no template. A support user is instance-wide.
+// Fails on Lightning: "Publish Template" stays enabled after a step is renamed, because it compares lock versions, which only change when the workflow is saved
 test('@S41', { tag: ['@serial'] }, async ({ page }) => {
   const { id, by, wf } = givenIntake();
   const saved = seedEditorWorkflow(id, by, { name: 'Intake saved' });
@@ -1601,6 +1603,8 @@ test.describe('shared-run-retry-controls', () => {
   test('shared-run-retry-controls@S10 on workflow-editor-inspectors', async ({
     page,
   }) => {
+    // One page load per example
+    test.setTimeout(90000);
     const why = runRetry.given.S10;
     const h = givenIntake({ [ME]: 'viewer' });
     const fetch = h.wf.steps.Fetch;
@@ -1625,15 +1629,6 @@ test.describe('shared-run-retry-controls', () => {
       await runRetry.S10(page, surface(), why.disconnected);
       sock.reconnect();
     });
-  });
-
-  test('shared-run-retry-controls@S10 on workflow-editor-inspectors, deleted', async ({
-    page,
-  }) => {
-    const h = givenIntake({ [ME]: 'editor' });
-    await openAs(page, h.wf, ME, stepOf(h.wf, 'Fetch'));
-    deleteWorkflowOnNode(h.wf.id, OWNER);
-    await runRetry.S10(page, panel(page, 'Fetch'), runRetry.given.S10.deleted);
   });
 });
 
