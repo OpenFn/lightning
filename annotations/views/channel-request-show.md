@@ -18,7 +18,7 @@ trigger:
       channels.ex:561-581)
 
 inherits:
-  - shared-authenticated-session # live_session :default with InitAssigns (router.ex:288)
+  - shared-authenticated-session # live_session :default with InitAssigns (router.ex:336)
   - shared-project-scope # show.ex:16
   - shared-project-header # show.ex:55-76 (project picker plus "History" and "Channels" breadcrumbs); side menu marked History via active_menu_item :runs (show.ex:31)
   - shared-run-components # channel_state_pill (run_live/components.ex:140-160) via state_pill_with_tooltip (components.ex:182-195, :189, :192)
@@ -44,7 +44,7 @@ config_variants:
 inventory:
   routes:
     - live /projects/:project_id/history/channels/:id  ChannelRequestLive.Show
-      :show # router.ex:296
+      :show # router.ex:344
   events: [] # no handle_event, handle_info or handle_params; mount only (show.ex:19-48)
   js_hooks:
     - Copy # copy_icon_button for request id, body and hash (components.ex:344-359); also Common.datetime click-to-copy (common.ex:466, :489)

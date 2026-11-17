@@ -13,64 +13,64 @@ trigger:
     - project-settings-collections
   reachable_when:
     - the "Download" link renders on every collection row for every viewer of
-      the tab, with no permission check (collections_component.ex:344-352); the
+      the tab, with no permission check (collections_component.ex:353-361); the
       controller re-checks access itself
 
-inherits: [] # the controller does not mount shared-project-scope or shared-authenticated-session (both are LiveView on_mount gates); it sits behind the plain :require_authenticated_user plug (router.ex:189-190) and re-implements the project gate with different outcomes (see section 3 and 6.2). The entry view inherits both.
+inherits: [] # the controller does not mount shared-project-scope or shared-authenticated-session (both are LiveView on_mount gates); it sits behind the plain :require_authenticated_user plug (router.ex:237-238) and re-implements the project gate with different outcomes (see section 3 and 6.2). The entry view inherits both.
 
 url_params:
   - name: project_id
     set_by:
       project-settings-collections "Download" link
-      (collections_component.ex:346-348)
+      (collections_component.ex:355-357)
     effect:
       the project whose collection is looked up; cast to a UUID first, 400 if
-      malformed (collections_controller.ex:111, :143-148)
+      malformed (collection_download_controller.ex:15, :36-41)
   - name: name
     set_by:
       project-settings-collections "Download" link
-      (collections_component.ex:347)
+      (collections_component.ex:356)
     effect:
       the collection name, looked up only inside that project
-      (collections_controller.ex:112; collections.ex:82-87); also the downloaded
-      file name (collections_controller.ex:125)
+      (collection_download_controller.ex:16; collections.ex:91-98); also the
+      downloaded file name (collection_download_controller.ex:30)
 
 config_variants:
   default: {} # read under this variant
-  require-email-verification: { check_flag?(:require_email_verification): true } # locked-out accounts are redirected before the controller runs (user_auth.ex:305-306)
+  require-email-verification: { check_flag?(:require_email_verification): true } # locked-out accounts are redirected before the controller runs (user_auth.ex:297-298)
 
 inventory:
   routes:
-    - get /download/collections/:project_id/:name  CollectionsController
-      :download (router.ex:197-199, pipe_through [:browser,
-      :require_authenticated_user], router.ex:189-190)
+    - get /download/collections/:project_id/:name  CollectionDownloadController
+      :download (router.ex:245-247, pipe_through [:browser,
+      :require_authenticated_user], router.ex:237-238)
   events: []
   js_hooks: []
   policies:
     - Lightning.Policies.Collections.authorize(:access_collection)
-      (policies/collections.ex:53-55), deferring to
+      (policies/collections.ex:58), deferring to
       Lightning.Policies.ProjectUsers.permitted?(:access_project)
   workers: []
   api_endpoints: []
   emails: []
   config:
-    - :lightning, LightningWeb.CollectionsController, :max_database_limit
-      (config/config.exs:229-231)
+    - :lightning, Lightning.Collections, :stream_page_size
+      (config/config.exs:230; config.ex:90-93)
   not_reachable_here:
-    - CollectionsController.stream_all_in_chunks/3 first clause (limit <=
-      max_database_limit) (collections_controller.ex:187-192); download always
-      passes max_database_limit + 1 (:117), so only the unfold clause runs
-    - Collections.get_all/3 key_pattern and timestamp filters
-      (collections.ex:192-199); download passes nil and no timestamps
-    - Collections.get_collection/1 cross-project lookup and FallbackController
-      :conflict (collections.ex:66-72; fallback_controller.ex:31-39); download
-      always scopes by project id
+    - Collections.stream_all/3 `key_pattern` and the `:limit` and timestamp
+      filters (collections.ex:279-295, :304-327); download passes an empty
+      filter map and no pattern, so it always reads every item in pages of
+      `stream_page_size`
+    - Collections.resolve_collection/3 name lookup across projects and its
+      `:ambiguous_name` answer (collections.ex:111-153); download always names
+      its project by id and looks the collection up with get_collection/2
     - The rest of CollectionsController (put, put_all, get, delete, delete_all,
-      stream) belongs to the Collections API capability
+      stream) and API.CollectionController (GET and PUT by id) belong to the
+      Collections API capability
 
 related:
-  - lib/lightning_web/controllers/collections_controller.ex
-  - lib/lightning_web/controllers/fallback_controller.ex
+  - lib/lightning_web/controllers/collection_download_controller.ex
+  - lib/lightning_web/controllers/browser_fallback_controller.ex
   - lib/lightning_web/controllers/user_auth.ex
   - lib/lightning_web/views/error_view.ex
   - lib/lightning_web/live/project_live/collections_component.ex
@@ -79,8 +79,8 @@ related:
   - lib/lightning/collections/collection.ex
   - lib/lightning/policies/collections.ex
   - lib/lightning/policies/project_users.ex
-  - lib/lightning/projects/scope.ex
-  - test/lightning_web/collections_controller_test.exs
+  - lib/lightning/scope.ex
+  - test/lightning_web/collections/download_test.exs
   - test/lightning_web/controllers/project_mfa_enforcement_test.exs
   - test/lightning_web/confirmation_lockout_recovery_test.exs
 flows: []
@@ -122,11 +122,11 @@ what's in the file and what happens when the download goes wrong.
 
 ## 3. Who can do what
 
-Source: `collections_controller.ex:113`, `:150-159` asks `Policies.Collections`
+Source: `collection_download_controller.ex:17-23` asks `Policies.Collections`
 for `:access_collection`, which defers to `ProjectUsers` `:access_project`
-(`policies/collections.ex:53-55`); `project_users.ex:134` (MFA unsatisfied
-denies), `:136` and `:193-194` (standing is a role row or support access);
-`scope.ex:149-152` (scheduled deletion denies).
+(`policies/collections.ex:58`); `decision.ex:59-66` (MFA unsatisfied denies),
+`:136` and `:193-194` (standing is a role row or support access);
+`scope.ex:363-365` (scheduled deletion denies).
 
 | Action                  | Viewer | Editor | Admin | Owner | Superuser (no row)         | Support (no row)               |
 | ----------------------- | ------ | ------ | ----- | ----- | -------------------------- | ------------------------------ |
@@ -136,36 +136,37 @@ denies), `:136` and `:193-194` (standing is a role row or support access);
 **Preconditions beyond role**
 
 - Signed in, with no pending TOTP step and not locked out pending email
-  confirmation (`user_auth.ex:288-311`).
+  confirmation (`user_auth.ex:280-303`).
 - If the project requires MFA, the member must be enrolled, or the download is
-  refused with 401 (`project_users.ex:134`;
+  refused with 401 (`decision.ex:59-66`;
   `project_mfa_enforcement_test.exs:216-254`).
 - The collection must exist in the named project (404 otherwise,
-  `collections.ex:82-87`, `fallback_controller.ex:10-15`), and the project must
-  not be scheduled for deletion (401, `scope.ex:149-152`).
+  `collections.ex:91-98`, `browser_fallback_controller.ex:12-17`), and the
+  project must not be scheduled for deletion (401, `scope.ex:363-365`).
 
 ## 4. What it touches
 
 **Hop 1, project-settings-collections**
 
 - Reads: none beyond the tab's own collection list; the link is a plain
-  `<a href>` with no `target` (`collections_component.ex:344-352`)
+  `<a href>` with no `target` (`collections_component.ex:353-361`)
 - Writes: none
 
 **Hop 2, controller:collections-download**
 
-- Reads: `collections` (by project id and name, `collections.ex:82-87`);
-  `projects` and `project_users` for the access check (`scope.ex:171-199`);
-  `collections_items`, ordered by id, 501 rows per query with `id > cursor`
-  until a query returns none (`collections_controller.ex:114-119`, `:194-210`;
-  `collections.ex:187-204`, `:430-441`)
+- Reads: `collections` (by project id and name, `collections.ex:91-98`);
+  `projects` and `project_users` for the access check (`scope.ex:323-360`);
+  `collections_items`, ordered by id, 500 rows per query with `id > cursor`
+  until a query returns fewer than 500 (`collection_download_controller.ex:24`;
+  `collections.ex:304-327`, `:628-639`)
 - Writes: none
 - Response: `200 application/json`, chunked,
   `content-disposition: attachment; filename="<name>.json"`, body `[` then one
-  chunk per item then `]` (`collections_controller.ex:121-127`, `:167-183`).
-  Each item is `{key, value, created, updated}` (`item.ex:54-65`). Errors render
+  chunk per item then `]` (`collection_download_controller.ex:26-32`, `:43-59`).
+  Each item is `{key, value, created, updated}` (`item.ex:83-95`). Errors render
   the HTML error pages: 400, 401 "Authorization Error", 404
-  (`fallback_controller.ex:10-29`; `error_view.ex`)
+  (`browser_fallback_controller.ex:12-31`; `error_view.ex`), the same pages as
+  before the download moved to its own controller
 
 **Hop 3, project-settings-collections**
 
@@ -187,13 +188,12 @@ denies), `:136` and `:193-194` (standing is a role row or support access);
 **Depends on config**
 
 - `require_email_verification` flag (see `config_variants`)
-- `max_database_limit` sets the page size of each database read, not the size of
-  the file (`config/config.exs:229-231`)
+- `stream_page_size` sets the page size of each database read, not the size of
+  the file (`config/config.exs:230`)
 
 **Product limits**
 
-- none; every record is streamed in pages of 501
-  (`collections_controller.ex:194-210`)
+- none; every record is streamed in pages of 500 (`collections.ex:304-327`)
 
 ## 5. Scenarios
 
@@ -213,8 +213,8 @@ Feature: Download a collection
     Then the browser receives "patients.json" as an "application/json" attachment
     And the file is a JSON array holding records "key-1" and "key-2", each with key, value, created and updated
     And the collections tab is still showing
-    # collections_component.ex:344-352; collections_controller.ex:110-129, :167-183; item.ex:54-65
-    # collections_controller_test.exs:1248-1286
+    # collections_component.ex:353-361; collection_download_controller.ex:14-59; item.ex:83-95
+    # download_test.exs:14-46
 
   @S02
   Scenario: The download holds every record, not one page
@@ -222,7 +222,7 @@ Feature: Download a collection
     Given the project has a collection "patients" with 1200 records
     When I download "patients"
     Then the file holds 1200 records in the order they were first stored
-    # collections_controller.ex:117, :194-210 (pages of max_database_limit + 1 = 501 by id until empty); collections.ex:430-441
+    # collection_download_controller.ex:24; collections.ex:304-327, :628-639 (pages of stream_page_size = 500 by id until a short page)
     # Read from code; no test downloads more than two records.
 
   @S03
@@ -231,7 +231,7 @@ Feature: Download a collection
     Given the project has a collection "patients" with no records
     When I download "patients"
     Then the file contains "[]"
-    # collections_controller.ex:167-183; collections_controller_test.exs:1288-1299
+    # collection_download_controller.ex:43-59; download_test.exs:48-59
 
   @S04
   Scenario: Non-member cannot download another project's collection
@@ -241,8 +241,8 @@ Feature: Download a collection
     When I visit "/download/collections/<project_id>/patients"
     Then I see "Authorization Error"
     And no file is downloaded
-    # collections_controller.ex:113, :150-159; policies/collections.ex:53-55; fallback_controller.ex:24-29
-    # collections_controller_test.exs:1301-1313 (asserts 401)
+    # collection_download_controller.ex:17-23; policies/collections.ex:58; browser_fallback_controller.ex:26-31
+    # download_test.exs:61-72 (asserts 401)
 
   @S05
   Scenario: Unenrolled member of an MFA-required project cannot download
@@ -252,7 +252,7 @@ Feature: Download a collection
     When I visit "/download/collections/<project_id>/patients"
     Then I see "Authorization Error"
     And an enrolled member of an MFA-required project still receives the file
-    # project_users.ex:134; project_mfa_enforcement_test.exs:216-254
+    # decision.ex:59-66; project_mfa_enforcement_test.exs:216-254
 
   @S06
   Scenario: Signed-out visitor is sent to log in
@@ -260,7 +260,7 @@ Feature: Download a collection
     Given I am not logged in
     When I visit "/download/collections/<project_id>/patients"
     Then I am on "/users/log_in"
-    # user_auth.ex:290-299, :490-492
+    # user_auth.ex:282-291, :464-466
     # Read from code; no download test covers the signed-out case.
 
   @S07 @variant:require-email-verification
@@ -271,53 +271,50 @@ Feature: Download a collection
     When I visit "/download/collections/<project_id>/patients"
     Then I am on "/users/confirm-required"
     And no record from "patients" is served
-    # user_auth.ex:305-306; collections_controller_test.exs:1328-1358; confirmation_lockout_recovery_test.exs:219-227
+    # user_auth.ex:297-298; download_test.exs:89-118; confirmation_lockout_recovery_test.exs:219-227
 ```
 
 ## 6. Unclear value
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                               | Where                                           | What a user sees                                                                                      | Disposition |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------- |
-| The closing `]` is sent with `{:ok, conn} =`; if the client disconnects mid-download the per-item loop halts on `{:error, :closed}` and the final chunk then raises a `MatchError` | `collections_controller.ex:175-181`             | nothing (they already cancelled); an error in the server logs and Sentry for every cancelled download | fix         |
-| The 200 status and opening `[` are sent before any item is read, so a database error mid-stream cannot become an error page                                                        | `collections_controller.ex:168-169`, `:201-209` | a truncated, invalid `.json` file saved as if it succeeded                                            | decide      |
+| What                                                                                                                                                                               | Where                                                               | What a user sees                                                                                      | Disposition |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------- |
+| The closing `]` is sent with `{:ok, conn} =`; if the client disconnects mid-download the per-item loop halts on `{:error, :closed}` and the final chunk then raises a `MatchError` | `collection_download_controller.ex:51-57`                           | nothing (they already cancelled); an error in the server logs and Sentry for every cancelled download | fix         |
+| The 200 status and opening `[` are sent before any item is read, so a database error mid-stream cannot become an error page                                                        | `collection_download_controller.ex:44-45`, `collections.ex:304-327` | a truncated, invalid `.json` file saved as if it succeeded                                            | decide      |
 
 ### 6.2 Quirks and implementation details
 
-| What                                                                                                                                                                                                                                  | Where                                                                                                         | Disposition |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------- |
-| The controller re-implements the project gate with different outcomes from `shared-project-scope`: non-member, MFA-unenrolled and scheduled-for-deletion all get a 401 "Authorization Error" page, not "Not Found" or `/mfa_required` | `collections_controller.ex:113`; `fallback_controller.ex:24-29`                                               | decide      |
-| `value` is written as the stored JSON string, not parsed, so the file is an array of objects whose `value` is an escaped string                                                                                                       | `item.ex:30`, `:54-65`                                                                                        | decide      |
-| Timestamps are named `created` and `updated` in the file, matching the API and preview, not `inserted_at`                                                                                                                             | `item.ex:58-61`                                                                                               | preserve    |
-| Each page is a separate query with no transaction, so writes during a long download can appear or be missed; ordering by id means records updated mid-download keep their position                                                    | `collections_controller.ex:185-210`; `collections.ex:430-441`                                                 | preserve    |
-| A final empty query runs after the last page to detect the end                                                                                                                                                                        | `collections_controller.ex:204-206`                                                                           | preserve    |
-| One HTTP chunk per item, unlike the API stream which batches 100                                                                                                                                                                      | `collections_controller.ex:172-179` vs `:12`, `:223`                                                          | preserve    |
-| Filename is the collection name, which the name format already keeps URL- and filename-safe                                                                                                                                           | `collections_controller.ex:125`; `collection.ex:40-41`                                                        | preserve    |
-| Route sits under `/download/collections/:project_id/:name`, outside `/projects/:project_id`, beside `/download/yaml`                                                                                                                  | `router.ex:195-199`                                                                                           | decide      |
-| The tests send `accept: text/html,*/*`; the `:browser` pipeline only accepts html, so a request without it negotiates differently                                                                                                     | `router.ex:22`; `collections_controller_test.exs:1244-1246`; `confirmation_lockout_recovery_test.exs:223-225` | preserve    |
+| What                                                                                                                                                                                                                                  | Where                                                                                       | Disposition |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------- |
+| The controller re-implements the project gate with different outcomes from `shared-project-scope`: non-member, MFA-unenrolled and scheduled-for-deletion all get a 401 "Authorization Error" page, not "Not Found" or `/mfa_required` | `collection_download_controller.ex:17-23`; `browser_fallback_controller.ex:26-31`           | decide      |
+| `value` is written as the stored JSON string, not parsed, so the file is an array of objects whose `value` is an escaped string                                                                                                       | `item.ex:30`, `:54-65`                                                                      | decide      |
+| Timestamps are named `created` and `updated` in the file, matching the API and preview, not `inserted_at`                                                                                                                             | `item.ex:58-61`                                                                             | preserve    |
+| Each page is a separate query with no transaction, so writes during a long download can appear or be missed; ordering by id means records updated mid-download keep their position                                                    | `collection_download_controller.ex:24`, `:43-59`; `collections.ex:304-327`, `:628-639`      | preserve    |
+| A final empty query runs only when the last page is exactly full; a short page ends the stream                                                                                                                                        | `collections.ex:316-324`                                                                    | preserve    |
+| One HTTP chunk per item, unlike the API stream which batches 100                                                                                                                                                                      | `collection_download_controller.ex:47-55` vs `collections_controller.ex:20`, `:129-140`     | preserve    |
+| Filename is the collection name, which the name format already keeps URL- and filename-safe                                                                                                                                           | `collection_download_controller.ex:30`; `collection.ex:54-56`                               | preserve    |
+| Route sits under `/download/collections/:project_id/:name`, outside `/projects/:project_id`, beside `/download/yaml`                                                                                                                  | `router.ex:243-247`                                                                         | decide      |
+| The tests send `accept: text/html,*/*`; the `:browser` pipeline only accepts html, so a request without it negotiates differently                                                                                                     | `router.ex:23`; `download_test.exs:10-12`; `confirmation_lockout_recovery_test.exs:223-225` | preserve    |
 
 ### 6.3 Unreachable or dead code
 
-| What                                               | Where                               | Why unreachable                                                                                        |
-| -------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `stream_all_in_chunks/3` first clause              | `collections_controller.ex:187-192` | download passes `max_database_limit + 1` (`:117`), which fails the `limit <= max_database_limit` guard |
-| `key_pattern` and timestamp filters in `get_all/3` | `collections.ex:192-199`            | download passes `nil` and no timestamp params (`collections_controller.ex:115-119`)                    |
+| What                                               | Where                                | Why unreachable                                                                        |
+| -------------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `key_pattern` and timestamp filters in `get_all/3` | `collections.ex:288-293`, `:641-671` | download passes `nil` and no timestamp params (`collection_download_controller.ex:24`) |
 
 ### 6.4 Performance and operational limits
 
-| What                                                                                                                   | Where                                                                | User-visible? | Disposition |
-| ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------- | ----------- |
-| Records are read 501 per query (`max_database_limit` 500 + 1) and streamed, so memory stays flat for large collections | `config/config.exs:229-231`; `collections_controller.ex:117`, `:199` | no            | preserve    |
+| What                                                                                                         | Where                                             | User-visible? | Disposition |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ------------- | ----------- |
+| Records are read 500 per query (`stream_page_size`) and streamed, so memory stays flat for large collections | `config/config.exs:230`; `collections.ex:304-327` | no            | preserve    |
 
 ### 6.5 Things seen but not understood
 
-- An earlier note cites the route at `router.ex:222-224`; in the tree read it is
-  at `router.ex:197-199` (`:222-224` is `retry_run`). The view annotation's S19
-  already cites `:197-199`.
+- The route is at `router.ex:245-247`; the view annotation's S19 cites it too.
 - `refute_serves` in the lockout test accepts any refusal shape, so S07's
   `/users/confirm-required` redirect is pinned only by
-  `collections_controller_test.exs:1356`, not by the shared lockout test.
+  `download_test.exs:89-118`, not by the shared lockout test.
 
 ## 7. Not migrating
 

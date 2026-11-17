@@ -52,7 +52,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/history  RunLive.Index :index # exit, router.ex:294
+    - live /projects/:project_id/history  RunLive.Index :index # exit, router.ex:342
   events:
     - ProjectLive.Settings#set_digest # entry, owned by project-settings-collaborators (settings.ex:612-645)
   js_hooks: []
@@ -186,7 +186,7 @@ landing is governed by shared-project-scope.
   (`projects.ex:814-825`); no audit event
 - Hop 2: none beyond Oban's own job state
 - Hop 3: `user_return_to` in the session when the recipient is signed out
-  (`user_auth.ex:296-298`, `:490-491`)
+  (`user_auth.ex:288-290`, `:464-465`)
 
 **Immediate side effects** (in the preference request)
 
@@ -297,7 +297,7 @@ Feature: Project digest email
     When my digest arrives
     Then under "Intake" I see "See this workflow's failures grouped by error" linking to the workflow health page
     And under "Sync" I see only the history link
-    # user_notifier.ex:365-382; router.ex:304
+    # user_notifier.ex:365-382; router.ex:352
     # user_notifier_test.exs:208-291 (daily body)
 
   @S07
@@ -309,7 +309,7 @@ Feature: Project digest email
     Then I am asked to log in
     When I log in
     Then I am on the history page with the workflow chip "Workflow is Intake" and the digest's window
-    # user_auth.ex:288-298, :490-491 (current_path keeps the query string)
+    # user_auth.ex:280-290, :464-465 (current_path keeps the query string)
 ```
 
 Setting the preference, and refusing to set someone else's, are owned by

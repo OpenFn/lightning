@@ -15,7 +15,7 @@ trigger:
     - panel and IDE controls render only while their host panel is in a run state (ManualRunPanel.tsx:680-703; FullScreenIDE.tsx:924-970)
 
 inherits:
-  - shared-authenticated-session    # both run endpoints sit behind :require_authenticated_user (router.ex:215-225)
+  - shared-authenticated-session    # both run endpoints sit behind :require_authenticated_user (router.ex:263-273)
   - shared-project-scope            # who can open the editor at all; MFA and scheduled-deletion refusals on the endpoints
   - shared-editor-session           # sync state, can_edit_workflow / can_run_workflow, limits delivery, saveWorkflow, content lock, KeyboardProvider
 
@@ -47,8 +47,8 @@ inventory:
     - Lightning.Policies.ProjectUsers :access_project   # workflow_controller.ex:220-226
   workers: []                                           # runs go to the run queue for external workers, not Oban
   api_endpoints:
-    - post /projects/:project_id/workflows/:workflow_id/runs   WorkflowController :create_run   # router.ex:215-217; inputs and writes owned by workflow-editor-manual-run
-    - post /projects/:project_id/runs/:run_id/retry            WorkflowController :retry_run    # router.ex:223-225
+    - post /projects/:project_id/workflows/:workflow_id/runs   WorkflowController :create_run   # router.ex:263-265; inputs and writes owned by workflow-editor-manual-run
+    - post /projects/:project_id/runs/:run_id/retry            WorkflowController :retry_run    # router.ex:271-273
   emails: []
   config:
     - user.preferences.experimental_features
@@ -155,7 +155,7 @@ from the session context (`workflow_channel.ex:1516-1541`).
 - A retry needs the step's input not wiped and the workflow not deleted
   (`work_orders.ex:327-353`).
 - MFA and scheduled-deletion refusals come from the policy guard
-  (`project_users.ex:134`; owned by shared-project-scope).
+  (`decision.ex:59-66`; owned by shared-project-scope).
 
 ## 4. What it touches
 
@@ -351,7 +351,7 @@ Feature: Run and retry controls
     Then the response is 400 with "Run limit reached" and no run is created
     And a control that sent it shows the refusal in its failure toast
     # workflow_channel.ex:1381, :2417-2419, :2437-2473; useWorkflow.tsx:963-965, :998-1001
-    # helpers.ex:51-53; workflow_controller.ex:235, :246-249; fallback_controller.ex:55-63; useRunRetry.ts:385-388; api/dataclips.ts:160-170
+    # helpers.ex:51-53; workflow_controller.ex:235, :246-249; browser_fallback_controller.ex:46-51; useRunRetry.ts:385-388; api/dataclips.ts:160-170
     # workflow_controller_test.exs:261-286, :451-476
 
   @S12
@@ -361,7 +361,7 @@ Feature: Run and retry controls
     And <who>
     When a retry of "R" is posted through <project>
     Then no new run is created and the response is <status>
-    # workflow_controller.ex:219-234, :264-275, :284-294; project_users.ex:167-172; fallback_controller.ex:24-29
+    # workflow_controller.ex:219-234, :264-275, :284-294; project_users.ex:182-192; browser_fallback_controller.ex:26-31
     # workflow_controller_test.exs:535-586 (cross-project and missing run only; no viewer test)
 
     Examples:

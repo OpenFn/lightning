@@ -37,7 +37,7 @@ inventory:
     - CredentialIndexComponent#cancel_credential_deletion
   js_hooks: []
   policies:
-    - Lightning.Policies.Users (:edit_credential, :delete_credential)
+    - Lightning.Policies.Credentials (:edit_credential, :delete_credential)
     - Lightning.Policies.Credentials (:create/edit/delete_keychain_credential)
   workers: []
   api_endpoints: []
@@ -90,15 +90,17 @@ keychains follow project role.
 
 ## 3. Who can do what
 
-Credentials and OAuth clients (`lib/lightning/policies/users.ex:42-44`):
-ownership, not project role.
+Credentials (`lib/lightning/policies/credentials.ex:76-147`) and OAuth clients
+(`lib/lightning/policies/users.ex:42-44`): ownership, not project role.
 
-| Action                                  | Credential owner | Anyone else                                          |
-| --------------------------------------- | ---------------- | ---------------------------------------------------- |
-| See the row                             | yes              | yes, when it is shared with the project being viewed |
-| Edit, delete, transfer, cancel deletion | yes              | no                                                   |
+| Action                  | Credential owner                                     | Anyone else                                          |
+| ----------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
+| See the row             | yes                                                  | yes, when it is shared with the project being viewed |
+| Edit, transfer          | yes, unless the credential is scheduled for deletion | no                                                   |
+| Delete, cancel deletion | yes                                                  | no                                                   |
 
-Keychain credentials (`lib/lightning/policies/credentials.ex:54-63`, `:87-98`):
+Keychain credentials
+(`lib/lightning/policies/credentials.ex:119-146, :203-206`):
 
 | Action                        | Viewer | Editor | Admin | Owner | Superuser (no row) | Support (no row)               |
 | ----------------------------- | ------ | ------ | ----- | ----- | ------------------ | ------------------------------ |
@@ -108,7 +110,7 @@ Keychain credentials (`lib/lightning/policies/credentials.ex:54-63`, `:87-98`):
 **Preconditions beyond role**
 
 - Keychain actions also require the project's MFA requirement to be met
-  (`policies/credentials.ex:90-93`).
+  (`policies/credentials.ex:119-146, :203-206`).
 - Creating a project credential is gated by the host page's
   `can_create_project_credential` (`credential_index_component.ex:92`).
 
@@ -154,8 +156,8 @@ Feature: Credential index
     # Value: people can maintain their own secrets.
     Given I own credential "DHIS2 prod"
     When I open the credential list
-    Then I see edit, delete and transfer actions for "DHIS2 prod"
-    # credential_index_component.html.heex:72
+    Then I see transfer, edit and delete actions for "DHIS2 prod", each shown only if the credentials policy allows it
+    # credential_index_component.html.heex:72-115, credential_index_component.ex:394-419
 
   @S02
   Scenario: Another member's credential has no edit actions
@@ -164,7 +166,7 @@ Feature: Credential index
     When I open the project's credential list
     Then I see "DHIS2 prod"
     And I see no edit, delete or transfer actions for it
-    # credential_index_component.html.heex:72, policies/users.ex:42-44
+    # credential_index_component.html.heex:72-115, policies/credentials.ex:76-147
 
   @S03
   Scenario: Editor cannot manage keychains
@@ -173,7 +175,7 @@ Feature: Credential index
     When I open the project's credential list
     Then I see "By district"
     And I see no edit or delete actions for it
-    # credential_index_component.html.heex:134, policies/credentials.ex:92-93
+    # credential_index_component.html.heex:134, policies/credentials.ex:119-146, :203-206
 
   @S04
   Scenario: Admin deletes a keychain
@@ -190,6 +192,7 @@ Feature: Credential index
     Given I own credential "DHIS2 prod" which is scheduled for deletion
     When I cancel its deletion
     Then I see "Credential deletion canceled"
+    And "DHIS2 prod" offers "Edit", "Transfer" and "Delete" again
     # credential_index_component.ex:353-374, lib/lightning/credentials.ex:936-940
 
   @S06
@@ -198,7 +201,7 @@ Feature: Credential index
     Given credential "DHIS2 prod" is owned by someone else
     When I send "edit_credential" for "DHIS2 prod"
     Then I see "You are not authorized to perform this action"
-    # credential_index_component.ex:224-238, :420-424
+    # credential_index_component.ex:230-244, :412-419
 ```
 
 ## 6. Unclear value

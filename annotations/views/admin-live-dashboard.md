@@ -12,10 +12,10 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the HTTP request passes `[:browser, :require_authenticated_user,
-      :require_superuser]` (`lib/lightning_web/router.ex:358-361`;
-      `controllers/user_auth.ex:288-311`, `:415-438`)
+      :require_superuser]` (`lib/lightning_web/router.ex:406-409`;
+      `controllers/user_auth.ex:280-303`, `:401-412`)
     - the socket mount passes `{LightningWeb.InitAssigns, :default}` then
-      `{LightningWeb.Hooks, :ensure_admin}` (`router.ex:365-368`;
+      `{LightningWeb.Hooks, :ensure_admin}` (`router.ex:413-416`;
       `init_assigns.ex:17-35`; `hooks.ex:40-53`)
     - entered from "Sys Info" in the project side menu, shown to superusers only
       (`components/layouts/live.html.heex:45-58`; shared-project-header S17);
@@ -47,7 +47,7 @@ config_variants:
 
 inventory:
   routes:
-    - live_dashboard /dashboard  Phoenix.LiveDashboard.PageLive # router.ex:363-369; expands to live "/", "/:page", "/:node/:page" and GET "/css-:md5", "/js-:md5" in live_session :live_dashboard (pld:router.ex macro, :325-333)
+    - live_dashboard /dashboard  Phoenix.LiveDashboard.PageLive # router.ex:411-417; expands to live "/", "/:page", "/:node/:page" and GET "/css-:md5", "/js-:md5" in live_session :live_dashboard (pld:router.ex macro, :325-333)
   events:
     - Phoenix.LiveDashboard.RequestLoggerPage#toggle_cookie # pld:pages/request_logger_page.ex:63-69
     - Phoenix.LiveDashboard.RequestLoggerPage#toggle_autoscroll # pld:pages/request_logger_page.ex:71-72
@@ -58,16 +58,16 @@ inventory:
     - PhxRequestLoggerQueryParameter # pld:pages/request_logger_page.ex:111
     - PhxRequestLoggerCookie # pld:pages/request_logger_page.ex:154
   policies:
-    - Lightning.Policies.Users :access_admin_space (policies/users.ex:19-21),
+    - Lightning.Policies.Users :access_admin_space (policies/users.ex:30-32),
       via LightningWeb.Hooks :ensure_admin (hooks.ex:40-53)
-    - LightningWeb.UserAuth.require_superuser plug (user_auth.ex:415-438)
+    - LightningWeb.UserAuth.require_superuser plug (user_auth.ex:401-412)
   workers: []
   api_endpoints: []
   emails: []
   config:
     - live_dashboard option metrics:
-        LightningWeb.Telemetry (router.ex:364; telemetry.ex:27-98)
-    - live_dashboard option on_mount (router.ex:365-368)
+        LightningWeb.Telemetry (router.ex:412; telemetry.ex:27-98)
+    - live_dashboard option on_mount (router.ex:413-416)
     - endpoint plug Phoenix.LiveDashboard.RequestLogger, param_key
       "request_logger", cookie_key "request_logger" (endpoint.ex:65-67)
     - :lightning, :ecto_repos [Lightning.Repo] (config/config.exs:11), used by
@@ -160,8 +160,8 @@ needs explaining.
 | Kill database connections                      | no             | no                | no                | no        |
 | See environment variables                      | no             | no                | no                | no        |
 
-Sources: `router.ex:358-369`; `user_auth.ex:288-311`, `:415-438`;
-`hooks.ex:40-53`; `policies/users.ex:19-21`; `live.html.heex:45-58`;
+Sources: `router.ex:406-417`; `user_auth.ex:280-303`, `:401-412`;
+`hooks.ex:40-53`; `policies/users.ex:30-32`; `live.html.heex:45-58`;
 `pld:router.ex:307`, `pld:info/process_info_component.ex:61-63`;
 `pld:pages/ecto_stats_page.ex:191-195`; `pld:router.ex:29-31`. Support access is
 a separate flag the policy ignores (shared-admin-space section 3).
@@ -169,10 +169,10 @@ a separate flag the policy ignores (shared-admin-space section 3).
 **Preconditions beyond role**
 
 - Revoked, TOTP-pending and locked-out sessions are refused first by
-  shared-authenticated-session (`user_auth.ex:302-306`;
+  shared-authenticated-session (`user_auth.ex:294-298`;
   `init_assigns.ex:22-30`).
-- Two checks: the HTTP plug (`router.ex:361`) and the socket mount hooks
-  (`router.ex:365-368`); see shared-admin-space S04, S05.
+- Two checks: the HTTP plug (`router.ex:409`) and the socket mount hooks
+  (`router.ex:413-416`); see shared-admin-space S04, S05.
 - A request logger link carries a signed token and works for 1 hour after it is
   generated; the token, not the opener's role, selects the request
   (`endpoint.ex:65-67`; `pld:request_logger.ex:9`, `:48-56`). See 6.2 and
@@ -224,7 +224,7 @@ written to the superuser's browser by the library hook
 **Product limits**
 
 - Metrics charts start empty and only show data collected while the page is open
-  (no `metrics_history`, `router.ex:363-369`; `pld:router.ex:41-45`)
+  (no `metrics_history`, `router.ex:411-417`; `pld:router.ex:41-45`)
 - A request logger link or cookie expires after 1 hour
   (`pld:request_logger.ex:9`)
 
@@ -243,7 +243,7 @@ Feature: System dashboard
     When I visit "/dashboard"
     Then I am on "/dashboard/home"
     And I see "Home"
-    # router.ex:358-369; live_dashboard_test.exs:33-47 (asserts the redirect and that the page contains "Home")
+    # router.ex:406-417; live_dashboard_test.exs:33-47 (asserts the redirect and that the page contains "Home")
 
   @S02
   Scenario: The dashboard offers the system, process and database pages
@@ -253,7 +253,7 @@ Feature: System dashboard
     Then the dashboard menu offers "OS Data", "Memory Allocators", "Metrics", "Request Logger", "Applications", "Processes", "Ports", "Sockets", "ETS" and "Ecto Stats"
     When I open "Ecto Stats"
     Then I see statistics for "Lightning.Repo"
-    # pld:router.ex:379-395 (page list; no additional_pages passed, router.ex:363-369)
+    # pld:router.ex:379-395 (page list; no additional_pages passed, router.ex:411-417)
     # OS Data needs os_mon (mix.exs:65); Ecto Stats needs ecto_psql_extras (mix.exs:115) and auto-discovers repos (pld:pages/ecto_stats_page.ex:18, :35-45; config/config.exs:11)
 
   @S03
@@ -267,7 +267,7 @@ Feature: System dashboard
     And I see charts for "lightning.ui.history"
     When a user loads a project's history page
     Then eventually the "lightning.ui.history" chart shows a new point
-    # telemetry.ex:27-98; router.ex:364; history span emitted at run_live/index.ex:204-215
+    # telemetry.ex:27-98; router.ex:412; history span emitted at run_live/index.ex:204-215
     # the lightning.api.webhook charts are listed in telemetry.ex:69-84 but never receive data (6.1)
 
   @S04
@@ -276,7 +276,7 @@ Feature: System dashboard
     Given I am a superuser
     When I open "/dashboard/home"
     Then I do not see an environment variables section
-    # env_keys not passed (router.ex:363-369); pld:router.ex:29-31, :164-175; pld:system_info.ex:753
+    # env_keys not passed (router.ex:411-417); pld:router.ex:29-31, :164-175; pld:system_info.ex:753
 
   @S05
   Scenario: A process cannot be killed from the dashboard
@@ -286,7 +286,7 @@ Feature: System dashboard
     And I open the details of any process
     Then I see the process details
     And I do not see a "Kill process" button
-    # allow_destructive_actions not passed, defaults to false (router.ex:363-369; pld:router.ex:61-66, :307)
+    # allow_destructive_actions not passed, defaults to false (router.ex:411-417; pld:router.ex:61-66, :307)
     # pld:info/process_info_component.ex:61-63; the kill handler asserts the flag (:82-84)
 
   @S06
@@ -332,32 +332,32 @@ Feature: System dashboard
 | What                                                                                                                                                                                                       | Where                                                               | Disposition |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------- |
 | The request logger plug runs on every request to the endpoint, before routing, so the log lines of a request carrying a valid `?request_logger=` token stream to the tab of the superuser who generated it | `endpoint.ex:65-67`; `pld:request_logger.ex:25-56`                  | decide      |
-| The request logger is on because the library enables it by default; Lightning never passes `request_logger:`                                                                                               | `router.ex:363-369`; `pld:router.ex:51-52`, `:235-248`              | decide      |
-| The dashboard runs in the library's own live_session `:live_dashboard` with its own root layout: no Lightning sidebar, menu, flash, banners or Back link                                                   | `router.ex:363-369`; `pld:router.ex:325-333`                        | decide      |
-| InitAssigns on this route reads the `sidebar_collapsed` preference, assigns banners and attaches a `toggle_sidebar` hook, none of which the dashboard renders or sends                                     | `router.ex:366`; `init_assigns.ex:37-57`                            | preserve    |
-| HTTP refusal shows the "No Access" card without Back (`:no_access_no_back`); a socket refusal by the hook shows it with Back. Recorded by shared-admin-space 6.2                                           | `user_auth.ex:433`; `hooks.ex:50`                                   | decide      |
-| The home page shows "Dashboard" and the LiveDashboard version, not Lightning's name and version, because `home_app` is not passed                                                                          | `router.ex:363-369`; `pld:router.ex:33-34`, `:177-189`              | decide      |
+| The request logger is on because the library enables it by default; Lightning never passes `request_logger:`                                                                                               | `router.ex:411-417`; `pld:router.ex:51-52`, `:283-296`              | decide      |
+| The dashboard runs in the library's own live_session `:live_dashboard` with its own root layout: no Lightning sidebar, menu, flash, banners or Back link                                                   | `router.ex:411-417`; `pld:router.ex:325-333`                        | decide      |
+| InitAssigns on this route reads the `sidebar_collapsed` preference, assigns banners and attaches a `toggle_sidebar` hook, none of which the dashboard renders or sends                                     | `router.ex:414`; `init_assigns.ex:37-57`                            | preserve    |
+| HTTP refusal shows the "No Access" card without Back (`:no_access_no_back`); a socket refusal by the hook shows it with Back. Recorded by shared-admin-space 6.2                                           | `user_auth.ex:410`; `hooks.ex:50`                                   | decide      |
+| The home page shows "Dashboard" and the LiveDashboard version, not Lightning's name and version, because `home_app` is not passed                                                                          | `router.ex:411-417`; `pld:router.ex:33-34`, `:225-237`              | decide      |
 | `/dashboard/:node/:page` lets a superuser inspect any node joined through libcluster                                                                                                                       | `application.ex:103-123`; pld router macro `live "/:node/:page"`    | preserve    |
 | Ecto stats auto-discovers the repo from `:ecto_repos` rather than naming it                                                                                                                                | `config/config.exs:11`; `pld:pages/ecto_stats_page.ex:18`, `:35-45` | preserve    |
 | "Sys Info" uses a warning triangle icon for a monitoring page; owned by shared-project-header S17                                                                                                          | `live.html.heex:51-57`                                              | decide      |
-| The request logger cookie is scoped to the current host (no `request_logger_cookie_domain`)                                                                                                                | `router.ex:363-369`; `pld:router.ex:54-59`                          | preserve    |
+| The request logger cookie is scoped to the current host (no `request_logger_cookie_domain`)                                                                                                                | `router.ex:411-417`; `pld:router.ex:54-59`                          | preserve    |
 
 ### 6.3 Unreachable or dead code
 
 | What                                                                                    | Where                                                | Why unreachable                                                                                                                                  |
 | --------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `LightningWeb.Telemetry`'s own `:telemetry_poller` child with an empty measurement list | `telemetry.ex:16-22`, `:100-106`                     | `periodic_measurements/0` returns `[]`, so the poller measures nothing; the `vm.*` charts are fed by telemetry_poller's default poller (see 6.5) |
-| `function_exported?(Routes, :live_dashboard_path, 2)` guard around "Sys Info"           | `live.html.heex:50`                                  | the `live_dashboard` route is declared unconditionally (`router.ex:358-370`), so the helper always exists                                        |
+| `function_exported?(Routes, :live_dashboard_path, 2)` guard around "Sys Info"           | `live.html.heex:50`                                  | the `live_dashboard` route is declared unconditionally (`router.ex:406-418`), so the helper always exists                                        |
 | Commented-out `ConsoleReporter` child and `count_users` measurement                     | `telemetry.ex:20-21`, `:102-104`                     | comments only                                                                                                                                    |
 | "Kill process" button and `kill` handler                                                | `pld:info/process_info_component.ex:61-63`, `:82-84` | `allow_destructive_actions` is false (S05)                                                                                                       |
 | `kill_all` table                                                                        | `pld:pages/ecto_stats_page.ex:191-195`               | rejected by the library (S06)                                                                                                                    |
-| `:ensure_admin` nil-user clause; `require_superuser` JSON branch                        | `hooks.ex:31-38`; `user_auth.ex:424-429`             | owned by shared-admin-space 6.3                                                                                                                  |
+| `:ensure_admin` nil-user clause; `require_superuser` JSON branch                        | `hooks.ex:31-38`; `user_auth.ex:410`                 | owned by shared-admin-space 6.3                                                                                                                  |
 
 ### 6.4 Performance and operational limits
 
 | What                                                                                                                                                  | Where                                        | User-visible?                             | Disposition |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------- | ----------- |
-| Metrics hold no history; charts are empty on open and lost on reload                                                                                  | `router.ex:363-369`; `pld:router.ex:41-45`   | yes, empty charts                         | preserve    |
+| Metrics hold no history; charts are empty on open and lost on reload                                                                                  | `router.ex:411-417`; `pld:router.ex:41-45`   | yes, empty charts                         | preserve    |
 | Request logger tokens expire after 3600 seconds                                                                                                       | `pld:request_logger.ex:9`, `:50`             | yes, a link stops streaming after an hour | preserve    |
 | Logger level `:info` in prod, so debug lines (including Phoenix's parameter lines) do not reach a request logger stream unless `LOG_LEVEL` is lowered | `config/prod.exs:16`; `bootstrap.ex:487-505` | yes, fewer lines than in dev              | preserve    |
 | Ecto stats runs catalogue and statistics queries against the database on every page refresh                                                           | `pld:pages/ecto_stats_page.ex:193-198`       | no                                        | decide      |

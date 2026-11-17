@@ -17,7 +17,7 @@ trigger:
     - workflow-editor-ai-assistant
   reachable_when:
     - project-settings-setup: viewer is an owner and the project is not a sandbox (settings.html.heex:304, settings.ex:262-267)
-    - admin-projects: viewer is a superuser (index.ex:7, hooks.ex:40-53, policies/users.ex:19-21)
+    - admin-projects: viewer is a superuser (index.ex:7, hooks.ex:40-53, policies/users.ex:30-32)
 
 inherits:
   - shared-project-scope            # receiving end of the broadcast (S10, S11) and the Not Found gate on a scheduled project (S04)
@@ -49,7 +49,7 @@ inventory:
   policies:
     - Lightning.Policies.ProjectUsers (:delete_project)
     - Lightning.Policies.Users (:access_admin_space)
-    - Lightning.Projects.Scope (still_operable/1, the refusal during the grace period)
+    - Lightning.Scope (still_operable/1, the refusal during the grace period)
   workers:
     - Lightning.Projects (Oban, queue :background, args type purge_deleted; sweep and per-project)
   api_endpoints: []
@@ -69,7 +69,7 @@ related:
   - lib/lightning_web/live/project_live/index.html.heex
   - lib/lightning/projects.ex
   - lib/lightning/projects/events.ex
-  - lib/lightning/projects/scope.ex
+  - lib/lightning/scope.ex
   - lib/lightning/extensions/project_hook.ex
   - lib/lightning/accounts/user_notifier.ex
   - lib/lightning/helpers.ex
@@ -131,10 +131,10 @@ dates and lists don't quite match what really happens.
 
 ## 3. Who can do what
 
-Source: `lib/lightning/policies/project_users.ex:138` (`:delete_project` is
+Source: `lib/lightning/policies/project_users.ex:164` (`:delete_project` is
 owner only), `settings.ex:119-121`, `:262-267` (setup gate), `index.ex:7` with
-`hooks.ex:40-53` and `policies/users.ex:19-21` (admin list needs
-`:access_admin_space`, superuser only), `scope.ex:149-152` (nobody may operate a
+`hooks.ex:40-53` and `policies/users.ex:30-32` (admin list needs
+`:access_admin_space`, superuser only), `scope.ex:363-365` (nobody may operate a
 scheduled project).
 
 | Action                                   | Viewer | Editor | Admin | Owner | Superuser (no row)      | Support (no row) |
@@ -194,7 +194,7 @@ scheduled project).
 
 **Deferred side effects** (later, elsewhere)
 
-- Webhooks to the project's triggers get 403 `trigger_disabled`
+- Webhooks to the project's triggers get 403 with code `trigger_disabled`
   (`webhooks_controller.ex:40`, `:109-115`); cron triggers stop firing
   (`workflows.ex:1288-1291`)
 - Nightly at 02:45 the sweep enqueues one purge job per project past its date
@@ -242,7 +242,7 @@ Feature: Schedule a project for deletion
     And I see "Project scheduled for deletion"
     And project "project-1" is scheduled for deletion 7 days from now
     And every trigger in "project-1" is disabled
-    And a request to its webhook URL gets 403 with error "trigger_disabled"
+    And a request to its webhook URL gets 403 with code "trigger_disabled"
     # project_deletion_modal.ex:32-53, settings.html.heex:304-311, projects.ex:1639-1690, webhooks_controller.ex:40, :109-115
     # project_live_test.exs:168-195 (flash); projects_test.exs:1079-1102 (triggers, date)
 
@@ -336,7 +336,7 @@ Feature: Schedule a project for deletion
     Then I see "Project deletion canceled"
     And "project-1" is no longer scheduled for deletion
     And its members can open it again
-    # index.ex:96-107, projects.ex:1728-1732, scope.ex:149; project_live_test.exs:308-320 (flash only)
+    # index.ex:96-107, projects.ex:1728-1732, scope.ex:363-365; project_live_test.exs:308-320 (flash only)
 
   @S12
   Scenario: Superuser purges a scheduled project without waiting

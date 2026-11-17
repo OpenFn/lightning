@@ -1,7 +1,7 @@
 ---
 id: flow-admin-collection-reaches-project
 type: flow
-title: A collection created or moved by a superuser reaches the project
+title: A collection created or renamed by a superuser reaches the project
 owner:
 
 trigger:
@@ -19,7 +19,7 @@ trigger:
       (project-settings-collections section 3)
     - for the API hop, the caller is a run of a workflow in some project, or a
       personal access token holder, addressing the collection by name
-      (router.ex:162-172; api_auth.ex:12-38)
+      (router.ex:207-216; api_auth.ex:15-33)
 
 inherits:
   - shared-admin-space # entry gate and settings layout; this flow does not repeat them
@@ -30,8 +30,9 @@ url_params:
   - name: project_id (query, API hop)
     set_by: the job or API caller, optionally
     effect:
-      scopes name lookup to one project (collections_controller.ex:131-141;
-      collections.ex:66-72)
+      scopes name lookup to one project (collections_controller.ex:99-110;
+      collections.ex:111-133); one that isn't a UUID names no collection, so the
+      lookup is 404 (naming_test.exs:225)
 
 config_variants:
   default: {
@@ -39,22 +40,25 @@ config_variants:
     } # every hook returns :ok; read under this one
   collection-limited: {
       Lightning.Extensions.collection_hook: <adapter that refuses or meters>,
-    } # plan limits; affects create and delete only (collections.ex:115-120, :169-176), never rename or move (6.1)
+    } # plan limits; affects create and delete only (collections.ex:181-186, :259-266), never rename
 
 inventory:
   routes:
-    - live /settings/collections  CollectionLive.Index :index # entry, owned by admin-collections (router.ex:285)
+    - live /settings/collections  CollectionLive.Index :index # entry, owned by admin-collections (router.ex:333)
     - '/collections/:name and /collections/:name/:key  CollectionsController
-      (stream, get, put, put_all, delete, delete_all)' # API hop (router.ex:162-172); owned by capability:collections-api
+      (stream, get, put, put_all, delete, delete_all)' # API hop (router.ex:206-216); owned by capability:collections-api
     - live /projects/:project_id/settings  ProjectLive.Settings :index # exit, owned by project-settings-collections
   events:
-    - CollectionLive.CollectionCreationModal#save # create, rename, move (collection_creation_modal.ex:56-93); owned by admin-collections
+    - CollectionLive.CollectionCreationModal#save # create, rename (collection_creation_modal.ex:56-102); owned by admin-collections
     - CollectionLive.Index#delete_collection # delete (index.ex:48-64); owned by admin-collections
-    - ProjectLive.CollectionsComponent#toggle_action # stale-tab lookup in S06 (collections_component.ex:89-119, :237-251); owned by project-settings-collections
+    - ProjectLive.CollectionsComponent#toggle_action # stale-tab lookup in S06 (collections_component.ex:89-119, :246-260); owned by project-settings-collections
   js_hooks: []
   policies:
-    - Lightning.Policies.Collections authorize/3 for %Run{}
-      (policies/collections.ex:81-84) and %User{} (:53-79), at the API hop
+    - Lightning.Policies.Collections authorize/3 on a %Scope{} for a person or
+      the service account (policies/collections.ex:48-65), at the API hop; a run
+      is never asked it, and resolve_collection/3 finds it only its own
+      project's collections (collections_controller.ex:112-114;
+      collections.ex:135-140)
   workers: []
   api_endpoints:
     - capability:collections-api
@@ -71,7 +75,7 @@ inventory:
 related:
   - flow-download-collection # starts on the exit view once the collection is there
   - capability:collection-api-name-resolution # deferred
-  - flow-sandbox-merge # a collection created or moved into a sandbox reaches the parent only by name, empty (sandboxes.ex:289, :309-312, :344)
+  - flow-sandbox-merge # a collection created in a sandbox reaches the parent only by name, empty (sandboxes.ex:289, :309-312, :344)
   - flow-export-project-yaml
   - flow-github-sync-actions
 flows: []
@@ -87,44 +91,42 @@ the change didn't reach them, a job would keep failing on a collection that
 
 ## 2. What it does
 
-1. A superuser creates, renames, moves to another project, or deletes a
-   collection on the admin collections page, without needing to be on the
-   project.
-2. The collection's records go wherever it goes: a rename or move keeps them,
-   and a delete removes them.
+1. A superuser creates, renames or deletes a collection on the admin collections
+   page, without needing to be on the project. A collection stays in the project
+   it was created in.
+2. The collection's records stay with it: a rename keeps them, and a delete
+   removes them.
 3. Members see the change on the project's collections tab the next time it
    loads; a member acting from a tab that was already open is told the
    collection is "not found".
 4. The project's jobs see the change on their next call:
    - A new or renamed collection is found by its new name
-   - The old name, or a deleted collection, gives "Not Found"
-   - After a move, only jobs in the new project can use it; the old project's
-     jobs are refused
+   - The old name, or a deleted collection, gives 404 `not_found`
+   - Only jobs in the collection's own project can use it; jobs in another
+     project get 404 `not_found`
 
-**Straightforwardness: 3 of 5.** The direct effects are what you'd expect, but
-moving is looser than it looks, so one change can break another project.
+**Straightforwardness: 3 of 5.** The direct effects are what you'd expect, but a
+rename or delete can break a project's jobs without warning.
 
 ### Most surprising behaviours
 
-- **(3)** Renaming, moving or deleting gives no warning that jobs using the
-  collection will break, so the first sign is failed runs in a project the
-  superuser may never look at. (6.1)
-- **(3)** A move isn't checked against the new project's plan limits, and the
-  old project keeps the usage. (6.1)
+- **(3)** Renaming or deleting gives no warning that jobs using the collection
+  will break, so the first sign is failed runs in a project the superuser may
+  never look at. (6.1)
 
 ## 3. Who can do what
 
 Sources: entry gate `collection_live/index.ex:4` (`:ensure_admin`, superuser
 only; no handler re-checks, admin-collections section 3); API hop
-`collections_controller.ex:131-159` and `policies/collections.ex:53-84`; exit
-`policies/collections.ex:53-55` and `scope.ex:138-152`.
+`collections_controller.ex:99-119` and `policies/collections.ex:48-65`; exit
+`policies/collections.ex:58` and `scope.ex:267-276`.
 
-| Action                                                  | Superuser (no row)           | Project member | Support (access on) | Run in owning project | Run in another project |
-| ------------------------------------------------------- | ---------------------------- | -------------- | ------------------- | --------------------- | ---------------------- |
-| Create, rename, move or delete on /settings/collections | yes                          | no             | no                  | n/a                   | n/a                    |
-| See the result on the project's collections tab         | no (cannot open the project) | yes            | yes                 | n/a                   | n/a                    |
-| Read the collection by name through the API             | only as a member             | yes, any role  | yes                 | yes                   | no                     |
-| Write items by name through the API                     | only as a member             | editor and up  | no                  | yes                   | no                     |
+| Action                                            | Superuser (no row)           | Project member | Support (access on) | Run in owning project | Run in another project |
+| ------------------------------------------------- | ---------------------------- | -------------- | ------------------- | --------------------- | ---------------------- |
+| Create, rename or delete on /settings/collections | yes                          | no             | no                  | n/a                   | n/a                    |
+| See the result on the project's collections tab   | no (cannot open the project) | yes            | yes                 | n/a                   | n/a                    |
+| Read the collection by name through the API       | only as a member             | yes, any role  | yes                 | yes                   | no                     |
+| Write items by name through the API               | only as a member             | editor and up  | no                  | yes                   | no                     |
 
 **Preconditions beyond role**
 
@@ -132,9 +134,9 @@ only; no handler re-checks, admin-collections section 3); API hop
   `:project_scope`; admin-collections 6.2). The project's members do need MFA to
   see the result (shared-project-scope S05).
 - A run is allowed only when its workflow's project is the collection's current
-  project, read on every call (`policies/collections.ex:82-84`;
-  `runs.ex:563-567`). A move therefore changes which runs are allowed with no
-  other step.
+  project, read on every call (`collections.ex:135-140`;
+  `collections_controller.ex:112-118`). Because a collection never changes
+  project, the set of runs allowed on it never changes either.
 
 ## 4. What it touches
 
@@ -142,39 +144,43 @@ only; no handler re-checks, admin-collections section 3); API hop
 
 - Reads: `collections` with projects, `projects` for the picker
   (admin-collections section 4)
-- Writes: `collections` insert (`collections.ex:113-128`); update of `name` and
-  `project_id` (`collection_creation_modal.ex:58`, `:66-69`;
-  `collections.ex:153-157`; `collection.ex:31-33`); delete cascading to
-  `collections_items` (`collections.ex:163-179`;
+- Writes: `collections` insert with an audit event "created"
+  (`collections.ex:173-205`); update of `name` only, with an audit event
+  "updated" (`collection_creation_modal.ex:60`, `:67-72`;
+  `collections.ex:222-249`; `collection.ex:45-50`); delete cascading to
+  `collections_items` (`collections.ex:251-269`;
   `20241022021209_create_collections.exs:20`)
-- Items keep their `collection_id`, so a rename or move carries every record
-  with it (`20241022021209_create_collections.exs:20`; no item write in
-  `collections.ex:153-157`)
+- Items keep their `collection_id`, so a rename carries every record with it
+  (`20241022021209_create_collections.exs:20`; no item write in
+  `collections.ex:222-249`)
 - Flash then `push_navigate` to `/settings/collections`
-  (`collection_creation_modal.ex:73-77`; `index.ex:50-54`)
+  (`collection_creation_modal.ex:76-80`; `index.ex:50-54`)
 
 **Hop 2, capability:collections-api**
 
-- Reads: `collections` by name, optionally by project
-  (`collections_controller.ex:131-141`; `collections.ex:66-87`); the run's
-  project via `work_order -> workflow -> project` (`runs.ex:563-567`);
-  `collections_items`
+- Reads: `collections` by name among those the caller can see, optionally
+  narrowed to one project (`collections_controller.ex:99-110`;
+  `collections.ex:111-153`); the run's project via
+  `work_order -> workflow -> project` (`runs.ex:563-567`); `collections_items`
 - Writes: `collections_items` on put (outside this flow's scope beyond S01)
-- Responses that change with hop 1: 404 `{"error": "Not Found"}` for a name no
-  project holds (`fallback_controller.ex:10-15`; `error_view.ex:73-84`); the
-  same 404 for a collection now in another project
+- Responses that change with hop 1: 404 problem document with code `not_found`
+  for a name no project the caller can see holds
+  (`api/fallback_controller.ex:35-41`; `api/problem.ex:96-110`); the same 404
+  for a collection in another project; 409 `ambiguous_name` when two of the
+  caller's projects hold the name and no `project_id` is sent
+  (`api/fallback_controller.ex:56-67`)
 
 **Hop 3, project-settings-collections**
 
 - Reads: `collections` for the project, on every mount and component update
-  (`collections_component.ex:29-51`; `collections.ex:45-56`)
+  (`collections_component.ex:29-51`; `collections.ex:51-61`)
 - Writes: none in this flow
 
 **Immediate side effects**
 
 - `CollectionHook.handle_create` on create and `handle_delete` on delete, inside
-  the transaction; nothing on rename or move (`collections.ex:115-120`,
-  `:169-176`, `:153-157`). No-ops under `default`.
+  the transaction; nothing on rename (`collections.ex:181-186`, `:259-266`,
+  `:222-249`). No-ops under `default`.
 - No PubSub broadcast, no email, no Oban job at any hop
 
 **Deferred side effects**
@@ -186,7 +192,7 @@ only; no handler re-checks, admin-collections section 3); API hop
 **External, non-transactional effects**
 
 - Under `collection-limited`, whatever the hook adapter records on create and
-  delete; nothing on move (6.1)
+  delete; nothing on rename
 
 **Depends on config**
 
@@ -213,8 +219,8 @@ Feature: A collection changed by a superuser reaches the project
     When I create a collection named "patients" in "Malawi HIV" on "/settings/collections"
     Then a member of "Malawi HIV" opening the project's "Collections" tab sees "patients"
     And run "R1" can put key "k1" into "patients" by name and read it back
-    # collection_creation_modal.ex:56-77; collections.ex:113-128; collections_controller.ex:28-40, :62-70, :131-141; policies/collections.ex:81-84
-    # collections_controller_test.exs:1610-1665 (run token reads and writes its own project's collection; scoped by ?project_id)
+    # collection_creation_modal.ex:56-80; collections.ex:173-205; collections_controller.ex:22-36, :47-54, :99-110; collections_controller.ex:112-119
+    # naming_test.exs:235-260 (a run token of the project reads and writes its collection); naming_test.exs:209-223 (scoped by ?project_id)
     # collections_component.ex:29-51
 
   @S02
@@ -225,23 +231,22 @@ Feature: A collection changed by a superuser reaches the project
     When I rename "patients" to "patients-2024" on "/settings/collections"
     Then a member of "Malawi HIV" sees "patients-2024" and not "patients" on the "Collections" tab
     And run "R1" reading "patients-2024" by name gets record "k1"
-    And run "R1" reading "patients" by name gets 404 "Not Found"
-    # collection_creation_modal.ex:58, :66-69; collections.ex:153-157; collections.ex:66-72 (no row: :not_found); fallback_controller.ex:10-15
-    # collections_controller_test.exs:1480-1491 (404 for unknown name, PAT); rename path read from code
+    And run "R1" reading "patients" by name gets 404 with code "not_found"
+    # collection_creation_modal.ex:60, :67-72; collections.ex:222-249; collections.ex:111-153 (no row: :not_found); api/fallback_controller.ex:35-41
+    # naming_test.exs:16-22 (404 for a name the project hasn't got, on every route); rename path read from code
 
   @S03
-  Scenario: After a move, the data follows the collection and the old project's jobs lose access
-    # Value: once a collection belongs to another project, the old project's jobs can no longer read or overwrite that project's data.
+  Scenario: A collection stays in its project, so only that project's jobs can use it
+    # Value: a rename by a superuser never changes whose data a collection is, so another project's jobs can't read or overwrite it.
     Given "Malawi HIV" has a collection "patients" with record "k1"
-    And "Kenya TB" has no collection "patients"
     And run "R1" belongs to a workflow in "Malawi HIV" and run "R2" to a workflow in "Kenya TB"
-    When I move "patients" to "Kenya TB" on "/settings/collections"
-    Then a member of "Malawi HIV" no longer sees "patients" on the "Collections" tab
-    And a member of "Kenya TB" sees "patients" on the "Collections" tab, with its used storage unchanged
-    And run "R2" reading "patients" by name gets record "k1"
-    And run "R1" reading or writing "patients" by name gets 404 "Not Found"
-    # admin-collections S09; collection.ex:31-33 (casts project_id); collections.ex:153-157; policies/collections.ex:82-84; runs.ex:563-567
-    # collections_controller_test.exs:1667-1725 (run token on another project's collection); the move itself is untested (admin-collections 6.5)
+    When I rename "patients" to "patients-2024" on "/settings/collections"
+    Then the "Project" field on the edit form is disabled and still reads "Malawi HIV"
+    And a member of "Malawi HIV" sees "patients-2024" on the "Collections" tab
+    And run "R1" reading "patients-2024" by name gets record "k1"
+    And run "R2" reading or writing "patients-2024" by name gets 404 with code "not_found"
+    # admin-collections S09; collection.ex:45-50 (rename_changeset casts only name); collection_creation_modal.ex:155-162; collections.ex:135-140; collections_controller.ex:112-118
+    # naming_test.exs:35-64 (a run token counts only its own project's collection)
 
   @S04
   Scenario: After a delete, the collection is gone for members and jobs
@@ -250,38 +255,35 @@ Feature: A collection changed by a superuser reaches the project
     And workflow "Daily sync" in "Malawi HIV" has a run "R1"
     When I delete "patients" on "/settings/collections" after confirming
     Then a member of "Malawi HIV" sees "No collections found." on the "Collections" tab
-    And run "R1" reading "patients" by name gets 404 "Not Found"
-    # index.ex:48-54; collections.ex:163-179; 20241022021209_create_collections.exs:20 (items cascade); data_tables.ex:356-357
+    And run "R1" reading "patients" by name gets 404 with code "not_found"
+    # index.ex:48-54; collections.ex:251-269; 20241022021209_create_collections.exs:20 (items cascade); data_tables.ex:356-357
 
   @S05
-  Scenario: A member acting on an open tab after a superuser moved the collection away is told it is not found
-    # Value: a project admin working from a stale list can't rename or delete a collection that now belongs to another project.
+  Scenario: A member acting on an open tab after a superuser deleted the collection is told it is not found
+    # Value: a project admin working from a stale list can't act on a collection that a superuser has removed.
     Given I am an admin on "Malawi HIV" with the "Collections" tab open, listing "patients"
-    And a superuser has since moved "patients" to "Kenya TB"
+    And a superuser has since deleted "patients"
     When I click "Edit" on "patients"
     Then I see "Collection not found"
     And "patients" is no longer in the list
-    And "patients" in "Kenya TB" is unchanged
-    # collections_component.ex:89-107, :237-251 (lookup scoped to the tab's project, then push_navigate re-lists); collections.ex:82-87
-    # same mechanism as project-settings-collections S16 and S17, reached by a superuser move; read from code
+    # collections_component.ex:89-107, :246-260 (lookup scoped to the tab's project, then push_navigate re-lists); collections.ex:91-98
+    # same mechanism as project-settings-collections S16 and S17, reached by a superuser delete; read from code
 ```
 
 ## 6. Unclear value
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                             | Where                                                                   | What a user sees                                                                                                                      | Disposition |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Move is possible only because `Collection.changeset` casts `project_id` for updates as well as inserts; the admin edit form renders the project select in edit mode and sends it | `collection.ex:31-33`; `collection_creation_modal.ex:146-152`, `:66-69` | a superuser can move a collection, which may be an accident of the cast rather than a designed feature; S03 depends on it             | decide      |
-| A move calls no `CollectionHook`: the target project is not checked against its plan and the source is not credited                                                              | `collections.ex:153-157` vs `:115-120`, `:169-176`                      | under `collection-limited`, a move can take the target project past its limit, and the source keeps the usage (admin-collections 6.1) | decide      |
-| Rename and move give no warning that runs using the old name or project will start failing with 404                                                                              | `collection_creation_modal.ex:96-178`                                   | jobs break silently from the superuser's side; the first sign is failed runs in the project                                           | decide      |
+| What                                                                             | Where                                  | What a user sees                                                                            | Disposition |
+| -------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------- | ----------- |
+| Rename gives no warning that runs using the old name will start failing with 404 | `collection_creation_modal.ex:105-188` | jobs break silently from the superuser's side; the first sign is failed runs in the project | decide      |
 
 ### 6.2 Quirks and implementation details
 
-| What                                                                                                                                                              | Where                                                                | Disposition |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------- |
-| No broadcast: a project tab already open keeps listing a created, renamed, moved or deleted collection as it was until it remounts                                | `collections.ex:113-179`; `collections_component.ex:29-51`           | decide      |
-| The project picker lists sandboxes, so a superuser can create or move a collection straight into a sandbox; it reaches the parent only by name and empty on merge | `collection_creation_modal.ex:30-32`; `sandboxes.ex:289`, `:309-312` | decide      |
+| What                                                                                                                                                      | Where                                                                | Disposition |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------- |
+| No broadcast: a project tab already open keeps listing a created, renamed or deleted collection as it was until it remounts                               | `collections.ex:173-269`; `collections_component.ex:29-51`           | decide      |
+| The project picker lists sandboxes, so a superuser can create a collection straight into a sandbox; it reaches the parent only by name and empty on merge | `collection_creation_modal.ex:30-32`; `sandboxes.ex:289`, `:309-312` | decide      |
 
 ### 6.3 Unreachable or dead code
 
@@ -291,18 +293,15 @@ Feature: A collection changed by a superuser reaches the project
 
 ### 6.4 Performance and operational limits
 
-| What                                                                               | Where                                              | User-visible? | Disposition |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------- | ------------- | ----------- |
-| A run's project is looked up with a three-table join on every collections API call | `policies/collections.ex:82-84`; `runs.ex:563-567` | no            | preserve    |
+| What                                                                               | Where                    | User-visible? | Disposition |
+| ---------------------------------------------------------------------------------- | ------------------------ | ------------- | ----------- |
+| A run's project is looked up with a three-table join on every collections API call | `collections.ex:135-140` | no            | preserve    |
 
 ### 6.5 Things seen but not understood
 
-- No test moves a collection and then calls the API, or checks the project tab
+- No test renames a collection and then calls the API, or checks the project tab
   after an admin-page change; S01 to S05 are composed from per-surface tests and
   code.
-- `collections_controller_test.exs:27-49` gets 401 for a run token on its own
-  project's collection; the run's work order has no workflow in that project,
-  which is the likely cause, but the test name says the token is invalid.
 
 ## 7. Not migrating
 
@@ -311,10 +310,7 @@ Feature: A collection changed by a superuser reaches the project
 
 ## 8. Open questions
 
-- Is moving a collection between projects an intended capability, or an accident
-  of `Collection.changeset` casting `project_id` (6.1)? If intended, should it
-  run the collection hook on both sides?
-- Should rename, move and delete warn which workflows use the collection (6.1)?
+- Should rename and delete warn which workflows use the collection (6.1)?
 
 ## Proposed flows
 

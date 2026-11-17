@@ -132,38 +132,37 @@ Notice shown at the top of each tab ("Role based permissions: You cannot modify
 this project's ..."). The notice is display only; each tab's own view disables
 its controls and re-checks on submit. Sources:
 `lib/lightning/policies/project_users.ex:29-49`, `:134`, `:160-172`;
-`lib/lightning/policies/collections.ex:73-75`;
-`lib/lightning/projects/scope.ex:139-147`; flags computed at
-`lib/lightning_web/live/project_live/settings.ex:118-188`.
+`lib/lightning/policies/collections.ex:73-75`; `lib/lightning/scope.ex:267-276`;
+flags computed at `lib/lightning_web/live/project_live/settings.ex:118-188`.
 
-| Action                                                                                                                                                              | Viewer | Editor | Admin | Owner | Superuser (no row)           | Support (no row, access on) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------ | ----- | ----- | ---------------------------- | --------------------------- |
-| See the tab strip and all nine tabs                                                                                                                                 | yes    | yes    | yes   | yes   | no (cannot open the project) | yes                         |
-| See sandbox banners (sandbox only)                                                                                                                                  | yes    | yes    | yes   | yes   | no                           | yes                         |
-| Notice on Setup ("basic settings.")                                                                                                                                 | yes    | yes    | no    | no    | n/a                          | yes                         |
-| Notice on Credentials ("available credentials.")                                                                                                                    | yes    | no     | no    | no    | n/a                          | no                          |
-| Notice on Collections ("available collections.")                                                                                                                    | yes    | yes    | no    | no    | n/a                          | yes                         |
-| Notice on Webhook security, not a sandbox ("webhook auth methods.")                                                                                                 | yes    | yes    | no    | no    | n/a                          | yes                         |
-| Notice on Collaboration ("collaboration settings, but you can change your notification preferences.")                                                               | yes    | yes    | no    | no    | n/a                          | yes                         |
-| Notice on Security, not a sandbox ("multi-factor authentication settings.")                                                                                         | yes    | yes    | no    | no    | n/a                          | yes                         |
-| Notice on Sync, only when GitHub sync is set up for the instance and the project isn't connected yet ("version control configuration.")                             | yes    | no     | no    | no    | n/a                          | no                          |
-| Notice on Sync, only when GitHub sync is set up for the instance and the project isn't connected yet ("version control configuration but you can initiate a sync.") | no     | yes    | no    | no    | n/a                          | yes                         |
-| Notice on Data storage ("data storage settings.")                                                                                                                   | yes    | yes    | no    | no    | n/a                          | yes                         |
-| Notice on History exports                                                                                                                                           | no     | no     | no    | no    | n/a                          | no                          |
-| Notice on Security or Webhook security in a sandbox                                                                                                                 | no     | no     | no    | no    | n/a                          | no                          |
+| Action                                                                                                                                                                                                                          | Viewer | Editor | Admin | Owner | Superuser (no row)           | Support (no row, access on) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------ | ----- | ----- | ---------------------------- | --------------------------- |
+| See the tab strip and all nine tabs                                                                                                                                                                                             | yes    | yes    | yes   | yes   | no (cannot open the project) | yes                         |
+| See sandbox banners (sandbox only)                                                                                                                                                                                              | yes    | yes    | yes   | yes   | no                           | yes                         |
+| Notice on Setup ("basic settings.")                                                                                                                                                                                             | yes    | yes    | no    | no    | n/a                          | yes                         |
+| Notice on Credentials ("available credentials.")                                                                                                                                                                                | yes    | no     | no    | no    | n/a                          | no                          |
+| Notice on Collections ("available collections.")                                                                                                                                                                                | yes    | yes    | no    | no    | n/a                          | yes                         |
+| Notice on Webhook security, not a sandbox ("webhook auth methods.")                                                                                                                                                             | yes    | yes    | no    | no    | n/a                          | yes                         |
+| Notice on Collaboration ("collaboration settings, but you can change your notification preferences.")                                                                                                                           | yes    | yes    | no    | no    | n/a                          | yes                         |
+| Notice on Security, not a sandbox ("multi-factor authentication settings.")                                                                                                                                                     | yes    | yes    | no    | no    | n/a                          | yes                         |
+| Notice on Sync, only when GitHub sync is set up for the instance and the project isn't connected yet ("version control configuration."), shown in the "Configure two-way sync to GitHub" box (project-settings-github-sync S15) | yes    | no     | no    | no    | n/a                          | no                          |
+| Notice on Sync, only when GitHub sync is set up for the instance and the project isn't connected yet ("version control configuration but you can initiate a sync.")                                                             | no     | yes    | no    | no    | n/a                          | yes                         |
+| Notice on Data storage ("data storage settings.")                                                                                                                                                                               | yes    | yes    | no    | no    | n/a                          | yes                         |
+| Notice on History exports                                                                                                                                                                                                       | no     | no     | no    | no    | n/a                          | no                          |
+| Notice on Security or Webhook security in a sandbox                                                                                                                                                                             | no     | no     | no    | no    | n/a                          | no                          |
 
 Template sources per row: `settings.html.heex:68-79`, `:301-336`,
-`collections_component.ex:278-283`, `settings.html.heex:365-368`, `:390-401`,
+`collections_component.ex:287-292`, `settings.html.heex:365-368`, `:390-401`,
 `:556-574`, `:667-674`, `:762-799`, `:938-943`, `:1131-1136`.
 
 **Preconditions beyond role**
 
 - A member who hasn't met the project's MFA requirement never reaches this page
   (shared-project-scope S05); the policies also deny every action in that state
-  (`project_users.ex:134`).
+  (`decision.ex:59-66`).
 - Support standing fills editor actions only when the user has no membership row
-  (`project_users.ex:167-169`); Collections asks for a real admin or owner row,
-  so support users always see its notice (`scope.ex:139-147`).
+  (`project_users.ex:182-192`); Collections asks for a real admin or owner row,
+  so support users always see its notice (`scope.ex:267-276`).
 - The sandbox banner depends only on the project having a parent, not on the
   viewer (`settings.ex:109`).
 
@@ -171,7 +170,7 @@ Template sources per row: `settings.html.heex:68-79`, `:301-336`,
 
 **Reads**: `projects` (the project and, for a sandbox, its parent via preload,
 `settings.ex:108-110`); `projects` and `project_users` again for each permission
-flag (`scope.ex:112-117`, `:166-190`)
+flag (`scope.ex:173-183`, `:323-360`)
 
 **Writes**: none
 
@@ -289,7 +288,7 @@ Feature: Project settings tab chrome
     Given I am an owner of sandbox "dev" of project "Malawi HIV"
     When I open the settings of sandbox "dev" on the "<tab>" tab
     Then I see "<copy>"
-    # sandbox_settings_banner.ex:30-48; settings.html.heex:80-84, :337-341, :575-579, :748-752, :944-948, :1137-1141; collections_component.ex:290-294
+    # sandbox_settings_banner.ex:30-48; settings.html.heex:80-84, :337-341, :575-579, :748-752, :944-948, :1137-1141; collections_component.ex:299-303
     # test/lightning_web/live/project_live/sandbox_settings_test.exs:105-126
 
     Examples:
@@ -338,7 +337,7 @@ Feature: Project settings tab chrome
 | Tabs carry `role="tab"` and `aria-selected`, but there is no arrow-key navigation, and no tab is marked selected until the hook runs                                                                                                       | `tabbed.ex:125-133`; `TabbedContainer.ts:46-56`                               | decide      |
 | History exports passes `can_perform_action={true}`, so its notice ("history exports.") can never show                                                                                                                                      | `settings.html.heex:1056-1061`                                                | preserve    |
 | In a sandbox, Security passes a nil message and Webhook security renders its header with no message and no sandbox banner (it shows its own "managed in the parent project" notice instead), so read-only members get no role notice there | `settings.html.heex:682-689`, `:378-401`; `sandbox_settings_test.exs:274-279` | preserve    |
-| Collections renders its own header and banner inside `CollectionsComponent`, not the settings template                                                                                                                                     | `collections_component.ex:278-294`                                            | preserve    |
+| Collections renders its own header and banner inside `CollectionsComponent`, not the settings template                                                                                                                                     | `collections_component.ex:287-303`                                            | preserve    |
 | Tab labels are title case ("Webhook Security", "Data Storage", "History Exports") while section headings are sentence case ("Webhook security", "Data storage")                                                                            | `settings.html.heex:46-64` vs `:381`, `:864`, `:1057`                         | decide      |
 | The Sync notice has no comma: "version control configuration but you can initiate a sync."                                                                                                                                                 | `settings.html.heex:794`                                                      | preserve    |
 | The notice is red helper text only; it disables nothing, and each tab gates its own controls and handlers                                                                                                                                  | `layout_components.ex:620-627`                                                | preserve    |
@@ -358,7 +357,7 @@ Feature: Project settings tab chrome
 
 | What                                                                                                                                 | Where                                                 | User-visible? | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ------------- | ----------- |
-| Eleven permission flags are computed on mount, each calling `Scope.fetch`, which reloads the project and the viewer's membership row | `settings.ex:118-188`; `scope.ex:112-117`, `:166-190` | no            | preserve    |
+| Eleven permission flags are computed on mount, each calling `Scope.fetch`, which reloads the project and the viewer's membership row | `settings.ex:118-188`; `scope.ex:173-183`, `:323-360` | no            | preserve    |
 
 ### 6.5 Things seen but not understood
 

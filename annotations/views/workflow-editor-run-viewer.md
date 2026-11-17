@@ -27,7 +27,7 @@ trigger:
       (useHistory.ts:155-162, :325-334)
 
 inherits:
-  - shared-authenticated-session # live_session :default; the steps endpoint sits behind :require_authenticated_user (router.ex:219-221; workflow_controller_test.exs:371-382)
+  - shared-authenticated-session # live_session :default; the steps endpoint sits behind :require_authenticated_user (router.ex:267-269; workflow_controller_test.exs:371-382)
   - shared-project-scope # S03 non-member, S05 MFA, S07 removal: who can open the editor that hosts this view
   - shared-editor-session # channel join, connection state, read-only views, teardown (its S11 to S16); not restated here
   - shared-log-viewer # the "Logs" tab body: ordering, JSON, level filter, step marking, "No logs were received for this run." (its S01, S02, S03, S05, S06); this file owns only the waiting overlay
@@ -75,7 +75,7 @@ config_variants:
 inventory:
   routes:
     - get /projects/:project_id/runs/:run_id/steps  WorkflowController
-      :get_run_steps # router.ex:219-221; workflow_controller.ex:145-198; no client caller (6.3)
+      :get_run_steps # router.ex:267-269; workflow_controller.ex:145-198; no client caller (6.3)
   events:
     - WorkflowLive.Collaborate#handle_params run preload (collaborate.ex:93-142) # the live route itself is owned by shared-editor-session / workflow-editor-canvas
     - WorkflowChannel#request_run_steps (workflow_channel.ex:267-287,
@@ -239,7 +239,7 @@ that takes some explaining.
 
 ## 3. Who can do what
 
-Source: `lib/lightning/policies/project_users.ex:136`, `:190-196`
+Source: `lib/lightning/policies/project_users.ex:160-162`, `:182-192`
 (`:access_project`, via `run_channel.ex:72-76` and
 `workflow_controller.ex:165-171`); `policies/workflows.ex:14-22` (`:access_read`
 for the editor that hosts the view, via shared-editor-session). Nothing in this
@@ -256,7 +256,7 @@ view checks a role beyond project access.
 **Preconditions beyond role**
 
 - The server preload and `request_run_steps` only return a run whose workflow is
-  in the editor's project (`collaborate.ex:106-114`; `runs.ex:74-84`;
+  in the editor's project (`collaborate.ex:106-114`; `runs.ex:76-88`;
   `workflow_channel.ex:279-284`). The run channel instead checks the run's own
   project (`run_channel.ex:72-76`; flow-open-run-in-editor 6.1).
 - `request_run_steps` does not check that the run belongs to the open workflow,
@@ -272,7 +272,7 @@ view checks a role beyond project access.
 **Reads**
 
 - Mount with `?run=`: `runs` joined to `work_orders` and `workflows` for the
-  project, with `steps` (`collaborate.ex:110`; `runs.ex:74-84`)
+  project, with `steps` (`collaborate.ex:110`; `runs.ex:76-88`)
 - `request_run_steps`: `runs` with `steps`, `created_by`,
   `work_order.workflow.project` (`invocation.ex:1536-1546`)
 - Run channel join: `runs` with `workflow.project` (`run_channel.ex:72-73`);
@@ -529,7 +529,7 @@ Feature: Workflow editor run viewer
 
 | What                                                                                                        | Where                                                 | Why unreachable                                                                                                                                                                                                                                                   |
 | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /projects/:project_id/runs/:run_id/steps` (`get_run_steps`)                                            | `router.ex:219-221`; `workflow_controller.ex:145-198` | no client caller; its doc says it decides retry availability, which `useRunRetry` now reads from the run channel. Tests at `workflow_controller_test.exs:289-400`; the "requires project access" test actually exercises the project mismatch branch (`:385-399`) |
+| `GET /projects/:project_id/runs/:run_id/steps` (`get_run_steps`)                                            | `router.ex:267-269`; `workflow_controller.ex:145-198` | no client caller; its doc says it decides retry availability, which `useRunRetry` now reads from the run channel. Tests at `workflow_controller_test.exs:289-400`; the "requires project access" test actually exercises the project mismatch branch (`:385-399`) |
 | `RunViewerPanel` props `onTabChange` and `onClearFollowRun`                                                 | `RunViewerPanel.tsx:23-34`                            | accepted, never used                                                                                                                                                                                                                                              |
 | "No run data available" and RunTabPanel's "No run data"                                                     | `RunViewerPanel.tsx:82-89`; `RunTabPanel.tsx:34-36`   | reached only after "Dismiss" (6.2) or with no project in the session context                                                                                                                                                                                      |
 | `isLoading && !run` skeleton after the first load                                                           | `RunViewerPanel.tsx:58-61`                            | `activeRun` is kept across a switch, so the skeleton shows only for the first run of a page                                                                                                                                                                       |

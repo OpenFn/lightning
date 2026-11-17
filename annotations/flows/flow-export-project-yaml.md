@@ -5,33 +5,34 @@ title: Export a project as YAML
 owner:
 
 trigger:
-  entry: project-settings-setup
-  exit: project-settings-setup # only on the failure path; the success path ends in a file download in the new tab
+  entry: project-settings-github-sync # the Sync tab (it moved from the Setup tab)
+  exit: project-settings-github-sync # only on the failure path; the success path ends in a file download in the new tab
   surfaces:
-    - project-settings-setup
+    - project-settings-github-sync
     - controller:downloads-project-yaml
-    - project-settings-setup
+    - project-settings-github-sync
   reachable_when:
-    - the "Export project" link renders for every viewer of the setup tab
-      (settings.html.heex:252-266); the controller checks access itself
+    - the "Export project" link renders for every viewer of the Sync tab
+      (settings.html.heex:853-867); the controller checks access itself
 
 inherits: [] # the controller does not mount shared-project-scope; it re-implements the gate with different outcomes (see section 3 and 6.2). The entry and exit views inherit it.
 
 url_params:
   - name: id
     set_by:
-      project-settings-setup "Export project" link (settings.html.heex:260)
+      project-settings-github-sync "Export project" link
+      (settings.html.heex:862)
     effect: the project to export (downloads_controller.ex:10-12)
 
 config_variants:
   default: {} # read under this variant
-  require-email-verification: { check_flag?(:require_email_verification): true } # locked-out accounts are redirected before the controller runs (user_auth.ex:305-306)
+  require-email-verification: { check_flag?(:require_email_verification): true } # locked-out accounts are redirected before the controller runs (user_auth.ex:297-298)
 
 inventory:
   routes:
     - get /download/yaml  DownloadsController :download_project_yaml
-      (router.ex:195, pipe_through [:browser, :require_authenticated_user],
-      router.ex:189)
+      (router.ex:243, pipe_through [:browser, :require_authenticated_user],
+      router.ex:237)
   events: []
   js_hooks: []
   policies:
@@ -43,17 +44,17 @@ inventory:
   not_reachable_here:
     - Projects.export_project/4 :v1 format and snapshot_ids
       (projects.ex:1617-1629); this route always passes nil, :v2
-    - FallbackController clauses other than {:error, :not_found} and {:error,
-      :unauthorized}
+    - BrowserFallbackController clauses other than {:error, :not_found} and
+      {:error, :unauthorized}
 
 related:
   - lib/lightning_web/controllers/downloads_controller.ex
-  - lib/lightning_web/controllers/fallback_controller.ex
+  - lib/lightning_web/controllers/browser_fallback_controller.ex
   - lib/lightning_web/controllers/user_auth.ex
   - lib/lightning_web/views/error_view.ex
   - lib/lightning_web/live/project_live/settings.html.heex
   - lib/lightning/projects.ex
-  - lib/lightning/projects/scope.ex
+  - lib/lightning/scope.ex
   - lib/lightning/policies/project_users.ex
   - lib/lightning/workflows/yaml_format/v2.ex
   - lib/lightning/export_utils/duplicate_key_error.ex
@@ -105,8 +106,8 @@ about what ends up in the file and the odd way failures are shown.
 ## 3. Who can do what
 
 Source: `downloads_controller.ex:13-19` asks `ProjectUsers` for
-`:access_project`; `project_users.ex:134` (MFA unsatisfied denies), `:136` and
-`:193-194` (standing is a role row or support access); `scope.ex:149-152`
+`:access_project`; `decision.ex:59-66` (MFA unsatisfied denies), `:136` and
+`:193-194` (standing is a role row or support access); `scope.ex:363-365`
 (scheduled deletion denies).
 
 | Action                        | Viewer | Editor | Admin | Owner | Superuser (no row)         | Support (no row)               |
@@ -117,11 +118,11 @@ Source: `downloads_controller.ex:13-19` asks `ProjectUsers` for
 **Preconditions beyond role**
 
 - Signed in, with no pending TOTP step and not locked out pending email
-  confirmation (`user_auth.ex:288-311`).
+  confirmation (`user_auth.ex:280-303`).
 - If the project requires MFA, the member must be enrolled, or the download is
-  refused with 401 (`project_users.ex:134`;
+  refused with 401 (`decision.ex:59-66`;
   `project_mfa_enforcement_test.exs:162-167`).
-- The project must not be scheduled for deletion (401, `scope.ex:149-152`).
+- The project must not be scheduled for deletion (401, `scope.ex:363-365`).
 
 ## 4. What it touches
 
@@ -133,7 +134,7 @@ Source: `downloads_controller.ex:13-19` asks `ProjectUsers` for
 
 **Hop 2, controller:downloads-project-yaml**
 
-- Reads: `projects` (three loads: `projects.ex:283`, `scope.ex:175`,
+- Reads: `projects` (three loads: `projects.ex:283`, `scope.ex:323-360`,
   `projects.ex:1619`), `project_users`, `users`, `workflows` (not soft-deleted,
   `project.ex:50`), `jobs`, `triggers`, `workflow_edges`, `project_credentials`,
   `credentials`, credential owners' `users`, `collections`, `channels`, channel
@@ -182,13 +183,13 @@ Feature: Export a project as YAML
   Scenario: Member downloads the project YAML in a new tab
     # Value: anyone on the project can take a copy of it as code, even without edit rights.
     Given I am a viewer on project "project-1"
-    And I am on the setup tab of project settings
+    And I am on the Sync tab of project settings
     When I click "Export project"
     Then a new tab opens "/download/yaml?id=<project_id>"
     And that tab receives "project-<project_id>.yaml" as a "text/yaml" attachment
     And the file contains the name "project-1"
     And the original tab still shows project settings
-    # settings.html.heex:258-264, downloads_controller.ex:20-29
+    # settings.html.heex:859-866, downloads_controller.ex:20-29
     # project_live_test.exs:197-211, confirmation_lockout_recovery_test.exs:148-150
 
   @S02
@@ -210,7 +211,7 @@ Feature: Export a project as YAML
     When I visit "/download/yaml?id=<project_id>"
     Then I see "Authorization Error"
     And no file is downloaded
-    # downloads_controller.ex:13-19, fallback_controller.ex:24-29, error_view.ex:27-48
+    # downloads_controller.ex:13-19, browser_fallback_controller.ex:26-31, error_view.ex:27-48
     # download_controller_test.exs:36-44 (asserts 401)
 
   @S04
@@ -220,7 +221,7 @@ Feature: Export a project as YAML
     And I am an editor who has not enrolled in MFA
     When I visit "/download/yaml?id=<project_id>"
     Then I see "Authorization Error"
-    # project_users.ex:134, project_mfa_enforcement_test.exs:162-167, :184-193
+    # decision.ex:59-66, project_mfa_enforcement_test.exs:162-167, :184-193
 
   @S05
   Scenario: Signed-out visitor logs in and gets the download
@@ -228,8 +229,8 @@ Feature: Export a project as YAML
     Given I am not logged in
     When I visit "/download/yaml?id=<project_id>"
     Then I am on "/users/log_in"
-    # user_auth.ex:290-299, :490-492; download_controller_test.exs:47-57
-    # The return-to after login is stored (user_auth.ex:491) but no test reads it; assert only the redirect.
+    # user_auth.ex:282-291, :464-466; download_controller_test.exs:47-57
+    # The return-to after login is stored (user_auth.ex:465) but no test reads it; assert only the redirect.
 
   @S06
   Scenario: The export carries credential names and owners, never secrets
@@ -247,31 +248,31 @@ Feature: Export a project as YAML
     And I am an editor on project "project-1"
     When I visit "/download/yaml?id=<project_id>"
     Then I am on "/users/confirm-required"
-    # user_auth.ex:305-306, :332-341; confirmation_lockout_recovery_test.exs:82-103
+    # user_auth.ex:297-298, :324-333; confirmation_lockout_recovery_test.exs:82-103
 ```
 
 ## 6. Unclear value
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                              | Where                                                                        | What a user sees                                           | Disposition |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------- |
-| Success sets flash "Project yaml exported successfully" on a 200 response; Phoenix only persists flash on 3xx, so it is discarded and never shown | `downloads_controller.ex:28`                                                 | nothing; the message is dead                               | fix         |
-| Any serializer failure other than a name collision returns `{:error, {:serialize_failed, err}}`, a tuple no `FallbackController` clause matches   | `v2.ex:170`, `downloads_controller.ex:40-41`, `fallback_controller.ex:65-76` | a 500 error page in the new tab instead of a reason        | fix         |
-| A malformed `id` reaches `Repo.get` uncast in `get_project/1` before the policy's cast-first load runs                                            | `projects.ex:282-287`, `scope.ex:171-175`                                    | a Bad Request (Ecto cast error) page rather than Not Found | fix         |
-| Collision flash copy starts lowercase ("two workflows in this project...") and quotes keys with Elixir `inspect`                                  | `duplicate_key_error.ex:22-26`                                               | an error that reads like a log line                        | decide      |
+| What                                                                                                                                                   | Where                                                                                | What a user sees                                           | Disposition |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------------------- | ----------- |
+| Success sets flash "Project yaml exported successfully" on a 200 response; Phoenix only persists flash on 3xx, so it is discarded and never shown      | `downloads_controller.ex:28`                                                         | nothing; the message is dead                               | fix         |
+| Any serializer failure other than a name collision returns `{:error, {:serialize_failed, err}}`, a tuple no `BrowserFallbackController` clause matches | `v2.ex:170`, `downloads_controller.ex:40-41`, `browser_fallback_controller.ex:53-64` | a 500 error page in the new tab instead of a reason        | fix         |
+| A malformed `id` reaches `Repo.get` uncast in `get_project/1` before the policy's cast-first load runs                                                 | `projects.ex:282-287`, `scope.ex:323-360`                                            | a Bad Request (Ecto cast error) page rather than Not Found | fix         |
+| Collision flash copy starts lowercase ("two workflows in this project...") and quotes keys with Elixir `inspect`                                       | `duplicate_key_error.ex:22-26`                                                       | an error that reads like a log line                        | decide      |
 
 ### 6.2 Quirks and implementation details
 
-| What                                                                                                                                                                                                                                  | Where                                                           | Disposition |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------- |
-| The controller re-implements the project gate with different outcomes from `shared-project-scope`: non-member, MFA-unenrolled and scheduled-for-deletion all get a 401 "Authorization Error" page, not "Not Found" or `/mfa_required` | `downloads_controller.ex:13-19`, `fallback_controller.ex:24-29` | decide      |
-| On collision the new tab lands on project settings, so the user ends with two settings tabs open                                                                                                                                      | `downloads_controller.ex:31-38` comment                         | preserve    |
-| `put_root_layout(false)` has no effect on a `send_resp`                                                                                                                                                                               | `downloads_controller.ex:27`                                    | decide      |
-| Credentials whose owner has no email are dropped from the file without notice                                                                                                                                                         | `v2.ex:658-663`, `:772-773`                                     | decide      |
-| Collections export as names only, sorted; no collection data                                                                                                                                                                          | `v2.ex:652-656`                                                 | preserve    |
-| Filename uses the project UUID, not its name                                                                                                                                                                                          | `downloads_controller.ex:25`                                    | decide      |
-| Route sits under `/download/yaml?id=` with the project id in the query string, outside `/projects/:project_id`                                                                                                                        | `router.ex:195`                                                 | decide      |
+| What                                                                                                                                                                                                                                  | Where                                                                   | Disposition |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------- |
+| The controller re-implements the project gate with different outcomes from `shared-project-scope`: non-member, MFA-unenrolled and scheduled-for-deletion all get a 401 "Authorization Error" page, not "Not Found" or `/mfa_required` | `downloads_controller.ex:13-19`, `browser_fallback_controller.ex:26-31` | decide      |
+| On collision the new tab lands on project settings, so the user ends with two settings tabs open                                                                                                                                      | `downloads_controller.ex:31-38` comment                                 | preserve    |
+| `put_root_layout(false)` has no effect on a `send_resp`                                                                                                                                                                               | `downloads_controller.ex:27`                                            | decide      |
+| Credentials whose owner has no email are dropped from the file without notice                                                                                                                                                         | `v2.ex:658-663`, `:772-773`                                             | decide      |
+| Collections export as names only, sorted; no collection data                                                                                                                                                                          | `v2.ex:652-656`                                                         | preserve    |
+| Filename uses the project UUID, not its name                                                                                                                                                                                          | `downloads_controller.ex:25`                                            | decide      |
+| Route sits under `/download/yaml?id=` with the project id in the query string, outside `/projects/:project_id`                                                                                                                        | `router.ex:243`                                                         | decide      |
 
 ### 6.3 Unreachable or dead code
 
@@ -283,10 +284,10 @@ Feature: Export a project as YAML
 
 ### 6.4 Performance and operational limits
 
-| What                                                                                                                  | Where                                                 | User-visible?               | Disposition |
-| --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | --------------------------- | ----------- |
-| Project row loaded three times per request                                                                            | `projects.ex:283`, `scope.ex:175`, `projects.ex:1619` | no                          | preserve    |
-| Whole project, every workflow with jobs, triggers and edges, built in memory in one request; no size cap or streaming | `v2.ex:744-755`, `downloads_controller.ex:29`         | only on very large projects | preserve    |
+| What                                                                                                                  | Where                                                     | User-visible?               | Disposition |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | --------------------------- | ----------- |
+| Project row loaded three times per request                                                                            | `projects.ex:283`, `scope.ex:323-360`, `projects.ex:1619` | no                          | preserve    |
+| Whole project, every workflow with jobs, triggers and edges, built in memory in one request; no size cap or streaming | `v2.ex:744-755`, `downloads_controller.ex:29`             | only on very large projects | preserve    |
 
 ### 6.5 Things seen but not understood
 

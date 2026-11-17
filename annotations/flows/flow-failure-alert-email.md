@@ -37,13 +37,13 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/history  RunLive.Index :index   # exit, router.ex:294
+    - live /projects/:project_id/history  RunLive.Index :index   # exit, router.ex:342
   events:
     - ProjectLive.Settings#set_failure_alert       # entry, owned by project-settings-collaborators (settings.ex:612-645)
   js_hooks: []
   policies:
     - Lightning.Policies.ProjectUsers (:edit_failure_alerts self-only, project_users.ex:51, :96-110)
-    - Lightning.Policies.ProjectUsers (:access_project, via MailRecipients.may_receive?, project_users.ex:134-136, mail_recipients.ex:27-32)
+    - Lightning.Policies.ProjectUsers (:access_project, via MailRecipients.may_receive?, decision.ex:59-66; project_users.ex:160-162, mail_recipients.ex:27-32)
   workers:
     - Lightning.Janitor (Oban, queue background, cron */5; janitor.ex:13-17, config/bootstrap.ex:291)
   api_endpoints: []
@@ -138,7 +138,7 @@ governed by shared-project-scope.
   `email-verification-required` (`accounts.ex:1360-1368`).
 - The recipient must hold `:access_project` on the project at send time: MFA
   enrolled if the project requires it, project not scheduled for deletion
-  (`mail_recipients.ex:28-31`, `project_users.ex:134`; `scope.ex:149`).
+  (`mail_recipients.ex:28-31`, `decision.ex:59-66`; `scope.ex:363-365`).
 - At most `rate_limit` emails per recipient per workflow per `time_scale` window
   (`failure_alerter.ex:87-94`).
 
@@ -278,7 +278,7 @@ Feature: Failure alert email
       | my account is scheduled for deletion                             |
       | the project requires MFA and I have not enrolled                 |
       | the project is scheduled for deletion                            |
-    # failure_alerter.ex:45-56; mail_recipients.ex:28-31; accounts.ex:329-332; project_users.ex:134-136
+    # failure_alerter.ex:45-56; mail_recipients.ex:28-31; accounts.ex:329-332; decision.ex:59-66; project_users.ex:160-162
     # failure_alert_test.exs:359-400, :402-439, :493-506; enrolled-member counterpart :340-357
 
   @S06 @variant:email-verification-required
@@ -320,7 +320,7 @@ Feature: Failure alert email
     Then I am asked to log in
     When I log in
     Then I am on the history page with only work order "W", expanded
-    # router.ex:294; user_auth.ex:490-491 (current_path keeps the query string), :63-69
+    # router.ex:342; user_auth.ex:464-465 (current_path keeps the query string), :63-69
 ```
 
 The landing step inherits shared-project-scope: a recipient removed from the

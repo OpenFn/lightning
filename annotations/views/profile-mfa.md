@@ -11,7 +11,7 @@ trigger:
   reachable_when:
     - the host page `/profile` renders, as catalogued in profile-account
       (config-injected route, `config/config.exs:58-59`; `:services`
-      live_session `router.ex:351-355`)
+      live_session `router.ex:399-403`)
     - the card is always rendered on `:edit` and `:delete`; no config, role or
       project gates it (`components.ex:57-61`)
     - every action applies to the signed-in user's own account only; the
@@ -45,7 +45,7 @@ inventory:
     - :lightning, :totp_client # mfa_component.ex:27; test seam only
   not_reachable_here:
     - BackupCodesLive.Index and BackupCodesController :print
-      (router.ex:252-265); owned by profile-backup-codes
+      (router.ex:300-313); owned by profile-backup-codes
     - ReAuthenticateLive.New (/auth/confirm_access); reached from the "View"
       recovery codes button, owned by its own view and the proposed
       flow-reauth-backup-codes
@@ -133,8 +133,8 @@ acts only on that user's `user_totps` row (`components.ex:57-61`;
   secret (`user_totp.ex:26-43`, `:58-65`).
 - Opening recovery codes from the "View" button needs a valid sudo session,
   which the backup codes route enforces by redirecting to `/auth/confirm_access`
-  (`mfa_component.html.heex:268-272`; `router.ex:252-265`;
-  `user_auth.ex:397-409`).
+  (`mfa_component.html.heex:268-272`; `router.ex:300-313`;
+  `user_auth.ex:383-395`).
 - A session still waiting on its second factor never reaches this card
   (shared-authenticated-session S03).
 
@@ -172,7 +172,7 @@ session's user (`mfa_component.ex:15`, `:90`, `:118`)
   once it is off (`user_session_controller.ex:40`; `oidc_controller.ex:250`);
   owned by flow-login-return-to S02, S03
 - Projects that require MFA admit the user once `mfa_enabled` is true, and
-  refuse them again once it is false (`scope.ex:221-222`); owned by
+  refuse them again once it is false (`scope.ex:370-373`); owned by
   flow-require-project-mfa
 - Digest and failure-alert emails for MFA-required projects follow the same flag
   (flow-require-project-mfa section 4)
@@ -332,7 +332,7 @@ Feature: Multi-factor authentication on the user profile
     And I am on "/profile"
     When I click "View" under "Recovery codes"
     Then the flow "flow-reauth-backup-codes" has started
-    # mfa_component.html.heex:268-272; router.ex:252-265; user_auth.ex:397-409
+    # mfa_component.html.heex:268-272; router.ex:300-313; user_auth.ex:383-395
 ```
 
 ## 6. Unclear value
@@ -414,8 +414,8 @@ Feature: Multi-factor authentication on the user profile
   session is refused by `require_sudo_user`, which stores the path (without any
   `sudo_token`) as `user_return_to` and redirects to `/auth/confirm_access` with
   "You must verify yourself again in order to access this page."
-  (`mfa_component.html.heex:268-272`; `router.ex:252-265`;
-  `user_auth.ex:211-231`, `:397-409`, `:496-510`); after re-authenticating,
+  (`mfa_component.html.heex:268-272`; `router.ex:300-313`;
+  `user_auth.ex:212-232`, `:383-395`, `:470-484`); after re-authenticating,
   ReAuthenticateLive navigates back with a fresh `sudo_token` appended
   (`re_authenticate_live/new.ex:9-14`, `:40-42`, `:74`) and the backup codes
   page renders (`backup_codes_live_test.exs:20-43`). Surfaces: profile-mfa,

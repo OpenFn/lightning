@@ -13,7 +13,7 @@ trigger:
     - the dataclip belongs to this project, otherwise the page redirects to History with "Dataclip not found" (show.ex:20-34; invocation.ex:225-235)
 
 inherits:
-  - shared-authenticated-session    # router.ex:288 (live_session :default, LightningWeb.InitAssigns)
+  - shared-authenticated-session    # router.ex:336 (live_session :default, LightningWeb.InitAssigns)
   - shared-project-scope            # show.ex:9
   - shared-usage-limits-banner      # show.ex:10, :41-47
   - shared-project-header           # show.ex:48-67 (project picker, "Dataclip" breadcrumb)
@@ -35,7 +35,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/dataclips/:id/show  DataclipLive.Show :show   # router.ex:299
+    - live /projects/:project_id/dataclips/:id/show  DataclipLive.Show :show   # router.ex:347
   events:
     - DataclipLive.Show handle_params id                                       # show.ex:19-35
   js_hooks:
@@ -48,7 +48,7 @@ inventory:
     - Lightning.Policies.Dataclips :view_dataclip            # body fetch (dataclip_controller.ex:16-30)
   workers: []
   api_endpoints:
-    - get /dataclip/body/:id  DataclipController :show       # router.ex:201; fetched by DataclipViewer.tsx:10-30
+    - get /dataclip/body/:id  DataclipController :show       # router.ex:249; fetched by DataclipViewer.tsx:10-30
   emails: []
   config:
     - :lightning, Lightning.Extensions, :usage_limiter (check_limits banner; live_helpers.ex:196-200)
@@ -115,11 +115,12 @@ surprises are in how faithfully that data is shown.
 ## 3. Who can do what
 
 Source: the page has no policy check of its own beyond the project scope gate
-(`show.ex:9`; `lib/lightning/policies/project_users.ex:134-136`, `:190-191`).
-The body is fetched from `/dataclip/body/:id`, which asks
+(`show.ex:9`;
+`lib/lightning/policies/decision.ex:59-66; project_users.ex:160-162`,
+`:190-191`). The body is fetched from `/dataclip/body/:id`, which asks
 `Lightning.Policies.Dataclips :view_dataclip` (`dataclip_controller.ex:19-30`),
 which delegates to `:access_project` on the dataclip's own project
-(`policies/dataclips.ex:20-22`; `projects/scope.ex:167`, `:149`).
+(`policies/dataclips.ex:20-22`; `scope.ex:323-360`, `:363-365`).
 
 | Action                              | Viewer | Editor | Admin | Owner | Superuser (no row) | Support (no row)               |
 | ----------------------------------- | ------ | ------ | ----- | ----- | ------------------ | ------------------------------ |
@@ -134,7 +135,7 @@ which delegates to `:access_project` on the dataclip's own project
 - The body request re-checks access against the dataclip's own project, and
   refuses it with 403 when the user has no standing there or the project is
   scheduled for deletion (`dataclip_controller.ex:19-30`;
-  `policies/dataclips.ex:20-22`; `projects/scope.ex:149`;
+  `policies/dataclips.ex:20-22`; `scope.ex:363-365`;
   `dataclip_controller_test.exs:241-249`, `:262-288`).
 - MFA, deleted projects and membership changes on an open page are owned by
   shared-project-scope.
@@ -158,7 +159,7 @@ which delegates to `:access_project` on the dataclip's own project
 - For scrubbing an `http_request` body: the webhook auth methods behind the work
   order it started (`dataclip_scrubber.ex:40-41`)
 - `projects` and `project_users` for the scope gate (shared-project-scope) and
-  again for the body request (`projects/scope.ex:167`, `:188`)
+  again for the body request (`scope.ex:323-360`, `:323-360`)
 
 **Writes**
 
@@ -334,7 +335,7 @@ Feature: Dataclip page
 | A 403 from the body endpoint (access lost, or the project scheduled for deletion, after the page mounted) reads "Failed to load content" with no reason | `DataclipViewer.tsx:18-23`, `:51-52`; `dataclip_controller.ex:26-29` | decide      |
 | An existence check followed by `get_dataclip!`; a dataclip deleted between the two crashes the page instead of redirecting                              | `show.ex:23-28`; `invocation.ex:217`                                 | preserve    |
 | A body of `null` (stored body nil but not wiped) is shown as the text `null`                                                                            | `dataclip_controller.ex:77`; `dataclip_controller_test.exs:290-300`  | preserve    |
-| The route keeps a trailing `/show` segment, unlike `/runs/:id`                                                                                          | `router.ex:297`, `:299`                                              | decide      |
+| The route keeps a trailing `/show` segment, unlike `/runs/:id`                                                                                          | `router.ex:345`, `:347`                                              | decide      |
 
 ### 6.3 Unreachable or dead code
 

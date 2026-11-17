@@ -13,14 +13,14 @@ trigger:
     - admin-user-edit # the form where a superuser disables a user or changes password, email, role, support access (user_live/form_component.ex:57-68)
     - profile-delete-account # /profile/:id/delete, same modal with logout: true (profile_live/components.ex:40-47)
     - email:account-deletion-scheduled # deletion entries only (user_notifier.ex:205-224)
-    - pubsub:users_live:<user_id> # the /live transport of every open LiveView page (user_auth.ex:151, :165)
-    - pubsub:user_socket:<user_id> # the /socket transport: editor, run and AI channels (user_auth.ex:138, :164; user_socket.ex:11-13, :53-54)
+    - pubsub:users_live:<user_id> # the /live transport of every open LiveView page (user_auth.ex:152, :166)
+    - pubsub:user_socket:<user_id> # the /socket transport: editor, run and AI channels (user_auth.ex:139, :165; user_socket.ex:11-13, :53-54)
     - workflow-editor-canvas
     - workflow-editor-run-viewer
     - workflow-editor-ai-assistant
-    - controller:token-exchange # /users/token_exchange/:token, password-change tab only (router.ex:180)
-    - controller:user-log-out # /users/log_out, own-deletion tab only (router.ex:71)
-    - projects-dashboard # where the password-change tab lands (user_auth.ex:514)
+    - controller:token-exchange # /users/token_exchange/:token, password-change tab only (router.ex:228)
+    - controller:user-log-out # /users/log_out, own-deletion tab only (router.ex:98)
+    - projects-dashboard # where the password-change tab lands (user_auth.ex:488)
     - auth-login
     - profile-tokens
     - auth-reset-password
@@ -28,9 +28,9 @@ trigger:
   reachable_when:
     - the actor is signed in (shared-authenticated-session)
     - admin entries:
-        the actor is a superuser (`hooks.ex:40-51`; `policies/users.ex:19-21`)
+        the actor is a superuser (`hooks.ex:40-51`; `policies/users.ex:30-32`)
     - own deletion:
-        the target is the actor (`policies/users.ex:23-30`) and is not a
+        the target is the actor (`policies/users.ex:35-41`) and is not a
         superuser (`user.ex:418-428`)
 
 inherits:
@@ -50,16 +50,16 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/token_exchange/:token  UserSessionController :exchange_token # router.ex:180, behind :redirect_if_user_is_authenticated
-    - get /users/log_out  UserSessionController :delete # router.ex:71; own-deletion tab only
+    - get /users/token_exchange/:token  UserSessionController :exchange_token # router.ex:228, behind :redirect_if_user_is_authenticated
+    - get /users/log_out  UserSessionController :delete # router.ex:98; own-deletion tab only
   events:
     - ProfileLive.FormComponent#save_password # entry; owned by profile-account S08
     - UserLive.FormComponent#save # entry (:edit); owned by admin-user-edit
     - Components.UserDeletionModal#delete # entry for admin-users and profile-delete-account
   js_hooks: [] # the /socket client is SocketProvider.tsx, not a hook
   policies:
-    - Lightning.Policies.Users :access_admin_space (policies/users.ex:19-21)
-    - Lightning.Policies.Users :delete_account (policies/users.ex:23-30)
+    - Lightning.Policies.Users :access_admin_space (policies/users.ex:30-32)
+    - Lightning.Policies.Users :delete_account (policies/users.ex:35-41)
   workers:
     - oban:accounts-purge-deleted # Lightning.Accounts perform/1, accounts.ex:92-130; cron bootstrap.ex:306-309
   api_endpoints: [] # API tokens are affected, not called; Tokens.verify/1 is the receiving gate
@@ -72,7 +72,7 @@ inventory:
       revocation, entered from the password reset email, which is outside this
       flow's entries (6.5)
     - UserAuth.log_out_user/1 broadcast on the session's own live_socket_id
-      (user_auth.ex:114-132); logout hangs up pages but revokes only its own
+      (user_auth.ex:115-133); logout hangs up pages but revokes only its own
       token (6.2)
     - UserLive.Index#cancel_deletion (user_live/index.ex:34-52); owned by
       admin-users
@@ -141,7 +141,7 @@ expect.
 
 ## 3. Who can do what
 
-Sources: `lib/lightning/policies/users.ex:19-30`,
+Sources: `lib/lightning/policies/users.ex:30-41`,
 `lib/lightning_web/hooks.ex:40-51`, `lib/lightning/accounts/user.ex:338-343`,
 `:418-440`, `lib/lightning/accounts.ex:177-221`.
 
@@ -192,10 +192,10 @@ profile-delete-account)**
 **Hop 2: disconnect broadcasts (pubsub)**
 
 - After commit, `Endpoint.broadcast` of `disconnect` on `user_socket:<id>` and
-  `users_live:<id>` (`user_auth.ex:163-166`; called from `accounts.ex:192`,
+  `users_live:<id>` (`user_auth.ex:164-167`; called from `accounts.ex:192`,
   `:934`, `:971`). Phoenix closes every transport registered under that id:
   `/live` transports carry `live_socket_id` from the session, written per user
-  on every browser request (`user_auth.ex:175-192`); `/socket` transports
+  on every browser request (`user_auth.ex:176-193`); `/socket` transports
   identify as `user_socket:<id>` (`user_socket.ex:53-54`).
 
 **Hop 3: deletion email (deletion entries only)**
@@ -209,14 +209,14 @@ profile-delete-account)**
 - The LiveView client reconnects; the rejoin's `on_mount` reads
   `session["user_token"]`, finds no user, and halts with a redirect to
   `/users/log_in` (`init_assigns.ex:17-24`). The redirect GET runs
-  `fetch_current_user/2`, which finds nothing (`user_auth.ex:175-182`).
+  `fetch_current_user/2`, which finds nothing (`user_auth.ex:176-183`).
 
 **Hop 5: editor, run viewer and AI chat (pubsub:user_socket)**
 
 - `WorkflowChannel`, `RunChannel` and `AiAssistantChannel` all ride the one
   `/socket` (`user_socket.ex:11-13`), so all end with it. The client retries
   with `window.userToken`, minted once per page render from the now-deleted
-  session token (`root.html.heex:20`; `user_auth.ex:378-392`;
+  session token (`root.html.heex:20`; `user_auth.ex:364-378`;
   `SocketProvider.tsx:39-74`), and `connect/3` refuses it
   (`user_socket.ex:30-50`). The host LiveView's redirect (hop 4) takes the page
   away.
@@ -228,14 +228,14 @@ profile-delete-account)**
   `accounts.ex:1051-1055`). The controller verifies the token is under 30
   seconds old, deletes it, inserts a new `session` token, renews the session and
   redirects to `/projects` (`user_session_controller.ex:55-67`;
-  `accounts.ex:1062-1072`; `user_token.ex:96-102`; `user_auth.ex:54-70`).
+  `accounts.ex:1062-1072`; `user_token.ex:96-102`; `user_auth.ex:55-71`).
 
 **Hop 7: the own-deletion tab (controller:user-log-out)**
 
 - `push_navigate` to `/users/log_out` (`user_deletion_modal.ex:45-49`,
   `:89-90`), which deletes the (already deleted) session token, broadcasts on
   the session's `live_socket_id`, renews the session, clears the remember-me
-  cookie and redirects to `/users/log_in` (`user_auth.ex:114-132`).
+  cookie and redirects to `/users/log_in` (`user_auth.ex:115-133`).
 
 **Deferred side effects**
 
@@ -243,7 +243,7 @@ profile-delete-account)**
   (`tokens.ex:190-196`).
 - Login attempts are refused with "This user account is disabled" or "This user
   account is scheduled for deletion" (`user_session_controller.ex:31-38`;
-  `user_auth.ex:41-45`).
+  `user_auth.ex:42-46`).
 - `oban:accounts-purge-deleted` purges users whose `scheduled_deletion` has
   passed and who have no runs, project files or keychain credentials, one job
   per user, nightly at 02:15 (`accounts.ex:92-130`, `:43-79`;
@@ -278,7 +278,7 @@ Feature: Revoking a user's sessions and tokens
     When <actor> <revokes> from browser A
     Then browser B eventually is on "/users/log_in"
     And reloading "/projects" in browser B lands on "/users/log_in"
-    # accounts.ex:192, :934, :971; user_auth.ex:163-166, :175-192; init_assigns.ex:17-24
+    # accounts.ex:192, :934, :971; user_auth.ex:164-167, :176-193; init_assigns.ex:17-24
     # account_revocation_teardown_test.exs:46-66 (topic broadcast), :69-90 (reload refused); accounts_test.exs:1384-1434, :1497-1506, :2014-2027
 
     Examples:
@@ -318,7 +318,7 @@ Feature: Revoking a user's sessions and tokens
     Then Bob's editor channels are closed
     And Bob's editor cannot reconnect to "/socket"
     And Bob's page eventually is on "/users/log_in"
-    # user_socket.ex:11-13, :30-54; user_auth.ex:164; user_socket_test.exs:55-66, :79-86
+    # user_socket.ex:11-13, :30-54; user_auth.ex:165; user_socket_test.exs:55-66, :79-86
     # the editor's interim "You are disconnected. Reconnecting..." state is shared-editor-session's
 
   @S05
@@ -373,7 +373,7 @@ shared-editor-session. They are not restated here.
 
 | What                                                                                                                                                                                                                                                                                        | Where                                                                | What a user sees                                                                                                                                                                    | Disposition                            |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| On a password change the LiveView broadcasts `disconnect` to its own `/live` transport before returning the redirect to `/users/token_exchange/:token`; the transport may close first, the redirect is lost, and the reconnect finds the session deleted. Same as profile-account 6.1 row 2 | `accounts.ex:934`; `user_auth.ex:163-166`; `form_component.ex:62-78` | possibly "/users/log_in" with no message instead of "/projects" with "Password changed successfully."; LiveViewTest has no transport (`account_revocation_teardown_test.exs:12-14`) | decide (verify in a browser, then fix) |
+| On a password change the LiveView broadcasts `disconnect` to its own `/live` transport before returning the redirect to `/users/token_exchange/:token`; the transport may close first, the redirect is lost, and the reconnect finds the session deleted. Same as profile-account 6.1 row 2 | `accounts.ex:934`; `user_auth.ex:164-167`; `form_component.ex:62-78` | possibly "/users/log_in" with no message instead of "/projects" with "Password changed successfully."; LiveViewTest has no transport (`account_revocation_teardown_test.exs:12-14`) | decide (verify in a browser, then fix) |
 | The same ordering on own deletion: the broadcast precedes `push_navigate` to `/users/log_out`                                                                                                                                                                                               | `accounts.ex:971`; `user_deletion_modal.ex:45-49`, `:89-90`          | probably "/users/log_in" without "User scheduled for deletion" or "Logged out successfully."; the end page is the same                                                              | decide                                 |
 | A superuser who changes their own email, role or password in the admin form, or disables themselves, disconnects their own tab before `push_navigate` returns                                                                                                                               | `accounts.ex:192`; `user_live/form_component.ex:57-68`               | the login page instead of "User updated successfully"                                                                                                                               | decide                                 |
 | `/users/token_exchange/:token` calls `Base.url_decode64!`, so a token that isn't valid base64 raises instead of showing "Invalid token"                                                                                                                                                     | `user_session_controller.ex:56`                                      | a server error page for a mangled link                                                                                                                                              | fix                                    |
@@ -388,9 +388,9 @@ shared-editor-session. They are not restated here.
 | "Cancel deletion" re-enables the account but its tokens are already gone, so the user signs in again and must reissue API tokens                                           | `accounts.ex:667-674`; `user_live/index.ex:34-52`                                       | decide      |
 | The deletion email's delivery result is ignored                                                                                                                            | `accounts.ex:972`                                                                       | decide      |
 | The `/socket` client keeps retrying with the page's stale token until the LiveView redirect replaces the page                                                              | `SocketProvider.tsx:39-74`; `root.html.heex:20`                                         | preserve    |
-| Logging out hangs up the account's LiveView pages on every device but revokes only its own session, so the others reconnect and stay signed in                             | `user_auth.ex:110-132`                                                                  | preserve    |
-| `live_socket_id` is keyed per user, not per session token as `phx.gen.auth` generates, so one broadcast reaches every browser                                              | `user_auth.ex:140-151`; `account_revocation_teardown_test.exs:46-66`                    | preserve    |
-| `/users/token_exchange/:token` is behind `:redirect_if_user_is_authenticated`, so a browser that still has a valid session goes to "/projects" without consuming the token | `router.ex:176-180`; `user_auth.ex:271-279`; `user_session_controller_test.exs:130-137` | preserve    |
+| Logging out hangs up the account's LiveView pages on every device but revokes only its own session, so the others reconnect and stay signed in                             | `user_auth.ex:111-133`                                                                  | preserve    |
+| `live_socket_id` is keyed per user, not per session token as `phx.gen.auth` generates, so one broadcast reaches every browser                                              | `user_auth.ex:141-152`; `account_revocation_teardown_test.exs:46-66`                    | preserve    |
+| `/users/token_exchange/:token` is behind `:redirect_if_user_is_authenticated`, so a browser that still has a valid session goes to "/projects" without consuming the token | `router.ex:224-228`; `user_auth.ex:263-271`; `user_session_controller_test.exs:130-137` | preserve    |
 
 ### 6.3 Unreachable or dead code
 

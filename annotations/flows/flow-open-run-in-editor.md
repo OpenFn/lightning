@@ -18,7 +18,7 @@ trigger:
   reachable_when:
     - the run's workflow has not been deleted (hooks.ex:139-157, query.ex:35-40)
     - the run belongs to the project in the URL, for the run to be loaded
-      (collaborate.ex:106-114; runs.ex:73-84)
+      (collaborate.ex:106-114; runs.ex:76-88)
 
 inherits:
   - shared-project-scope # login, MFA and membership gates on both ends
@@ -55,9 +55,9 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit # router.ex:303
-    - get /projects/:project_id/w/:id/legacy  LegacyRedirectController :edit # router.ex:311
-    - get /projects/:project_id/w/new/legacy  LegacyRedirectController :new # router.ex:310
+    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit # router.ex:351
+    - get /projects/:project_id/w/:id/legacy  LegacyRedirectController :edit # router.ex:359
+    - get /projects/:project_id/w/new/legacy  LegacyRedirectController :new # router.ex:358
   events: [] # navigation only; WorkflowLive.Collaborate#handle_params is the hop
   js_hooks:
     - ReactComponent (CollaborativeEditor, data-initial-run-data) # collaborate.ex:252-287
@@ -139,14 +139,13 @@ wouldn't guess.
   the first load refuses it. (6.1)
 - **(3)** History still lists and links runs of deleted workflows, and following
   the link gives "Workflow not found". (6.1)
-- **(3)** A mistyped or truncated run link crashes the editor page rather than
-  just opening without the run. (6.1)
 
 ## 3. Who can do what
 
 Source: `lib/lightning/policies/workflows.ex:14-22` (`:access_read` is
-`:access_project`), `lib/lightning/policies/project_users.ex:134-136`, checked
-at `workflow_channel.ex:2196-2198`, `:2255-2257`, `:2289-2290`; run channel join
+`:access_project`),
+`lib/lightning/policies/decision.ex:59-66; project_users.ex:160-162`, checked at
+`workflow_channel.ex:2196-2198`, `:2255-2257`, `:2289-2290`; run channel join
 `run_channel.ex:67-77`. Edit and run rights inside the editor come from
 `workflow_channel.ex:1516-1522` and are owned by the editor surfaces.
 
@@ -159,7 +158,7 @@ at `workflow_channel.ex:2196-2198`, `:2255-2257`, `:2289-2290`; run channel join
 **Preconditions beyond role**
 
 - The run must belong to the project in the URL, or the editor opens without it
-  (`collaborate.ex:106-114`, `runs.ex:73-84`).
+  (`collaborate.ex:106-114`, `runs.ex:76-88`).
 - An as-executed view needs the run's snapshot to belong to the workflow in the
   URL (`workflow_channel.ex:2314-2320`).
 - The workflow must not be soft-deleted (`hooks.ex:139-157`,
@@ -176,7 +175,7 @@ at `workflow_channel.ex:2196-2198`, `:2255-2257`, `:2289-2290`; run channel join
   (`legacy_redirect_controller.ex:25-45`)
 - Hop 3, mount: `workflows` (`hooks.ex:144-145`, `collaborate.ex:445-446`);
   `runs` joined through `work_orders` and `workflows`, with `steps`
-  (`collaborate.ex:110`, `runs.ex:73-84`)
+  (`collaborate.ex:110`, `runs.ex:76-88`)
 - Hop 4, workflow channel join: `workflow_snapshots` by lock_version (`v`), or
   `runs` joined to `workflow_snapshots` (`as_run`)
   (`workflow_channel.ex:2174-2184`, `:2289-2320`)
@@ -277,7 +276,7 @@ Feature: Open a run in the workflow editor
     And run "R" belongs to "Kenya TB"
     When I open "Intake" in "Malawi HIV" with "run=<R id>"
     Then the editor opens with no run data for "R"
-    # collaborate.ex:106-114; runs.ex:73-84; run_channel.ex:67-77
+    # collaborate.ex:106-114; runs.ex:76-88; run_channel.ex:67-77
     # collaborate_test.exs:222-245 asserts initial_run_data is nil
 
   @S06 @variant:experimental-features
@@ -296,7 +295,7 @@ Feature: Open a run in the workflow editor
     When I open it
     Then I am redirected to "/projects/<project_id>/w/<Intake id>" with "run=<R id>" and "s=<job id>"
     And the run viewer shows "R"
-    # legacy_redirect_controller.ex:21-45; router.ex:310-311
+    # legacy_redirect_controller.ex:21-45; router.ex:358-359
     # legacy_redirect_controller_test.exs:47-80
 ```
 
@@ -308,7 +307,6 @@ Feature: Open a run in the workflow editor
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | The History row pins `v` to the work order's snapshot but loads the last run; a retry runs on the latest snapshot and does not update the work order's snapshot                       | `workorder_component.ex:193`; `work_orders.ex:361-375`, `:895-904`                     | a retried work order opens at the original version with the retry's results painted on it, and a version mismatch warning | fix         |
 | History lists runs of soft-deleted workflows and links them; the editor mount refuses deleted workflows                                                                               | `workorder_component.ex:190-209`; `hooks.ex:144-157`; `query.ex:35-40`                 | "Workflow not found" and a redirect to the workflows list                                                                 | decide      |
-| `?run=` with a non-UUID reaches `Runs.get_for_project/3` uncast in `handle_params`                                                                                                    | `collaborate.ex:106-110`; `runs.ex:73-84`                                              | the editor LiveView crashes on a mistyped or truncated run link                                                           | fix         |
 | The run channel authorizes on the run's own project, not the editor's project, so a foreign run the user can access elsewhere still loads into the viewer once the client asks for it | `run_channel.ex:67-77`; `CollaborativeWorkflowDiagram.tsx:78`, `useHistory.ts:150-162` | another project's run painted onto this workflow's canvas (S05 only covers the server-rendered initial data)              | decide      |
 
 ### 6.2 Quirks and implementation details

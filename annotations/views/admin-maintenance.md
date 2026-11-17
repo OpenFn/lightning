@@ -11,7 +11,7 @@ trigger:
   reachable_when:
     - the session is admitted by shared-authenticated-session; the route sits in
       the `:settings` live_session, which mounts `InitAssigns`
-      (`lib/lightning_web/router.ex:268`, `:280`)
+      (`lib/lightning_web/router.ex:316`, `:328`)
     - the viewer passes `Users :access_admin_space` (superuser only); unlike the
       other admin views this module does not use the `:ensure_admin` hook and
       checks the policy itself in `mount` and in each `handle_event`
@@ -40,14 +40,15 @@ config_variants:
 
 inventory:
   routes:
-    - live /settings/maintenance  MaintenanceLive.Index :index # router.ex:280
+    - live /settings/maintenance  MaintenanceLive.Index :index # router.ex:328
   events:
     - MaintenanceLive.Index#refresh_adaptors # index.ex:32-50
     - MaintenanceLive.Index#refresh_icons # index.ex:52-66
     - MaintenanceLive.Index handle_async(:refresh_icons) # index.ex:68-89 (not an event; async result)
+    - MaintenanceLive.Index assign_async(:usage_tracking) # index.ex:21-24, :93-100 (loads usage metrics status)
   js_hooks: []
   policies:
-    - Lightning.Policies.Users :access_admin_space (policies/users.ex:19-21),
+    - Lightning.Policies.Users :access_admin_space (policies/users.ex:30-32),
       via MaintenanceLive.Index.superuser?/1 (index.ex:91-98)
   workers: [] # no Oban; work runs on the cluster-singleton Lightning.Adaptors.Scheduler GenServer (scheduler.ex:1-21, supervisor.ex:95-131)
   api_endpoints: []
@@ -92,7 +93,13 @@ server access intervenes.
 
 ## 2. What it does
 
-- Superusers see the two maintenance actions on one page
+- Superusers see the two maintenance actions and the usage metrics status on one
+  page
+- **See anonymous usage metrics status**
+  - Superusers see whether usage metrics are enabled, where they are sent, and
+    the instance UUID and its hash, each with a copy button
+  - When metrics are disabled, a callout asks them to consider turning them back
+    on
 - **Refresh the adaptor registry**
   - Superusers start a registry refresh and are told it was queued, or that it
     could not be started
@@ -136,7 +143,7 @@ on the instance.
 | Refresh adaptor icons    | no         | no           | no           | yes       |
 
 Sources: `maintenance_live/index.ex:16-29`, `:32-35`, `:52-53`, `:91-98`;
-`policies/users.ex:19-21`; refusal and roles as in shared-admin-space section 3.
+`policies/users.ex:30-32`; refusal and roles as in shared-admin-space section 3.
 Test: `test/lightning_web/live/maintenance_live/index_test.exs:12-21`.
 
 **Preconditions beyond role**
@@ -320,6 +327,43 @@ Feature: Admin maintenance
     When I run the icon refresh as a superuser
     Then eventually I see "Icon refresh complete" with 1 updated
     # local.ex:76-100 (reads icons from disk, no etags); bootstrap.ex:1067-1068, :1114
+
+  @S09
+  Scenario: The page shows the instance's anonymous usage metrics status
+    # Value: an admin can tell at a glance whether this instance reports usage metrics, where to, and which identifiers it reports under, and can copy them for the team that maintains the instance.
+    Given I am a superuser
+    And usage metrics are enabled and an instance UUID has been generated
+    When I open "/settings/maintenance"
+    Then I see a card titled "Anonymous Usage Metrics"
+    And I see an "Enabled" pill
+    And I see "Reporting to:" followed by the configured usage tracking host
+    And I see the instance UUID and its SHA-256 hash, each with a copy button titled "Copy instance UUID" and "Copy hashed UUID"
+    And I see that only the hashed UUID is sent, or that the UUID is sent in cleartext along with its hash, depending on configuration
+    And I see links to what data is sent and to the public impact page
+    # index.ex:21-24, :93-100; index.html.heex:52-190 (card :53, host :138, ids :143-165, mode :176-190)
+    # usage_tracking.ex:164-173 (instance_identity); identity.ex:6 (hash); common.ex:146 (copy_icon_button)
+
+  @S10
+  Scenario: A disabled instance is asked to consider enabling usage metrics
+    # Value: operators who switched reporting off are reminded why it matters to the project and how to turn it back on, and are told nothing is being sent.
+    Given I am a superuser
+    And usage metrics are disabled
+    When I open "/settings/maintenance"
+    Then I see a "Disabled" pill
+    And I see a callout "Please consider turning anonymous usage metrics back on." naming USAGE_TRACKING_ENABLED=true
+    And I see "Would report to:" followed by the configured host
+    And I see "Nothing is sent while usage metrics are disabled."
+    # index.html.heex:104-135 (callout), :138 (host label), :176-190 (identity mode)
+
+  @S11
+  Scenario: Before an instance UUID exists the card says when it will be generated
+    # Value: an admin who sees no UUID is told why, rather than thinking something is broken.
+    Given I am a superuser
+    And no instance UUID has been generated yet
+    When I open "/settings/maintenance"
+    Then I do not see an instance UUID or hashed UUID
+    And I see "generated the first time metrics are collected." if usage metrics are enabled, or "generated once metrics are enabled." if not
+    # index.html.heex:168-174; usage_tracking.ex:164-173 (nil when no config row)
 ```
 
 ## 6. Unclear value
@@ -401,7 +445,7 @@ Feature: Admin maintenance
   and SchemaReconciler rewrites legacy credential schema names. Surfaces:
   admin-maintenance, pubsub:adaptors:<instance>,
   pubsub:adaptors:client_update:<instance>, channel:workflow
-  (workflow-editor-canvas), controller:adaptor-icons (`router.ex:81-82`),
+  (workflow-editor-canvas), controller:adaptor-icons (`router.ex:108-109`),
   project-settings-credentials. This file asserts only the handoff (S02, S05).
 
 ## Proposed shared
@@ -410,7 +454,7 @@ none
 
 ## Summary
 
-- Scenarios: 8 (S01 to S08); S08 tagged `@variant:local-adaptors`.
+- Scenarios: 11 (S01 to S11); S08 tagged `@variant:local-adaptors`.
 - Section 6: 6.1 has 3, 6.2 has 9, 6.3 has 2, 6.4 has 5, 6.5 has 2.
 - Flows: proposed flow-adaptor-catalogue-update (S02, S05 handoffs); none
   existing referenced.

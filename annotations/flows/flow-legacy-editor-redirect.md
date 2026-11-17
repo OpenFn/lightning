@@ -8,16 +8,16 @@ trigger:
   entry: controller:legacy-redirect # an old bookmark or a link in an email sent before the legacy editor was retired; nothing in lib/ or assets/js builds a /legacy URL any more
   exit: workflow-editor-canvas # /w/:id/legacy; workflow-editor-new for /w/new/legacy; workflow-editor-run-viewer when a= was on the link
   surfaces:
-    - controller:legacy-redirect # legacy_redirect_controller.ex:17-44; router.ex:306-311
+    - controller:legacy-redirect # legacy_redirect_controller.ex:17-44; router.ex:354-359
     - workflow-editor-new # /w/new/legacy lands here (legacy_redirect_controller.ex:17-19)
     - workflow-editor-canvas # /w/:id/legacy lands here (legacy_redirect_controller.ex:21-23)
     - workflow-editor-run-viewer # only when the link carried a= (legacy_redirect_controller.ex:39-43); owned by flow-open-run-in-editor S07
   reachable_when:
     - the visitor is signed in, or signs in first and is returned to the legacy
-      URL (router.ex:189-190; user_auth.ex:288-300, :490-492, :64-69)
+      URL (router.ex:237-238; user_auth.ex:280-292, :464-466, :65-70)
 
 inherits:
-  - shared-authenticated-session # :browser and :require_authenticated_user on the controller hop (router.ex:189-190)
+  - shared-authenticated-session # :browser and :require_authenticated_user on the controller hop (router.ex:237-238)
   - shared-project-scope # applied on landing, not by the controller (collaborate.ex:25)
 
 url_params:
@@ -44,8 +44,8 @@ config_variants:
 
 inventory:
   routes:
-    - get /projects/:project_id/w/new/legacy  LegacyRedirectController :new # router.ex:310
-    - get /projects/:project_id/w/:id/legacy  LegacyRedirectController :edit # router.ex:311
+    - get /projects/:project_id/w/new/legacy  LegacyRedirectController :new # router.ex:358
+    - get /projects/:project_id/w/:id/legacy  LegacyRedirectController :edit # router.ex:359
   events: []
   js_hooks: []
   policies: [] # the controller checks nothing; the landing LiveView's on_mount hooks do
@@ -104,7 +104,7 @@ the surprises are odd links breaking it, not the normal case.
 ## 3. Who can do what
 
 The controller applies no policy (`legacy_redirect_controller.ex:17-44`).
-Signed-in status comes from the scope's pipeline (`router.ex:189-190`). Access
+Signed-in status comes from the scope's pipeline (`router.ex:237-238`). Access
 to the target is decided on landing by `shared-project-scope` and the editor's
 own mount checks.
 
@@ -131,7 +131,7 @@ own mount checks.
 **Reads**
 
 - Hop 1, login gate (signed out only): session `user_return_to` written with the
-  full legacy path and query (`user_auth.ex:296-298`, `:490-492`)
+  full legacy path and query (`user_auth.ex:288-290`, `:464-466`)
 - Hop 2, redirect: the request path and query string only, no database
   (`legacy_redirect_controller.ex:25-37`)
 - Hop 3, landing: whatever the target LiveView mounts (`collaborate.ex:25-59`);
@@ -174,7 +174,7 @@ Feature: Legacy editor URLs redirect to the collaborative editor
     When I open "/projects/<project_id>/w/<Intake id>/legacy"
     Then I am redirected to "/projects/<project_id>/w/<Intake id>"
     And the workflow editor shows "Intake"
-    # legacy_redirect_controller.ex:21-23, :25-37; router.ex:303, :311
+    # legacy_redirect_controller.ex:21-23, :25-37; router.ex:351, :359
     # legacy_redirect_controller_test.exs:35-45 (redirect target only)
 
   @S02
@@ -184,7 +184,7 @@ Feature: Legacy editor URLs redirect to the collaborative editor
     When I open "/projects/<project_id>/w/new/legacy"
     Then I am redirected to "/projects/<project_id>/w/new"
     And the flow ends on workflow-editor-new
-    # legacy_redirect_controller.ex:17-19; router.ex:302, :310
+    # legacy_redirect_controller.ex:17-19; router.ex:350, :358
     # legacy_redirect_controller_test.exs:10-17
 
   @S03
@@ -194,7 +194,7 @@ Feature: Legacy editor URLs redirect to the collaborative editor
     When I open "/projects/<project_id>/w/<Intake id>/legacy?a=<R id>"
     And I log in
     Then I am on "/projects/<project_id>/w/<Intake id>" with "run=<R id>"
-    # router.ex:189-190; user_auth.ex:288-300, :490-492, :64-69; legacy_redirect_controller.ex:39-43
+    # router.ex:237-238; user_auth.ex:280-292, :464-466, :65-70; legacy_redirect_controller.ex:39-43
     # no test covers the login hop for this route
 ```
 
@@ -215,9 +215,9 @@ S07 (`legacy_redirect_controller_test.exs:47-83`); not repeated here.
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ----------- |
 | If both `a` and `run` are present, `a` overwrites `run`; repeated params collapse to the last value                                                        | `legacy_redirect_controller.ex:39-43`                     | decide      |
 | Query param order is not preserved (re-encoded from a map)                                                                                                 | `legacy_redirect_controller.ex:31`                        | preserve    |
-| Legacy `s` and `m` are forwarded under their old names although the collaborative editor names selection and mode differently; they are ignored on landing | `legacy_redirect_controller.ex:9-13`; `router.ex:306-309` | decide      |
+| Legacy `s` and `m` are forwarded under their old names although the collaborative editor names selection and mode differently; they are ignored on landing | `legacy_redirect_controller.ex:9-13`; `router.ex:354-357` | decide      |
 | On `/w/new` every forwarded param is ignored                                                                                                               | workflow-editor-new url_params (`collaborate.ex:100-104`) | preserve    |
-| The redirect is a plain controller GET inside the `:default` live_session block, so it is a full page load, not a live navigation                          | `router.ex:288`, `:310-311`                               | preserve    |
+| The redirect is a plain controller GET inside the `:default` live_session block, so it is a full page load, not a live navigation                          | `router.ex:336`, `:358-359`                               | preserve    |
 
 ### 6.3 Unreachable or dead code
 

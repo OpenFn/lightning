@@ -9,7 +9,7 @@ trigger:
     any page that renders `LightningWeb.Components.Tabbed.container`
     (tabbed.ex:24-98): today /projects/:project_id/settings
     (settings.html.heex:25-29, :1176) and /projects/:project_id/runs/:id
-    (router.ex:297; run_live/show.ex:228-297)
+    (router.ex:345; run_live/show.ex:228-297)
   new_route:
   old_route_disposition: unchanged
   reachable_when:

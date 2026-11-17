@@ -430,9 +430,9 @@ Feature: Workflow versions, history and sandbox editing
     And the restore dialog stays open and usable
     Examples:
       | cause                                         | message                                                  |
-      | someone else saves "Intake" at the same time  | Someone else saved this workflow. Try the restore again. |
+      | someone else saves "Intake" at the same time  | Someone else saved this workflow. Try again.         |
       | v1 no longer exists                           | That version no longer exists                            |
-    # workflow_channel.ex:461-463, :479, :1428-1432, :1670-1686; CollaborativeEditor.tsx:166-186; RestoreVersionDialog.tsx:69-75
+    # workflow_channel.ex:461-463, :479, :1666-1686; CollaborativeEditor.tsx:166-186; RestoreVersionDialog.tsx:69-75
     # workflow_channel_test.exs:2478-2482, :2589-2606; RestoreVersionDialog.test.tsx:121-132
 
   @S13

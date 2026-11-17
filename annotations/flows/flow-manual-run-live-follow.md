@@ -9,7 +9,7 @@ trigger:
   exit: workflow-editor-run-viewer
   surfaces:
     - workflow-editor-manual-run # "Run From Here" in the panel, standalone over the canvas or embedded in the IDE (ManualRunPanel.tsx:683-692; FullScreenIDE.tsx:1312-1334)
-    - controller:workflow-create-run # POST /projects/:project_id/workflows/:workflow_id/runs (router.ex:215-217; workflow_controller.ex:26-66)
+    - controller:workflow-create-run # POST /projects/:project_id/workflows/:workflow_id/runs (router.ex:263-265; workflow_controller.ex:26-66)
     - pubsub:project:<project_id> # RunCreated, WorkOrderCreated, then RunUpdated (workorders/events.ex:24-49); reaches the editor as "history_updated" on the workflow channel (workflow_channel.ex:79, :980-1073)
     - controller:worker-channel # "claim" on worker:queue (worker_channel.ex:44-49); manual runs sit in queue "manual"
     - controller:run-channel # worker side "run:start", "step:start", "step:complete", "run:log", "run:batch_logs", "run:complete"; browser side join, "fetch:run", "fetch:logs" and the forwarders (run_channel.ex:67-95, :112-258, :261-323)

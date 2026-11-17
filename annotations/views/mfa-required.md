@@ -10,7 +10,7 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the visitor is signed in with a valid session
-      (shared-authenticated-session; `router.ex:189-190`, `:288-289`)
+      (shared-authenticated-session; `router.ex:237-238`, `:336-337`)
     - the signed-in user has not enrolled in MFA (`users.mfa_enabled` not
       truthy); enrolled users are redirected to `/projects`
       (`mfa_required.ex:16-24`)
@@ -19,7 +19,7 @@ trigger:
       S05), but nothing requires that (see 6.1)
 
 inherits:
-  - shared-authenticated-session # login redirect, lockout, sidebar toggle, GDPR banner; InitAssigns runs before this view's own on_mount (router.ex:288)
+  - shared-authenticated-session # login redirect, lockout, sidebar toggle, GDPR banner; InitAssigns runs before this view's own on_mount (router.ex:336)
   - shared-project-header # side menu (Menu.profile_items here), account menu, global project picker and confirmation banner in the live layout; per batch 4 lead resolution it owns these on non-project pages too
   - shared-flash-messages # added by lead (final pass)
 
@@ -31,7 +31,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /mfa_required  ProjectLive.MFARequired :index # router.ex:288-289, live_session :default
+    - live /mfa_required  ProjectLive.MFARequired :index # router.ex:336-337, live_session :default
   events: [] # the view defines no handle_event; toggle_sidebar comes from InitAssigns (shared-authenticated-session)
   js_hooks: [] # ToggleSidebarViaCtrlM, SidebarHoverDelay, ReactComponent Picker come from the live layout (shared)
   policies: [] # the view calls none; ProjectUsers.blocked_by_mfa?/1 is called by the sender (hooks.ex:98-101)
@@ -217,9 +217,9 @@ the account menu and picker are shared-project-header S04-S12 and S17-S18.
 | No side menu item is marked active                                                                                                                   | `mfa_required.ex:13`; `menu.ex:93-108`                                         | preserve    |
 | The global project picker still lists the MFA-required projects; picking one returns the user to this page                                           | `layout_components.ex:461-470`; `hooks.ex:98-101`                              | decide      |
 | The enrolled-user redirect is a full `redirect` to `/projects` with no flash                                                                         | `mfa_required.ex:20`                                                           | preserve    |
-| Both links use `navigate` but `/profile` is in another live_session (`:services`), so following them is a full page load                             | `mfa_required.html.heex:35`, `:44`; `config/config.exs:50-59`; `router.ex:288` | preserve    |
-| The route sits in live_session `:default` with the project routes although it is not project-scoped                                                  | `router.ex:288-289`                                                            | preserve    |
-| The view's gate tests `mfa_enabled` for truthiness while the project scope requires `== true`; equivalent only because the field defaults to `false` | `mfa_required.ex:19`; `scope.ex:221-222`; `user.ex:35`                         | preserve    |
+| Both links use `navigate` but `/profile` is in another live_session (`:services`), so following them is a full page load                             | `mfa_required.html.heex:35`, `:44`; `config/config.exs:50-59`; `router.ex:336` | preserve    |
+| The route sits in live_session `:default` with the project routes although it is not project-scoped                                                  | `router.ex:336-337`                                                            | preserve    |
+| The view's gate tests `mfa_enabled` for truthiness while the project scope requires `== true`; equivalent only because the field defaults to `false` | `mfa_required.ex:19`; `scope.ex:370-373`; `user.ex:35`                         | preserve    |
 
 ### 6.3 Unreachable or dead code
 

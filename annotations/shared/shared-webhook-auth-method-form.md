@@ -135,7 +135,7 @@ Only admins and owners manage webhook auth methods
   (`form_component.ex:47-56`, `:208-211`; `user_totp.ex:58-64`).
 - Deleting needs `DELETE` typed exactly (`delete_modal.ex:215-227`).
 - A member who has not met the project's MFA requirement is denied every action
-  (`project_users.ex:134`).
+  (`decision.ex:59-66`).
 - The settings host only opens methods that belong to the current project
   (`settings.ex:559-563`; `webhook_auth_methods.ex:604-618`); a new method
   always takes the host project's id (`settings.ex:536-538`;

@@ -11,10 +11,10 @@ trigger:
     - project-settings-collaborators # invite form submit (invite_collaborator_component.ex:45-75)
     - pubsub:project:<project_id> # ProjectUserAdded (projects.ex:2020-2024, :757-762)
     - email:project-invitation # "Join <project> on OpenFn as a collaborator" (user_notifier.ex:452-464)
-    - auth-reset-password # GET/PUT /users/reset_password/:token (router.ex:185-186)
+    - auth-reset-password # GET/PUT /users/reset_password/:token (router.ex:233-234)
     - email:password-reset # recovery branch only, when the invitation link has lapsed (accounts.ex:1268-1282)
     - auth-login # where a successful reset lands (user_reset_password_controller.ex:38-41)
-    - projects-dashboard # /projects, the signed-in landing (user_auth.ex:514)
+    - projects-dashboard # /projects, the signed-in landing (user_auth.ex:488)
     - workflows-index # /projects/:id/w, reached from the dashboard row (dashboard_live/components.ex:114)
 
 inherits:
@@ -37,8 +37,8 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/reset_password/:token  UserResetPasswordController :edit # router.ex:185
-    - put /users/reset_password/:token  UserResetPasswordController :update # router.ex:186
+    - get /users/reset_password/:token  UserResetPasswordController :edit # router.ex:233
+    - put /users/reset_password/:token  UserResetPasswordController :update # router.ex:234
   events:
     - ProjectLive.InviteCollaboratorComponent#add_collaborators # the hop owned by project-settings-collaborators; listed for the handoff
   js_hooks: []
@@ -113,7 +113,7 @@ gaps.
 Sources: `lib/lightning/policies/project_users.ex:29-37` (add),
 `invite_collaborator_component.ex:48-54` (re-checked at submit),
 `user_reset_password_controller.ex:6`, `:48-58` (token holder),
-`router.ex:174-186` (signed-out only).
+`router.ex:222-234` (signed-out only).
 
 | Action                                   | Viewer                                                                                         | Editor | Admin | Owner | Superuser (no row) | Support (no row) | Holder of the link (signed out) |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------- | ------ | ----- | ----- | ------------------ | ---------------- | ------------------------------- |
@@ -127,7 +127,7 @@ Sources: `lib/lightning/policies/project_users.ex:29-37` (add),
 - The invited email must not already belong to an account (view S11;
   `invited_collaborators.ex:38-81`).
 - The link works only while signed out; a signed-in browser is redirected to
-  `/projects` (`router.ex:174-176`, `user_auth.ex:271-279`).
+  `/projects` (`router.ex:222-224`, `user_auth.ex:263-271`).
 - The link is valid for one day and only while the account's email equals the
   address it was sent to (`user_token.ex:31`, `:174-178`).
 - Entering the project goes through shared-project-scope, so an MFA-required
@@ -148,7 +148,7 @@ Sources: `lib/lightning/policies/project_users.ex:29-37` (add),
   (`projects.ex:2010-2025`).
 - Reset hop: `users.hashed_password` update; every `user_tokens` row for the
   user deleted (`accounts.ex:1318-1334`).
-- Log in hop: `user_tokens` insert, context `session` (`user_auth.ex:28-31`).
+- Log in hop: `user_tokens` insert, context `session` (`user_auth.ex:29-32`).
 
 **Immediate side effects** (in the same request)
 
@@ -214,7 +214,7 @@ Feature: Invite someone without an account to a project
     Then they see the project's workflows page with editor permissions
     # projects.ex:2010-2025, :2048-2067, :2079-2119; user_notifier.ex:452-464
     # user_reset_password_controller.ex:28-46; edit.html.heex:29-52; accounts.ex:1318-1334
-    # user_session_controller.ex:15-53; user_auth.ex:61-70, :514; dashboard_live/index.ex:44-48; dashboard_live/components.ex:114
+    # user_session_controller.ex:15-53; user_auth.ex:62-71, :488; dashboard_live/index.ex:44-48; dashboard_live/components.ex:114
     # project_live_test.exs:3811-3876 (invite and email only); user_reset_password_controller_test.exs:86-105 (reset only)
 
   @S02
@@ -266,9 +266,9 @@ Feature: Invite someone without an account to a project
 
 | What                                                                                                                                             | Where                                                                                   | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ----------- |
-| The journey does not land in the project: a successful reset goes to log in, then `/projects`, and the invitee must pick the project             | `user_reset_password_controller.ex:41`; `user_auth.ex:514`                              | decide      |
+| The journey does not land in the project: a successful reset goes to log in, then `/projects`, and the invitee must pick the project             | `user_reset_password_controller.ex:41`; `user_auth.ex:488`                              | decide      |
 | Setting the password deliberately does not sign the invitee in (the code comment gives token exposure as the reason)                             | `user_reset_password_controller.ex:34-35`; `user_reset_password_controller_test.exs:96` | preserve    |
-| Opening the link in a browser where someone else is signed in redirects to that person's `/projects`, with no hint the link was for someone else | `router.ex:174-176`; `user_auth.ex:271-279`                                             | decide      |
+| Opening the link in a browser where someone else is signed in redirects to that person's `/projects`, with no hint the link was for someone else | `router.ex:222-224`; `user_auth.ex:263-271`                                             | decide      |
 | The invitation reuses the password-reset token context and route rather than an invitation of its own                                            | `projects.ex:2106`; `user_notifier.ex:458`                                              | preserve    |
 | The email shows the role as its raw lowercase value ("editor")                                                                                   | `user_notifier.ex:456`; `invited_collaborators.ex:16`                                   | decide      |
 | The invitation mail goes through `deliver/3`, not the project-mail recipient check, though it names the project; the invitee is a member by then | `user_notifier.ex:62-71`, `:453`                                                        | preserve    |

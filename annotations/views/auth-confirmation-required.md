@@ -10,8 +10,8 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the request passes `[:browser, :require_authenticated_user]`
-      (router.ex:189-190), where the path is on the lockout allow-list
-      (confirmation_lockout.ex:25-27, :35-39; user_auth.ex:305-306, :327-330)
+      (router.ex:237-238), where the path is on the lockout allow-list
+      (confirmation_lockout.ex:25-27, :35-39; user_auth.ex:297-298, :319-322)
     - the session token resolves to an account that is not disabled or scheduled
       for deletion (accounts.ex:994-1006;
       user_confirmation_required_live.ex:18-22)
@@ -23,7 +23,7 @@ trigger:
       (shared-authenticated-session S04)
 
 inherits:
-  - shared-authenticated-session # HTTP plug parts only: S01 (signed out), S02 (disabled), S03 (TOTP pending), S04 and S05 (lockout redirect and allow-list), S11 (first setup, :browser pipeline). Not S06 to S10: the :confirmation_required live_session has no on_mount, so InitAssigns, its chrome and its banners never run here (router.ex:246-250)
+  - shared-authenticated-session # HTTP plug parts only: S01 (signed out), S02 (disabled), S03 (TOTP pending), S04 and S05 (lockout redirect and allow-list), S11 (first setup, :browser pipeline). Not S06 to S10: the :confirmation_required live_session has no on_mount, so InitAssigns, its chrome and its banners never run here (router.ex:294-298)
   - shared-flash-messages
 
 url_params: []
@@ -34,7 +34,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /users/confirm-required  UserConfirmationRequiredLive :show # router.ex:248-250
+    - live /users/confirm-required  UserConfirmationRequiredLive :show # router.ex:296-298
   events:
     - UserConfirmationRequiredLive#resend-confirmation-email # user_confirmation_required_live.ex:42-68
     - UserConfirmationRequiredLive#validate_email # user_confirmation_required_live.ex:70-77; also listed by flow-change-email-confirm
@@ -55,10 +55,10 @@ inventory:
   not_reachable_here:
     - InitAssigns on_mount and its toggle_sidebar hook, book-a-demo and GDPR
       banners (shared-authenticated-session S06 to S10); no on_mount in this
-      live_session (router.ex:246-250)
+      live_session (router.ex:294-298)
     - the user socket:
         no `user_token` is assigned for a locked-out account, so
-        `window.userToken` is empty (user_auth.ex:378-392;
+        `window.userToken` is empty (user_auth.ex:364-378;
         layouts/root.html.heex:20)
     - Common.flash's dynamic_component branch (common.ex:541-543); nothing here
       puts a component flash
@@ -130,7 +130,7 @@ did.
 ## 3. Who can do what
 
 No policy module. The HTTP request goes through `require_authenticated_user`
-(`router.ex:189-190`; `user_auth.ex:288-311`) and the mount re-resolves the
+(`router.ex:237-238`; `user_auth.ex:280-303`) and the mount re-resolves the
 session and checks `Accounts.locked_out?/1`
 (`user_confirmation_required_live.ex:17-40`).
 
@@ -182,13 +182,13 @@ Hammer counter increments (Mnesia)
   (`user_confirmation_required_live.ex:85-90`; `.html.heex:44-52`); on failure a
   `Logger.error` and an error under the email field (`:105-119`)
 - On arrival by redirect, the lockout flash from the plug is shown here
-  (`user_auth.ex:345-351`; `.html.heex:1-2`)
+  (`user_auth.ex:337-343`; `.html.heex:1-2`)
 
 **Deferred side effects**
 
 - none here; the confirm steps belong to flow-resend-account-confirmation and
   flow-change-email-confirm
-- The session's `live_socket_id` (written at login, `user_auth.ex:181-192`) is
+- The session's `live_socket_id` (written at login, `user_auth.ex:182-193`) is
   honoured by this page's LiveView socket, so a revocation disconnects it; that
   belongs to flow-account-revocation-teardown
 
@@ -241,8 +241,8 @@ Feature: Confirm your email (lockout page)
     Then I do not see "Malawi HIV"
     And I do not see the project picker, side menu or user menu
     And the page carries no socket token
-    # user_confirmation_required_live.ex:36 (layout app.html.heex:1-5); router.ex:246-250 (no InitAssigns)
-    # user_auth.ex:378-392; layouts/root.html.heex:20
+    # user_confirmation_required_live.ex:36 (layout app.html.heex:1-5); router.ex:294-298 (no InitAssigns)
+    # user_auth.ex:364-378; layouts/root.html.heex:20
     # user_confirmation_required_live_test.exs:51-63; user_auth_test.exs:633-656 (no user_token for this path)
 
   @S03 @variant:require-email-verification
@@ -388,7 +388,7 @@ Feature: Confirm your email (lockout page)
     And I am on "/users/confirm-required"
     When I click "Log out"
     Then the flow "flow-log-out" has started
-    # .html.heex:125-129; router.ex:71 (outside the authenticated scope, so the lockout never applies)
+    # .html.heex:125-129; router.ex:98 (outside the authenticated scope, so the lockout never applies)
     # confirmation_lockout.ex:16-17; confirmation_lockout_recovery_test.exs:107-117
 ```
 
@@ -407,16 +407,16 @@ Feature: Confirm your email (lockout page)
 
 | What                                                                                                                                                                                                                                | Where                                                                                                  | Disposition |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------- |
-| Own live_session with no on_mount, because InitAssigns would redirect a locked-out user back here in a loop; the mount does its own session lookup and the inverse lockout check. Test pins that every exempt LiveView is hook-free | `router.ex:246-250`; `user_confirmation_required_live.ex:17-40`; `confirmation_lockout_test.exs:72-94` | preserve    |
-| Being in its own live_session means arriving from any other LiveView is a full page load                                                                                                                                            | `router.ex:248`                                                                                        | preserve    |
-| A mount with no valid session (revoked, disabled, expired) redirects to /projects, which then redirects to /users/log_in, with no flash; only reachable on a websocket remount, since the HTTP plug refuses first                   | `user_confirmation_required_live.ex:18-22`, `:37-39`; `user_auth.ex:290-300`                           | decide      |
-| The plug's lockout flash ("Your account is blocked pending email confirmation. Confirm your email address, or update it below...") repeats the page's own body copy, so both show on arrival                                        | `confirmation_lockout.ex:8-9`; `user_auth.ex:345-351`; `.html.heex:1-2`, `:17-26`                      | decide      |
+| Own live_session with no on_mount, because InitAssigns would redirect a locked-out user back here in a loop; the mount does its own session lookup and the inverse lockout check. Test pins that every exempt LiveView is hook-free | `router.ex:294-298`; `user_confirmation_required_live.ex:17-40`; `confirmation_lockout_test.exs:72-94` | preserve    |
+| Being in its own live_session means arriving from any other LiveView is a full page load                                                                                                                                            | `router.ex:296`                                                                                        | preserve    |
+| A mount with no valid session (revoked, disabled, expired) redirects to /projects, which then redirects to /users/log_in, with no flash; only reachable on a websocket remount, since the HTTP plug refuses first                   | `user_confirmation_required_live.ex:18-22`, `:37-39`; `user_auth.ex:282-292`                           | decide      |
+| The plug's lockout flash ("Your account is blocked pending email confirmation. Confirm your email address, or update it below...") repeats the page's own body copy, so both show on arrival                                        | `confirmation_lockout.ex:8-9`; `user_auth.ex:337-343`; `.html.heex:1-2`, `:17-26`                      | decide      |
 | Flashes auto-hide after 5 seconds, including an "Email change link is invalid or it has expired." carried in from a failed link (flow-change-email-confirm S09)                                                                     | `common.ex:530-535`; `assets/js/hooks/index.ts:532-549`                                                | decide      |
 | The typed address is used raw for the token's `sent_to` and the success alert, while validation downcases it                                                                                                                        | `user_confirmation_required_live.ex:86-89`; `validators.ex:27`                                         | decide      |
 | After a correction is requested, the page still names the old address and "Resend confirmation email" still sends to it, since the email only changes when the link is opened                                                       | `.html.heex:20`, `:30`; `user_confirmation_required_live.ex:44-46`                                     | decide      |
 | The resend button is deliberately never disabled; the rate limit is the only bound (test comment)                                                                                                                                   | `.html.heex:65-72`; `user_confirmation_required_live_test.exs:79-81`                                   | preserve    |
 | "Update email" is disabled until the changeset is valid; both fields validate on blur                                                                                                                                               | `.html.heex:105`, `:112`, `:118`                                                                       | preserve    |
-| "Log out" is a GET link                                                                                                                                                                                                             | `.html.heex:126`; `router.ex:71`                                                                       | decide      |
+| "Log out" is a GET link                                                                                                                                                                                                             | `.html.heex:126`; `router.ex:98`                                                                       | decide      |
 | Page title "Confirm your email" differs from the heading "Confirm your email address"                                                                                                                                               | `user_confirmation_required_live.ex:28`; `.html.heex:12`                                               | preserve    |
 | A failed correction send shows "could not be updated, please try again" under the field, where the profile shows a flash (owned by flow-change-email-confirm 6.2)                                                                   | `user_confirmation_required_live.ex:105-119`                                                           | decide      |
 
@@ -462,7 +462,7 @@ Feature: Confirm your email (lockout page)
 - `flow-log-out`: clicking "Log out" issues GET /users/log_out, which deletes
   the session token, broadcasts `disconnect` on the session's `live_socket_id`,
   renews the session, clears the remember-me cookie and lands on /users/log_in
-  with "Logged out successfully." (`router.ex:71`; `user_auth.ex:114-132`;
+  with "Logged out successfully." (`router.ex:98`; `user_auth.ex:115-133`;
   `confirmation_lockout_recovery_test.exs:107-117`). Surfaces:
   auth-confirmation-required, the user menu on every app page
   (shared-authenticated-session), controller:user-log-out, auth-login.

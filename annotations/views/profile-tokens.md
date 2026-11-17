@@ -11,7 +11,7 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the user is signed in and admitted by shared-authenticated-session
-      (`router.ex:288`, `:326-327`, `:default` live_session with `on_mount: LightningWeb.InitAssigns`)
+      (`router.ex:336`, `:374-375`, `:default` live_session with `on_mount: LightningWeb.InitAssigns`)
     - the account is not locked out pending email confirmation;
       `/profile/tokens` is deliberately not on the lockout allow list
       (`confirmation_lockout.ex:14-23`;
@@ -40,8 +40,8 @@ config_variants:
 
 inventory:
   routes:
-    - live /profile/tokens  TokensLive.Index :index # router.ex:326
-    - live /profile/tokens/:id/delete  TokensLive.Index :delete # router.ex:327
+    - live /profile/tokens  TokensLive.Index :index # router.ex:374
+    - live /profile/tokens/:id/delete  TokensLive.Index :delete # router.ex:375
   events:
     - TokensLive.Index#generate_new_token # index.ex:49-59
     - Components.TokenDeletionModal#delete_token # token_deletion_modal.ex:12-22, :29-42
@@ -52,7 +52,7 @@ inventory:
     - ModalHook # components/modal.ex:31-37, via TokenDeletionModal
     # LocalTimeConverter comes through shared-local-datetime
   policies:
-    - Lightning.Policies.Users :delete_api_token # policies/users.ex:32-38
+    - Lightning.Policies.Users :delete_api_token # policies/users.ex:43-49
   workers: []
   api_endpoints: [] # tokens made here are consumed by /api and /collections; see Proposed flows
   emails: []
@@ -124,7 +124,7 @@ about the page itself.
 
 ## 3. Who can do what
 
-Source: `lib/lightning/policies/users.ex:32-38`; listing scoped by `user_id` in
+Source: `lib/lightning/policies/users.ex:43-49`; listing scoped by `user_id` in
 `user_token.ex:246-251`. This page has no project or instance role checks; the
 columns are the relationship to the token.
 
@@ -145,7 +145,7 @@ columns are the relationship to the token.
   was opened for (`token_deletion_modal.ex:13-21`).
 - The policy looks the token up by its value in the `api` context, so a session
   or other token row id is refused even if it belongs to the user
-  (`policies/users.ex:32-37`; `accounts.ex:1103-1107`).
+  (`policies/users.ex:43-48`; `accounts.ex:1103-1107`).
 
 ## 4. What it touches
 
@@ -166,12 +166,14 @@ delete of one row (`accounts.ex:1121-1123`)
 
 **Deferred side effects** (later, elsewhere)
 
-- A generated token authenticates `/api/*` through `authenticate_bearer` and
-  `/collections/*` through `Plugs.ApiAuth` (`router.ex:109-112`, `:163-171`;
-  `user_auth.ex:241-251`; `api_auth.ex:12-21`). Owned by the proposed
+- A generated token authenticates `/api/*` through `authenticate_bearer`, run by
+  `PersonOrServiceAccountAuth` on the `:person_or_service_account_api` pipeline,
+  and `/collections/*` through `Plugs.ApiAuth` (`router.ex:51-55`, `:145-209`,
+  `:206-216`; `plugs/person_or_service_account_auth.ex:23-37`;
+  `user_auth.ex:242-252`; `api_auth.ex:15-26`). Owned by the proposed
   `flow-personal-access-token-use`.
 - Each `/api` request with the token writes `last_used_at`, which this page
-  shows (`user_auth.ex:234-246`; `user_token.ex:74-80`).
+  shows (`user_auth.ex:235-247`; `user_token.ex:74-80`).
 - A deleted token fails the existence check on both routes
   (`user_token.ex:104-109`; `tokens.ex:190-196`).
 
@@ -297,7 +299,7 @@ Feature: Personal access tokens
     Then I am on "/profile/tokens"
     And I see "You can't perform this action"
     And I do not see "Delete API Access Token"
-    # index.ex:31-46; policies/users.ex:32-38; tokens_live_test.exs:113-125
+    # index.ex:31-46; policies/users.ex:43-49; tokens_live_test.exs:113-125
 
   @S10
   Scenario: A delete naming someone else's token deletes nothing
@@ -330,7 +332,7 @@ shared-project-header; timestamp display is shared-local-datetime.
 
 | What                                                                                                                                                                                                                                                           | Where                                                                             | What a user sees                                                                                         | Disposition               |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `last_used_at` is written only by `authenticate_bearer` on the `/api` scope; `/collections` authenticates the same token through `Plugs.ApiAuth` and `Tokens.verify/1`, which never update it                                                                  | `user_auth.ex:234-246`; `router.ex:109-112` vs `:163-164`; `api_auth.ex:12-21`    | a token used only for collections reads "Never used", inviting the user to delete a token that is in use | fix                       |
+| `last_used_at` is written only by `authenticate_bearer` on the `/api` scope; `/collections` authenticates the same token through `Plugs.ApiAuth` and `Tokens.verify/1`, which never update it                                                                  | `user_auth.ex:235-247`; `router.ex:123-165` vs `:206-216`; `api_auth.ex:15-26`    | a token used only for collections reads "Never used", inviting the user to delete a token that is in use | fix                       |
 | Escape, click-away and the backdrop hide the modal client-side only, leaving the URL on `/profile/tokens/:id/delete`; clicking the same row's trash icon again patches to the same URL, the live component keeps its id, and `phx-mounted` does not fire again | `modal.ex:31-48`, `:62-75`; `token_deletion_modal.ex:48`; `index.html.heex:22-28` | possibly nothing happens on the second click until the page is reloaded; not verified in a browser       | decide (verify, then fix) |
 | `/profile/tokens/:id/delete` with an id that doesn't exist, or isn't a UUID, raises in `get_token!/1` before the ownership check                                                                                                                               | `index.ex:32`; `accounts.ex:401`                                                  | an error page instead of "You can't perform this action"                                                 | fix                       |
 | A token deleted elsewhere (a second tab, or a password change through flow-account-revocation-teardown) while its modal is open makes "Yes" raise in `get_token!/1`                                                                                            | `token_deletion_modal.ex:29-31`                                                   | the LiveView crashes and reloads instead of a message                                                    | fix                       |
@@ -350,8 +352,8 @@ shared-project-header; timestamp display is shared-local-datetime.
 | The mask shows the last 10 characters of the JWT, which fall in its signature                                                                                                                                  | `index.ex:65-67`                                                                                                                      | preserve    |
 | With no tokens, "Generate New Token" appears twice: in the header and in the empty state                                                                                                                       | `index.html.heex:13-18`, `:129-140`                                                                                                   | preserve    |
 | Generating and deleting tokens write no audit event                                                                                                                                                            | `accounts.ex:1094-1098`, `:1121-1123`                                                                                                 | decide      |
-| The ownership policy resolves the owner through `get_user_by_api_token/1`, which also returns nil for a disabled or deleted owner; such an owner can't sign in anyway                                          | `policies/users.ex:32-37`; `accounts.ex:1002-1006`, `:1103-1107`                                                                      | preserve    |
-| `:delete_api_token` is missing from the policy's `@type actions`                                                                                                                                               | `policies/users.ex:12-16`                                                                                                             | preserve    |
+| The ownership policy resolves the owner through `get_user_by_api_token/1`, which also returns nil for a disabled or deleted owner; such an owner can't sign in anyway                                          | `policies/users.ex:43-48`; `accounts.ex:1002-1006`, `:1103-1107`                                                                      | preserve    |
+| `:delete_api_token` is missing from the policy's `@type actions`                                                                                                                                               | `policies/users.ex:12-19`                                                                                                             | preserve    |
 | `mount/3` loads the token list, and the `:delete` path loads the token row twice (route, then confirm)                                                                                                         | `index.ex:14-17`, `:32`; `token_deletion_modal.ex:30`                                                                                 | preserve    |
 
 ### 6.3 Unreachable or dead code
@@ -366,7 +368,7 @@ shared-project-header; timestamp display is shared-local-datetime.
 | What                                                                                   | Where                                 | User-visible?                                | Disposition |
 | -------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------- | ----------- |
 | No cap on how many tokens a user can generate, and the list is unpaginated             | `accounts.ex:1094-1098`, `:1128-1131` | yes, on a long list                          | decide      |
-| Each `/api` request with a token issues an `UPDATE` on its row for `last_used_at`      | `user_auth.ex:234-239`                | no                                           | preserve    |
+| Each `/api` request with a token issues an `UPDATE` on its row for `last_used_at`      | `user_auth.ex:235-240`                | no                                           | preserve    |
 | Header picker loads every project for the user on mount                                | `hooks.ex:194-202`                    | no                                           | preserve    |
 | A new token is accepted up to 60 seconds before its `iat` to absorb replica clock skew | `tokens.ex:12-16`, `:26-34`           | no; it prevents a 401 right after generating | preserve    |
 
@@ -399,10 +401,11 @@ shared-project-header; timestamp display is shared-local-datetime.
 ## Proposed flows
 
 - `flow-personal-access-token-use` (new): a token generated on this page is sent
-  as a bearer token to `/api/*` (`authenticate_bearer`, `router.ex:109-112`;
-  `user_auth.ex:241-251`) or `/collections/*` (`Plugs.ApiAuth`,
-  `router.ex:163-171`; `api_auth.ex:12-21`); `/api` requests set `last_used_at`,
-  which this page then shows as "Last Used at" (`user_auth.ex:234-239`); once
+  as a bearer token to `/api/*` (`authenticate_bearer` via
+  `PersonOrServiceAccountAuth`, `router.ex:51-55`, `:123-165`;
+  `user_auth.ex:242-252`) or `/collections/*` (`Plugs.ApiAuth`,
+  `router.ex:206-216`; `api_auth.ex:15-26`); `/api` requests set `last_used_at`,
+  which this page then shows as "Last Used at" (`user_auth.ex:235-240`); once
   the token is deleted here both routes refuse it with 401
   (`user_token.ex:104-109`; `tokens.ex:190-196`). Surfaces: profile-tokens,
   controller:api (authenticate_bearer), controller:collections (ApiAuth),

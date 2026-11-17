@@ -10,16 +10,16 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the session is admitted by shared-authenticated-session
-      (`router.ex:189-190` for the delete route, `router.ex:349` for the index
+      (`router.ex:237-238` for the delete route, `router.ex:397` for the index
       route)
     - the viewer is a superuser (`user_live/index.ex:7`; `hooks.ex:40-53`;
-      `policies/users.ex:19-21`); the gate itself is the proposed
+      `policies/users.ex:30-32`); the gate itself is the proposed
       shared-admin-space
     - '/settings/users exists only because `Lightning.Extensions.Routing` lists
       it (`config/config.exs:50-61`); the router mounts those routes in the
-      `:services` live_session (`router.ex:340-355`)'
+      `:services` live_session (`router.ex:388-403`)'
     - '/settings/users/:id/delete is a static route in the `:settings`
-      live_session (`router.ex:268-271`) and needs an existing user id
+      live_session (`router.ex:316-319`) and needs an existing user id
       (`user_live/index.ex:28-32`; `accounts.ex:372`)'
     - entered from the "Users" item in the admin side menu
       (`layouts/settings.html.heex:48-54`) or the "Admin Menu" link in the
@@ -49,13 +49,13 @@ config_variants:
   routing-without-users-index: {
       Lightning.Extensions.Routing.routes:
         "a deployment's list that omits /settings/users",
-    } # router.ex:341-355; the delete route and the menu link remain (6.5)
+    } # router.ex:389-403; the delete route and the menu link remain (6.5)
   require-email-verification: { lightning.require_email_verification: true } # inherited; shared-authenticated-session S04 to S06, shared-project-header S13, S14
 
 inventory:
   routes:
-    - live /settings/users  UserLive.Index :index # config/config.exs:60, mounted by router.ex:351-355 in :services
-    - live /settings/users/:id/delete  UserLive.Index :delete # router.ex:271, :settings live_session
+    - live /settings/users  UserLive.Index :index # config/config.exs:60, mounted by router.ex:399-403 in :services
+    - live /settings/users/:id/delete  UserLive.Index :delete # router.ex:319, :settings live_session
   events:
     - UserLive.Index#cancel_deletion # user_live/index.ex:34-52
     - UserLive.TableComponent#sort # table_component.ex:46-62
@@ -71,13 +71,13 @@ inventory:
     - TableHelpers.filter_input phx-keyup with phx-debounce 300
       (table_helpers.ex:33-43)
   policies:
-    - Lightning.Policies.Users :access_admin_space (policies/users.ex:19-21),
+    - Lightning.Policies.Users :access_admin_space (policies/users.ex:30-32),
       through LightningWeb.Hooks :ensure_admin (hooks.ex:31-53)
   workers: [] # cancelling keeps the account out of oban:accounts-purge-deleted, owned by flow-account-revocation-teardown
   api_endpoints: []
   emails: [] # scheduling sends email:account-deletion-scheduled via shared-user-deletion-modal S04 and flow-account-revocation-teardown S07; cancelling sends none
   config:
-    - :lightning, Lightning.Extensions.Routing # config/config.exs:50-61; router.ex:341-355
+    - :lightning, Lightning.Extensions.Routing # config/config.exs:50-61; router.ex:389-403
   not_reachable_here:
     - UserDeletionModal logout true clause and is_current_user true copy
       (user_deletion_modal.ex:89-93, :17, :120, :171); owned by
@@ -156,7 +156,7 @@ suggests.
 
 ## 3. Who can do what
 
-Sources: `policies/users.ex:19-21`; `hooks.ex:31-53`;
+Sources: `policies/users.ex:30-32`; `hooks.ex:31-53`;
 `user_live/components.ex:172-204`; `user_live/index.ex:34-52`.
 
 | Action                                                           | Signed out | Signed-in non-superuser    | Superuser                                                        |
@@ -216,7 +216,7 @@ shared-user-deletion-modal.
 **Depends on config**
 
 - `Lightning.Extensions.Routing` must list `/settings/users` for the index route
-  to exist (`config/config.exs:50-61`; `router.ex:341-355`)
+  to exist (`config/config.exs:50-61`; `router.ex:389-403`)
 
 **Product limits**
 
@@ -312,7 +312,7 @@ Feature: Admin users list
     Then I am on "/settings/users/<amara id>/delete"
     And the users list is still shown behind the dialog
     And shared-user-deletion-modal is open for "amara@example.org" with return to "/settings/users"
-    # user_live/components.ex:17-27, :148-151, :189-203; user_live/index.ex:28-32; index.html.heex:16-22; router.ex:271
+    # user_live/components.ex:17-27, :148-151, :189-203; user_live/index.ex:28-32; index.html.heex:16-22; router.ex:319
     # user_live_test.exs:315-319; scheduling, cancel and close are shared-user-deletion-modal S02, S04, S09; the revocation is flow-account-revocation-teardown S01, S07
 
   @S06
@@ -376,7 +376,7 @@ Feature: Admin users list
 | What                                                                                                                                                                                            | Where                                                                                                | Disposition |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------- |
 | The list is loaded once when the table component mounts and never refreshed; other superusers' edits, deletions and the nightly purge show only after navigation                                | `table_component.ex:30-43`; no PubSub in `user_live/index.ex`                                        | decide      |
-| `/settings/users` is in the `:services` live_session and `/settings/users/:id/delete` in `:settings`; "Delete", "Delete now" and closing the dialog each cross sessions and do a full page load | `router.ex:268-271`, `:351-355`; `config/config.exs:51`, `:60`                                       | decide      |
+| `/settings/users` is in the `:services` live_session and `/settings/users/:id/delete` in `:settings`; "Delete", "Delete now" and closing the dialog each cross sessions and do a full page load | `router.ex:316-319`, `:399-403`; `config/config.exs:51`, `:60`                                       | decide      |
 | Filter and sort live only in component assigns: not in the URL, lost on reload, on opening the dialog and on the navigation after cancel                                                        | `table_component.ex:30-38`; `user_live/index.ex:45`                                                  | decide      |
 | Sorting compares raw strings, so it is case-sensitive ("alice" sorts after "Zoe")                                                                                                               | `table_helpers.ex:152-164`, `:228`                                                                   | decide      |
 | Blank first or last names sort before every name in ascending order                                                                                                                             | `table_helpers.ex:220`                                                                               | preserve    |
@@ -391,7 +391,7 @@ Feature: Admin users list
 | An unknown or malformed id on `/settings/users/:id/delete` raises in `get_user!` rather than showing the "No Access" or "Not Found" panel                                                       | `user_live/index.ex:28-32`; `accounts.ex:372`                                                        | decide      |
 | Labels are title case ("New User", "Scheduled Deletion") against sentence case elsewhere                                                                                                        | `index.html.heex:11`; `user_live/components.ex:99`                                                   | decide      |
 | The page title is "Users" on both routes; the dialog does not change it                                                                                                                         | `user_live/index.ex:22-32`                                                                           | preserve    |
-| The index route is injected from config while its own delete route, the menu link and `push_navigate` targets are hard-coded                                                                    | `config/config.exs:60`; `router.ex:271`; `layouts/settings.html.heex:48-54`; `user_live/index.ex:45` | decide      |
+| The index route is injected from config while its own delete route, the menu link and `push_navigate` targets are hard-coded                                                                    | `config/config.exs:60`; `router.ex:319`; `layouts/settings.html.heex:48-54`; `user_live/index.ex:45` | decide      |
 | "Cancel deletion" is an `<a href="#">` with `phx-click`, handled by the parent LiveView rather than the table component                                                                         | `user_live/components.ex:206-217`; `user_live/index.ex:34-52`                                        | preserve    |
 
 ### 6.3 Unreachable or dead code
@@ -420,7 +420,7 @@ Feature: Admin users list
 - Whether a deployment is meant to replace this page through
   `Lightning.Extensions.Routing` (variant `routing-without-users-index`). If it
   omits the route, the side menu link and the delete route's `push_navigate`
-  targets still point at `/settings/users` (`router.ex:341-355`). Disposition:
+  targets still point at `/settings/users` (`router.ex:389-403`). Disposition:
   decide.
 - No test asserts the database after "Cancel deletion" (S07), the date and time
   format (S06 checks only "%d %b"), or the superuser footnote (S01).
@@ -464,7 +464,7 @@ none. Referenced:
   `audit_live/index.ex:7`, `auth_providers/index.ex:7`,
   `collection_live/index.ex:4`); no current user halts to `/users/log_in`
   (`hooks.ex:31-38`); a user failing `Users :access_admin_space` (role
-  `:superuser` only, `policies/users.ex:19-21`) halts with flash
+  `:superuser` only, `policies/users.ex:30-32`) halts with flash
   `:nav :no_access` and a redirect to `/projects` (`hooks.ex:40-53`), which
   renders "No Access" / "Sorry, you don't have access to that."
   (`live_helpers.ex:89-95`). Tests: `hooks_test.exs:38-70`,
@@ -474,7 +474,7 @@ none. Referenced:
   in `mount` and `handle_event` with `push_navigate` instead of the hook
   (`maintenance_live/index.ex:14-28`, `:31-33`); LiveDashboard `/dashboard` adds
   the `:require_superuser` plug and the hook but is not on the settings layout
-  (`router.ex:358-369`). Layout: `{LightningWeb.Layouts, :settings}` set in each
+  (`router.ex:406-417`). Layout: `{LightningWeb.Layouts, :settings}` set in each
   mount (`user_live/index.ex:14` and peers); side menu items Projects, Users,
   Authentication, Audit, Collections, Maintenance, a config extension slot
   (`settings_menu_items_extension`, `layout_components.ex:188-203`), Back to
@@ -483,7 +483,7 @@ none. Referenced:
   menu and global project picker as in shared-project-header S18 and S04, S06,
   S08, S10 to S12 (`layouts/settings.html.heex:29`, `:104-106`); no GDPR or
   book-a-demo banner. The routes split across live_sessions: `/settings/users`
-  in `:services` via config, the rest in `:settings` (`router.ex:268-285`,
+  in `:services` via config, the rest in `:settings` (`router.ex:316-333`,
   `:351-355`). Surfaces: the seven admin views above.
 
 ## Summary

@@ -12,13 +12,13 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the visitor passes shared-authenticated-session; both routes sit in the
-      `:browser, :require_authenticated_user` scope (`router.ex:189-190`,
+      `:browser, :require_authenticated_user` scope (`router.ex:237-238`,
       `:252-265`)
     - the session holds a `sudo_token` (from the session or the `sudo_token`
       query param) that belongs to this user and is under five minutes old,
       checked by the `:reauth_sudo_mode` and `:require_sudo_user` plugs on every
       HTTP request and by `on_mount :ensure_sudo` on every LiveView mount
-      (`router.ex:252-262`; `user_auth.ex:211-231`, `:397-410`, `:443-475`);
+      (`router.ex:300-310`; `user_auth.ex:212-232`, `:383-396`, `:417-449`);
       otherwise flow-reauth-backup-codes runs first
     - MFA is not required to reach either route; the profile only shows the
       entry point to MFA users (profile-mfa S06), and this page shows an "MFA
@@ -29,7 +29,7 @@ trigger:
       shared-authenticated-session S04)
 
 inherits:
-  - shared-authenticated-session # both routes: login redirect S01, disabled account S02, two-factor pending S03, lockout S04 to S06. The LiveView mounts InitAssigns through the unnamed `:sudo_auth` live_session (router.ex:258-262); the print page is a controller, so only the router-plug scenarios apply to it
+  - shared-authenticated-session # both routes: login redirect S01, disabled account S02, two-factor pending S03, lockout S04 to S06. The LiveView mounts InitAssigns through the unnamed `:sudo_auth` live_session (router.ex:306-310); the print page is a controller, so only the router-plug scenarios apply to it
   - shared-project-header # LiveView only, no-project parts as profile-account cites them: global picker S11, S12; confirmation banner S13, S14; role menu S17; account menu S18 (layout_components.ex:259-296, menu.ex:89-110). The print page renders in the bare app layout (layouts/app.html.heex:1-5)
   - shared-flash-messages # added by lead (final pass)
 
@@ -41,7 +41,7 @@ url_params:
     effect:
       Base64 of a `sudo_session` token; the plug copies it into the session and
       the page opens if it is this user's and under five minutes old
-      (`user_auth.ex:211-231`; `accounts.ex:1030-1035`; `user_token.ex:35`)
+      (`user_auth.ex:212-232`; `accounts.ex:1030-1035`; `user_token.ex:35`)
 
 config_variants:
   default: {} # everything below was read under this one; the page reads no config of its own
@@ -49,8 +49,8 @@ config_variants:
 
 inventory:
   routes:
-    - live /profile/auth/backup_codes  BackupCodesLive.Index :index # router.ex:258-263, live_session :sudo_auth
-    - get /profile/auth/backup_codes/print  BackupCodesController :print # router.ex:264
+    - live /profile/auth/backup_codes  BackupCodesLive.Index :index # router.ex:306-311, live_session :sudo_auth
+    - get /profile/auth/backup_codes/print  BackupCodesController :print # router.ex:312
   events:
     - BackupCodesLive.Index#regenerate-backup-codes # index.ex:27-35
     - BackupCodesController#print # backup_codes_controller.ex:5-12
@@ -60,9 +60,9 @@ inventory:
     - Tooltip (used-code tooltip via Common.tooltip) # index.html.heex:98-102; common.ex:348-357; assets/js/hooks/index.ts:567
     - inline onclick window.open for "Print Codes" # index.html.heex:111-131
   policies:
-    - LightningWeb.UserAuth.reauth_sudo_mode/2 # user_auth.ex:211-224
-    - LightningWeb.UserAuth.require_sudo_user/2 # user_auth.ex:397-410
-    - LightningWeb.UserAuth.on_mount(:ensure_sudo) # user_auth.ex:443-475
+    - LightningWeb.UserAuth.reauth_sudo_mode/2 # user_auth.ex:212-225
+    - LightningWeb.UserAuth.require_sudo_user/2 # user_auth.ex:383-396
+    - LightningWeb.UserAuth.on_mount(:ensure_sudo) # user_auth.ex:417-449
     - Lightning.Accounts.sudo_session_token_valid?/2 # accounts.ex:1030-1035
     - LightningWeb.Hooks.on_mount(:assign_projects) # index.ex:9; hooks.ex:194-202; not a gate, see 6.3
   workers: []
@@ -151,10 +151,10 @@ Pulled from the code, not a policy module: no policy is called (`index.ex:1-45`;
 
 **Preconditions beyond role**
 
-- Self only: no user id in either route or in the event (`router.ex:263-264`;
+- Self only: no user id in either route or in the event (`router.ex:311-312`;
   `index.ex:27-29`).
 - Sudo window: a `sudo_session` token for this user, inserted under five minutes
-  ago, in the session or the query (`user_auth.ex:211-231`, `:443-475`;
+  ago, in the session or the query (`user_auth.ex:212-232`, `:417-449`;
   `user_token.ex:35`). It is checked on page load and mount only; "Generate new
   backup codes" does not re-check the five-minute window and acts on an
   already-open page (`index.ex:27-35`; flow-reauth-backup-codes 6.2).
@@ -169,7 +169,7 @@ Pulled from the code, not a policy module: no policy is called (`index.ex:1-45`;
 **Reads**
 
 - `user_tokens` (session token, and `sudo_session` token when one is in the
-  query or session) on every request and mount (`user_auth.ex:211-224`,
+  query or session) on every request and mount (`user_auth.ex:212-225`,
   `:461-475`; `accounts.ex:1030-1035`)
 - `user_backup_codes` for the current user, on load and on the print page
   (`index.ex:42`; `backup_codes_controller.ex:6`; `accounts.ex:525-530`)
@@ -180,7 +180,7 @@ Pulled from the code, not a policy module: no policy is called (`index.ex:1-45`;
 
 **Writes**
 
-- Session `sudo_token`, copied from the query param (`user_auth.ex:226-231`)
+- Session `sudo_token`, copied from the query param (`user_auth.ex:227-232`)
 - "Generate new backup codes": every existing `user_backup_codes` row for the
   user deleted and ten new rows inserted, in one `Repo.update`
   (`accounts.ex:509-519`; `user.ex:51-52`, `on_replace: :delete`)
@@ -244,7 +244,7 @@ Feature: Two-factor backup codes
     And I see "Keep your backup codes as safe as your password."
     And I see each of my five recovery codes
     And I do not see "MFA Disabled"
-    # index.ex:37-44; index.html.heex:2-6, :10-13, :54-62, :88-108; user_auth.ex:211-231, :443-475
+    # index.ex:37-44; index.html.heex:2-6, :10-13, :54-62, :88-108; user_auth.ex:212-232, :417-449
     # backup_codes_live_test.exs:39-49 (asserts "Recovery codes" and each code)
 
   @S02
@@ -255,7 +255,7 @@ Feature: Two-factor backup codes
     When I open "/profile/auth/backup_codes"
     Then the flow "flow-reauth-backup-codes" has started
     And I do not see any of my recovery codes
-    # router.ex:252-262; user_auth.ex:397-410, :443-458
+    # router.ex:300-310; user_auth.ex:383-396, :417-432
     # backup_codes_live_test.exs:24-37 (redirect to /auth/confirm_access; the session there still holds the setup user's token, so this is the "someone else's token" case)
 
   @S03
@@ -265,7 +265,7 @@ Feature: Two-factor backup codes
     Then I am on "/profile/auth/backup_codes" with a sudo token in the address (the page copies it into the session)
     And I see ten recovery codes
     # handoff from flow-require-project-mfa S03 and profile-mfa S03 (mfa_component.ex:89-97; accounts.ex:423-431, :1021-1025)
-    # user_auth.ex:226-231 copies the token into the session; profile_live_test.exs:311-349 asserts the redirect, not this page
+    # user_auth.ex:227-232 copies the token into the session; profile_live_test.exs:311-349 asserts the redirect, not this page
 
   @S04
   Scenario: Generating new codes replaces every old one
@@ -301,7 +301,7 @@ Feature: Two-factor backup codes
     When I click "Print Codes"
     Then a new tab opens on "/profile/auth/backup_codes/print"
     And the flow "flow-reauth-backup-codes" S07 owns what that tab shows
-    # index.html.heex:111-131; router.ex:264; backup_codes_controller.ex:5-12
+    # index.html.heex:111-131; router.ex:312; backup_codes_controller.ex:5-12
     # untested
 
   @S07
@@ -346,7 +346,7 @@ Feature: Two-factor backup codes
 | The used-code tooltip shows the raw UTC timestamp, not the viewer's local time                                                                                                                                                       | `index.html.heex:100`                                                           | decide      |
 | "Print Codes" is a plain `<button>` with an inline `onclick` `window.open`; the print page does not open the browser's print dialog                                                                                                  | `index.html.heex:111-113`; flow-reauth-backup-codes 6.2                         | decide      |
 | The "Copy Codes" button sits next to a hidden `<input>` whose value is the codes joined by blank lines; the Copy hook reads it at click time                                                                                         | `index.html.heex:146-150`                                                       | preserve    |
-| `:sudo_auth` is its own live_session, so arriving from `/profile` (`:services`) or `/auth/confirm_access` (`:auth`) is a full page load                                                                                              | `router.ex:242-244`, `:258-263`, `:351-355`                                     | preserve    |
+| `:sudo_auth` is its own live_session, so arriving from `/profile` (`:services`) or `/auth/confirm_access` (`:auth`) is a full page load                                                                                              | `router.ex:290-292`, `:306-311`, `:399-403`                                     | preserve    |
 | The sidebar marks "User Profile" as active (`active_menu_item: :profile`)                                                                                                                                                            | `index.ex:13`; `menu.ex:97-100`                                                 | preserve    |
 | The print page's logo is a link to `#`                                                                                                                                                                                               | `print.html.heex:3`                                                             | decide      |
 
@@ -357,7 +357,7 @@ Feature: Two-factor backup codes
 | `on_mount {LightningWeb.Hooks, :assign_projects}` and the `@projects` assign it sets | `index.ex:9`; `hooks.ex:194-202`   | neither this template nor the live layout reads `@projects`; the global picker runs its own query (`layout_components.ex:461-468`). The project-picker test passes through the picker, not this assign (`backup_codes_live_test.exs:51-68`) |
 | `JS.remove_class("fade-in-scale", ...)` on the "Copied!" alert                       | `index.html.heex:156`              | nothing adds `fade-in-scale`; `JS.show` at `:137` adds no class                                                                                                                                                                             |
 | Copy hook "Copied!" tooltip (`showCopiedTooltip`)                                    | `assets/js/hooks/index.ts:808-814` | the button has no Tooltip ancestor, so the event is never dispatched                                                                                                                                                                        |
-| `apply_action/3` has only an `:index` clause                                         | `index.ex:37-44`                   | the router defines only `:index` (`router.ex:263`)                                                                                                                                                                                          |
+| `apply_action/3` has only an `:index` clause                                         | `index.ex:37-44`                   | the router defines only `:index` (`router.ex:311`)                                                                                                                                                                                          |
 
 ### 6.4 Performance and operational limits
 

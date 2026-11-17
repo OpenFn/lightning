@@ -38,8 +38,8 @@ config_variants:
 inventory:
   routes:
     - get /project_files/:id/download  ProjectFileController :download
-      (router.ex:227, pipe_through [:browser, :require_authenticated_user],
-      router.ex:190)
+      (router.ex:275, pipe_through [:browser, :require_authenticated_user],
+      router.ex:238)
   events:
     - RunLive.Index#show-export-modal # owned by history-work-orders; handoff only
     - RunLive.Index#close-export-modal
@@ -60,8 +60,8 @@ inventory:
     - GCS_BUCKET
     - Oban queue history_exports (bootstrap.ex:340)
   not_reachable_here:
-    - FallbackController clauses other than {:error, :forbidden}
-      (fallback_controller.ex:10-76)
+    - BrowserFallbackController clauses other than {:error, :forbidden}
+      (browser_fallback_controller.ex:12-64)
     - ProjectFileDefinition.delete/1 (reached only by retention and project
       deletion, see section 4)
 
@@ -84,9 +84,9 @@ related:
   - lib/lightning/storage/project_file_definition.ex
   - lib/lightning/policies/exports.ex
   - lib/lightning/policies/project_users.ex
-  - lib/lightning/projects/scope.ex
+  - lib/lightning/scope.ex
   - lib/lightning_web/controllers/project_file_controller.ex
-  - lib/lightning_web/controllers/fallback_controller.ex
+  - lib/lightning_web/controllers/browser_fallback_controller.ex
   - lib/lightning_web/live/project_live/settings.ex
   - lib/lightning_web/live/project_live/settings.html.heex
   - lib/lightning_web/live/components/data_tables.ex
@@ -150,8 +150,9 @@ different from what you'd assume.
 ## 3. Who can do what
 
 Sources: `index.ex:651-684`, `:694-708` (`can_run_workflow`); `exports.ex:21-24`
-delegates download to `:access_project`; `project_users.ex:134`, `:136`,
-`:193-194`; `scope.ex:149-152`, `:197`; `mail_recipients.ex:28-32`.
+delegates download to `:access_project`; `decision.ex:59-66`,
+`project_users.ex:160-162`, `:193-194`; `scope.ex:363-365`, `:323-360`;
+`mail_recipients.ex:28-32`.
 
 | Action                        | Viewer         | Editor         | Admin          | Owner          | Superuser (no row)         | Support (no row)               |
 | ----------------------------- | -------------- | -------------- | -------------- | -------------- | -------------------------- | ------------------------------ |
@@ -162,12 +163,12 @@ delegates download to `:access_project`; `project_users.ex:134`, `:136`,
 
 **Preconditions beyond role**
 
-- Signed in (`router.ex:190`).
+- Signed in (`router.ex:238`).
 - If the project requires MFA, the member must be enrolled; otherwise download
-  is 403 and the email is withheld (`project_users.ex:134`;
+  is 403 and the email is withheld (`decision.ex:59-66`;
   `project_mfa_enforcement_test.exs:169-182`; `export_worker_test.exs:458-471`).
 - The project must not be scheduled for deletion; otherwise download is 403
-  (`scope.ex:149-152`; `project_file_controller_test.exs:32-62`).
+  (`scope.ex:363-365`; `project_file_controller_test.exs:32-62`).
 - The email goes only to the requester, and only if their account is not
   disabled or locked out and they still have project access when the job
   finishes (`export_worker.ex:77-81`, `user_notifier.ex:69-85`,
@@ -226,11 +227,11 @@ delegates download to `:access_project`; `project_users.ex:134`, `:136`,
 **Hop 5, controller:project-file-download**
 
 - Reads `project_files`, `projects`, `project_users`, `users`
-  (`project_file_controller.ex:17-25`, `scope.ex:175-199`)
+  (`project_file_controller.ex:17-25`, `scope.ex:323-360`)
 - Writes: none
 - Response: local backend sends the file (`project_file_controller.ex:27-29`);
   GCS backend redirects to a signed URL (`:31-32`, `gcs.ex:60-74`); denial
-  renders 403 (`fallback_controller.ex:41-46`)
+  renders 403 (`browser_fallback_controller.ex:33-38`)
 
 **Immediate side effects**
 
@@ -294,7 +295,7 @@ Feature: Export work order history
     Given my history export on project "Malawi HIV" has completed
     When I open the link in the "Your OpenFn History Export Is Complete" email
     Then I receive "<project_file_id>.zip"
-    # user_notifier.ex:324, project_file_controller.ex:16-34, router.ex:227
+    # user_notifier.ex:324, project_file_controller.ex:16-34, router.ex:275
 
   @S03
   Scenario: Export covers every match, not only the first page or the first 50
@@ -344,7 +345,7 @@ Feature: Export work order history
     And I am a viewer on that project
     When I click "Download" on that row in project settings › History exports
     Then I receive the zip
-    # exports.ex:21-24, project_users.ex:136, settings.html.heex:1071-1080
+    # exports.ex:21-24, project_users.ex:160-162, settings.html.heex:1071-1080
     # project_file_controller_test.exs:81-99 (member with default role)
 
   @S08
@@ -360,7 +361,7 @@ Feature: Export work order history
       | I am signed in but not a member of the project                         |
       | I am an admin and the project is scheduled for deletion                |
       | the project requires MFA and I am a member who has not enrolled        |
-    # project_file_controller.ex:19-26, exports.ex:21-24, scope.ex:149-152, project_users.ex:134, fallback_controller.ex:41-46
+    # project_file_controller.ex:19-26, exports.ex:21-24, scope.ex:363-365, decision.ex:59-66, browser_fallback_controller.ex:33-38
     # project_file_controller_test.exs:32-79, project_mfa_enforcement_test.exs:169-182
 
   @S09

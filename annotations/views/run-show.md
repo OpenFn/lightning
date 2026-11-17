@@ -13,7 +13,7 @@ trigger:
     - the run belongs to a workflow of this project, otherwise the page redirects to History with "Run not found" (hooks.ex:169-183; show.ex:17)
 
 inherits:
-  - shared-authenticated-session    # router.ex:189-190 (require_authenticated_user), :288 (live_session :default)
+  - shared-authenticated-session    # router.ex:237-238 (require_authenticated_user), :288 (live_session :default)
   - shared-project-scope            # show.ex:16
   - shared-usage-limits-banner      # show.ex:18, :57-63
   - shared-project-header           # show.ex:65-91 (project picker, "History" breadcrumb)
@@ -45,7 +45,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/runs/:id  RunLive.Show :show          # router.ex:297
+    - live /projects/:project_id/runs/:id  RunLive.Show :show          # router.ex:345
   events:
     - RunLive.Show#cancel-run                                          # show.ex:370-404 (behaviour owned by shared-run-components)
     - RunLive.Show#save-log-filter                                     # injected by RunLive.Streaming, streaming.ex:214-227
@@ -70,7 +70,7 @@ inventory:
     - Lightning.Policies.Dataclips :view_dataclip            # body fetch by the DataclipViewer (dataclip_controller.ex:16-30)
   workers: []
   api_endpoints:
-    - get /dataclip/body/:id  DataclipController :show       # router.ex:201; fetched by DataclipViewer.tsx:10-30
+    - get /dataclip/body/:id  DataclipController :show       # router.ex:249; fetched by DataclipViewer.tsx:10-30
   emails: []                                                 # inbound only: email:failure-alert links here (flow-failure-alert-email)
   config:
     - user.preferences.experimental_features
@@ -164,7 +164,7 @@ everything), `:160-169` (support access fills in editor actions only when there
 is no membership row). The page evaluates `:run_workflow` against the project at
 mount (`show.ex:311-317`) and `:edit_data_retention` against the membership row
 (`show.ex:335-343`; a nil row resolves to no project and is refused,
-`scope.ex:112-116`, `:166-169`). Mount-time answers are refreshed by the
+`scope.ex:173-183`, `:323-360`). Mount-time answers are refreshed by the
 membership remount in shared-project-scope S08.
 
 | Action                                             | Viewer | Editor | Admin | Owner | Superuser (no row) | Support (no row)               |
@@ -179,7 +179,7 @@ membership remount in shared-project-scope S08.
 **Preconditions beyond role**
 
 - The run must belong to a workflow in this project (`hooks.ex:169-183`;
-  `runs.ex:74-84`).
+  `runs.ex:76-88`).
 - Input and output bodies are fetched from `/dataclip/body/:id`, which re-checks
   project access on the dataclip itself (`dataclip_controller.ex:16-30`;
   `policies/dataclips.ex:20-22`).
@@ -194,7 +194,7 @@ membership remount in shared-project-scope S08.
 
 - `runs` joined through `work_orders` and `workflows` to scope by project, once
   in the mount hook and again in the async load (`hooks.ex:175`;
-  `streaming.ex:15-27`; `runs.ex:74-84`)
+  `streaming.ex:15-27`; `runs.ex:76-88`)
 - With the run: `users` (created by), `triggers` (starting trigger), `steps`
   with `jobs` and `workflow_snapshots`, `workflows`, `projects`, the run's own
   snapshot (`streaming.ex:18-25`)
@@ -319,7 +319,7 @@ Feature: Run page
     Then I am on the "Malawi HIV" history page
     And I see "Run not found"
     And the same happens for a run id that does not exist
-    # hooks.ex:169-183; runs.ex:74-84
+    # hooks.ex:169-183; runs.ex:76-88
     # show_test.exs:19-42
 
   @S07
@@ -458,7 +458,7 @@ Feature: Run page
     Then I am on "/projects/<project_id>/runs/<R id>"
     And the flow "flow-failure-alert-email" ends on this page
     And if I was signed out, the flow "flow-login-return-to" starts for that URL
-    # failure_alerter.ex:69-73; failure_alert.html.heex:7-8; router.ex:189-190, :297
+    # failure_alerter.ex:69-73; failure_alert.html.heex:7-8; router.ex:237-238, :345
 
   @S20
   Scenario: A run on a zero-persistence project shows its data as not retained
@@ -479,7 +479,6 @@ Feature: Run page
 | A `step` param that names no step of this run still enables the Input and Output tabs; the viewer gets a nil step and dataclip                                                                                                               | `streaming.ex:235-246`; `show.ex:53`; `viewers.ex:256-286` | on a finished run, "No input state could be saved for this run." for a step that isn't part of it; on an unfinished run, "Nothing yet" forever                       | fix         |
 | `#input` or `#output` in the URL with no step selected opens the panel anyway: the hook selects the tab by `aria-controls`, which the disabled `<span>` also carries                                                                         | `TabbedContainer.ts:37-63`; `tabbed.ex:108-123`            | the disabled tab's panel is shown, reading "No input state could be saved for this run." on a finished run. Inferred from code                                       | fix         |
 | Highlight ranges start one line early (a 0-based marker is passed to Monaco's 1-based lines) and always extend the previous range (`last.end <= nextMarker` is always true), so a step's range swallows other steps' lines logged in between | `store.ts:67-89`; `component.tsx:61-66`                    | the line before the step's first log is highlighted, and with interleaved run-level or parallel-branch logs, unrelated lines are highlighted too. Inferred from code | decide      |
-| A non-UUID run id raises `Ecto.Query.CastError` in the mount hook rather than reaching the "Run not found" redirect                                                                                                                          | `hooks.ex:175`; `runs.ex:74-84`                            | an error page instead of being sent back to History                                                                                                                  | fix         |
 
 ### 6.2 Quirks and implementation details
 
@@ -570,7 +569,7 @@ Feature: Run page
 - **flow-login-return-to** (referenced; proposed by
   shared-authenticated-session): a signed-out visitor following a failure
   alert's run link is sent to log in and returned to the run afterwards
-  (`router.ex:189-190`). Surfaces: email:failure-alert, controller:user-session,
+  (`router.ex:237-238`). Surfaces: email:failure-alert, controller:user-session,
   run-show.
 - Referenced, existing: flow-failure-alert-email (S19),
   flow-zero-persistence-runs (S20).

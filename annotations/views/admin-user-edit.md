@@ -10,8 +10,8 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the session is admitted by shared-authenticated-session
-      (`router.ex:189-190`; both routes are in the `:settings` live_session,
-      `router.ex:268-270`)
+      (`router.ex:237-238`; both routes are in the `:settings` live_session,
+      `router.ex:316-318`)
     - the viewer is a superuser (`user_live/edit.ex:8`; shared-admin-space)
     - '/settings/users/:id needs an existing user id: `Accounts.get_user!/1`
       raises otherwise (`user_live/edit.ex:24-29`; `accounts.ex:372`), see 6.2'
@@ -39,15 +39,15 @@ config_variants:
 
 inventory:
   routes:
-    - live /settings/users/new  UserLive.Edit :new # router.ex:269
-    - live /settings/users/:id  UserLive.Edit :edit # router.ex:270
+    - live /settings/users/new  UserLive.Edit :new # router.ex:317
+    - live /settings/users/:id  UserLive.Edit :edit # router.ex:318
   events:
     - UserLive.FormComponent#validate # form_component.ex:26-38
     - UserLive.FormComponent#support_heads_up # form_component.ex:40-44
     - UserLive.FormComponent#save # form_component.ex:46-48, :57-104; also the entry listed by flow-account-revocation-teardown
   js_hooks: [] # the toggle and checkbox are plain inputs (new_inputs.ex:865-905, :1118-1145); Tooltip hook only if the toggle had a tooltip, it has none
   policies:
-    - Lightning.Policies.Users :access_admin_space (policies/users.ex:19-21),
+    - Lightning.Policies.Users :access_admin_space (policies/users.ex:30-32),
       through LightningWeb.Hooks :ensure_admin (hooks.ex:31-53); owned by
       shared-admin-space
   workers: [] # a date typed into "Scheduled Deletion" makes the account eligible for oban:accounts-purge-deleted, owned by flow-account-revocation-teardown
@@ -136,7 +136,7 @@ saves have instance-wide consequences that nothing on the form warns about.
 
 ## 3. Who can do what
 
-Sources: `policies/users.ex:19-21`; `hooks.ex:31-53`; `user_live/edit.ex:8`;
+Sources: `policies/users.ex:30-32`; `hooks.ex:31-53`; `user_live/edit.ex:8`;
 `user_live/form_component.ex:26-104`; `user.ex:287-305`, `:442-447`. Roles are
 `:user` and `:superuser` (`user.ex:16-19`); `support_user` is a flag the gate
 ignores.
@@ -188,7 +188,7 @@ uniqueness (`user.ex:241-256`); the actor's own row via the session (inherited).
 - Edit that disables, or changes password, email, role or support access, or
   sets a scheduled deletion: `disconnect` broadcast on `user_socket:<id>` and
   `users_live:<id>` after commit (`accounts.ex:191-192`;
-  `user_auth.ex:163-166`); the rest is flow-account-revocation-teardown
+  `user_auth.ex:164-167`); the rest is flow-account-revocation-teardown
 - Telemetry `[:lightning, :accounts, :superuser_changed]` on creating a
   superuser, granting superuser, or changing a superuser's password
   (`accounts.ex:153-160`, `:194-195`, `:233-260`)
@@ -419,6 +419,16 @@ Feature: Admin user form
     Then I am on "/settings/users"
     And the account's first name is unchanged
     # form_component.html.heex:109-114; untested
+
+  @S13
+  Scenario: Saving an account another superuser deleted meanwhile says so
+    # Value: a superuser whose edit lost a race with a deletion is told why nothing was saved, instead of seeing an error page.
+    Given I am a superuser with "/settings/users/<amara id>" open
+    And another superuser has deleted "amara@example.org"
+    When I click "Save"
+    Then I am on "/settings/users"
+    And I see "Someone else changed or deleted this record while you were editing it. Reload and try again."
+    # user_live/form_component.ex:57-78, live_helpers.ex:213-222, accounts.ex:188-206; user_live_test.exs
 ```
 
 The gate (non-superusers on both routes) is shared-admin-space S02, with
@@ -448,7 +458,7 @@ superuser is shared-authenticated-session S04
 | Typing the account's current password into "Password" changes nothing and revokes nothing                                                                                                                                                                              | `user.ex:136-146`                                                                                  | preserve    |
 | Saving as a superuser silently clears a stored scheduled deletion, so promoting a scheduled user cancels the deletion without the "Cancel deletion" flash or the re-enable                                                                                             | `user.ex:442-447`; compare admin-users S07                                                         | decide      |
 | An unknown or malformed id on /settings/users/:id raises in `get_user!` instead of showing "Not Found"                                                                                                                                                                 | `edit.ex:24-29`; `accounts.ex:372`                                                                 | decide      |
-| "Save" and "Cancel" go from the `:settings` live_session to `/settings/users` in `:services`, so each is a full page load                                                                                                                                              | `form_component.ex:68`, `:99`; `form_component.html.heex:109-114`; `router.ex:268-270`, `:340-356` | decide      |
+| "Save" and "Cancel" go from the `:settings` live_session to `/settings/users` in `:services`, so each is a full page load                                                                                                                                              | `form_component.ex:68`, `:99`; `form_component.html.heex:109-114`; `router.ex:316-318`, `:388-404` | decide      |
 | The create confirmation email is sent under every verification setting, unlike the /1 variant                                                                                                                                                                          | `accounts.ex:1161-1175` vs `:1177-1190`                                                            | preserve    |
 | The confirmation email gives the new user the creator's first name and email address as a contact                                                                                                                                                                      | `user_notifier.ex:107-119`                                                                         | preserve    |
 | The confirmation token is inserted with `Repo.insert!` after the create transaction, so a failure there raises after the account exists                                                                                                                                | `accounts.ex:1135-1142`; `form_component.ex:76-82`                                                 | decide      |

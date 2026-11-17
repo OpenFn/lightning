@@ -26,7 +26,7 @@ trigger:
       existing input (manual-run/SelectedDataclipView.tsx:167-170)
 
 inherits:
-  - shared-authenticated-session # the endpoint sits behind :require_authenticated_user (router.ex:189-201)
+  - shared-authenticated-session # the endpoint sits behind :require_authenticated_user (router.ex:237-249)
   - shared-project-scope # :view_dataclip is :access_project on the dataclip's own project (policies/dataclips.ex:20-22); role, support access and MFA semantics are owned there
 
 url_params: [] # the dataclip id is a path segment of the endpoint, supplied by the host, never by a page URL
@@ -49,7 +49,7 @@ inventory:
     - Lightning.Policies.Dataclips :view_dataclip # dataclip_controller.ex:19-24; policies/dataclips.ex:20-22
   workers: []
   api_endpoints:
-    - get /dataclip/body/:id  DataclipController :show # router.ex:201; dataclip_controller.ex:16-101
+    - get /dataclip/body/:id  DataclipController :show # router.ex:249; dataclip_controller.ex:16-101
   emails: []
   config: []
   not_reachable_here:
@@ -127,8 +127,8 @@ hard to predict.
 Source: `Lightning.Policies.Dataclips :view_dataclip`
 (`dataclip_controller.ex:19-30`), which delegates to
 `ProjectUsers :access_project` on the dataclip's project
-(`policies/dataclips.ex:20-22`; `project_users.ex:134-136`, `:190-191`;
-`projects/scope.ex:112-120`, `:149-152`, `:166-169`, `:196-198`).
+(`policies/dataclips.ex:20-22`; `decision.ex:59-66; project_users.ex:160-162`,
+`:190-191`; `scope.ex:173-183`, `:363-365`, `:323-360`, `:323-360`).
 
 | Action                   | Viewer | Editor | Admin | Owner | Superuser (no row) | Support (no row)                            |
 | ------------------------ | ------ | ------ | ----- | ----- | ------------------ | ------------------------------------------- |
@@ -138,13 +138,13 @@ Source: `Lightning.Policies.Dataclips :view_dataclip`
 **Preconditions beyond role**
 
 - The check is made against the dataclip's own project, not the page the viewer
-  sits on (`policies/dataclips.ex:20-22`; `scope.ex:167`).
-- Refused (403) when the project is scheduled for deletion (`scope.ex:149-152`;
+  sits on (`policies/dataclips.ex:20-22`; `scope.ex:323-360`).
+- Refused (403) when the project is scheduled for deletion (`scope.ex:363-365`;
   `dataclip_controller_test.exs:262-288`).
 - Refused (403) when the project requires MFA and the user has not enrolled
-  (`project_users.ex:134`; `scope.ex:221-224`;
+  (`decision.ex:59-66`; `scope.ex:370-373`;
   `project_mfa_enforcement_test.exs:150-160`, `:184-192`).
-- Signed-out requests are sent to log in (`router.ex:189-190`;
+- Signed-out requests are sent to log in (`router.ex:237-238`;
   `dataclip_controller_test.exs:319-325`); unconfirmed accounts past the
   deadline are refused (`confirmation_lockout_recovery_test.exs:212-231`; owned
   by shared-authenticated-session).

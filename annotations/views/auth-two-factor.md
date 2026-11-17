@@ -9,9 +9,9 @@ trigger:
   new_route:
   old_route_disposition: unchanged
   reachable_when:
-    - the browser holds a session token for an active account; otherwise the visitor is sent to /users/log_in (`router.ex:189-193`; `user_auth.ex:288-299`; `accounts.ex:994-1006`)
+    - the browser holds a session token for an active account; otherwise the visitor is sent to /users/log_in (`router.ex:237-241`; `user_auth.ex:280-291`; `accounts.ex:994-1006`)
     - the session carries the `user_totp_pending` flag, set only by the password login (`user_session_controller.ex:40-46`) or the external-provider callback (`oidc_controller.ex:250-256`) for an account with `mfa_enabled`; otherwise both GET and POST redirect to /projects (`user_totp_controller.ex:7`, `:33-41`)
-    - first-setup-open only: a superuser exists; otherwise the :browser pipeline sends the request to /first_setup (`router.ex:29`; `plugs/first_setup.ex:11-33`)
+    - first-setup-open only: a superuser exists; otherwise the :browser pipeline sends the request to /first_setup (`router.ex:30`; `plugs/first_setup.ex:11-33`)
 
 inherits:
   - shared-authenticated-session     # router-plug scenarios only, this is a controller page: login redirect (its S01), disabled account (its S02), first-setup redirect (its S11). Its S03 is the gate that sends a pending session here; its S04 lockout explicitly lets this path through (S12). InitAssigns, sidebar and banner behaviour do not apply
@@ -22,28 +22,28 @@ url_params:
     effect: "backup_code" shows the backup code variant; anything else, or absent, shows the authenticator variant (`user_totp_controller.ex:13`, `:43-51`)
   - name: user[remember_me]
     set_by: auth-login (password login, only when "Keep me logged in for 60 days" was ticked) and controller:oidc-callback (always "true")
-    effect: copied into a hidden field and, on a valid code, writes the 60-day remember-me cookie (`user_totp_controller.ex:12`; `new.html.heex:40`; `user_auth.ex:63-79`)
+    effect: copied into a hidden field and, on a valid code, writes the 60-day remember-me cookie (`user_totp_controller.ex:12`; `new.html.heex:40`; `user_auth.ex:64-80`)
 
 config_variants:
   default: { allow_signup: false, allow_first_setup: false, require_email_verification: false, auth provider: none }   # read under this one unless a scenario is tagged
   sso-provider: { auth provider configured at /settings/authentication }        # arrival from controller:oidc-callback with remember-me forced on (oidc_controller.ex:250-256)
   require-email-verification: { lightning.require_email_verification: true }    # bootstrap.ex:387-389; this path is on the lockout allow list (confirmation_lockout.ex:31-32)
   first-setup-open: { lightning.allow_first_setup: true, no superuser }          # bootstrap.ex:234; inherited from shared-authenticated-session S11, read in code only
-  # allow_signup: BlockRoutes never matches /users/two-factor (router.ex:31-42); no effect here
+  # allow_signup: BlockRoutes never matches /users/two-factor (router.ex:32-43); no effect here
   # Email delivery (MAIL_PROVIDER): the page sends no email; no effect here
 
 inventory:
   routes:
-    - get /users/two-factor  UserTOTPController :new         # router.ex:192
-    - post /users/two-factor  UserTOTPController :create     # router.ex:193
+    - get /users/two-factor  UserTOTPController :new         # router.ex:240
+    - post /users/two-factor  UserTOTPController :create     # router.ex:241
   events:
     - UserTOTPController#new
     - UserTOTPController#create
   js_hooks: []
   policies:
-    - LightningWeb.UserAuth.require_authenticated_user/2 (user_auth.ex:288-311)
+    - LightningWeb.UserAuth.require_authenticated_user/2 (user_auth.ex:280-303)
     - UserTOTPController.redirect_if_totp_is_not_pending/2 (user_totp_controller.ex:7, :33-41)
-    - LightningWeb.UserAuth.totp_pending?/1, totp_validated/1 (user_auth.ex:482-488)
+    - LightningWeb.UserAuth.totp_pending?/1, totp_validated/1 (user_auth.ex:456-462)
     - LightningWeb.ConfirmationLockout.allowed_path?/1 (confirmation_lockout.ex:31-38)
     - Lightning.Accounts.valid_user_totp?/2 (accounts.ex:462-467)
     - Lightning.Accounts.valid_user_backup_code?/2 (accounts.ex:472-502)
@@ -55,10 +55,10 @@ inventory:
     - :lightning, :require_email_verification     # confirmation_lockout.ex; lets this path through
     - :lightning, :allow_first_setup              # plugs/first_setup.ex:12
   not_reachable_here:
-    - UserAuth.mark_totp_pending/1 (user_auth.ex:478-480); called by auth-login and controller:oidc-callback, not by this view
+    - UserAuth.mark_totp_pending/1 (user_auth.ex:452-454); called by auth-login and controller:oidc-callback, not by this view
     - Accounts.upsert_user_totp/2, delete_user_totp/1, regenerate_user_backup_codes/1 (accounts.ex:413-457, :507-520); enrolment and backup code management live in profile-mfa and profile-backup-codes
     - UserTOTP.changeset/2 (user_totp.ex:26-43); used by enrolment only
-    - LightningWeb.Plugs.BlockRoutes (router.ex:31-42); never matches this path
+    - LightningWeb.Plugs.BlockRoutes (router.ex:32-43); never matches this path
 
 related:
   - lib/lightning_web/controllers/user_totp_controller.ex
@@ -130,7 +130,7 @@ wrong in confusing ways after a mistake, and gives a stuck person nowhere to go.
 
 ## 3. Who can do what
 
-Sources: `router.ex:189-193`; `user_auth.ex:288-323`, `:378-392`, `:482-488`;
+Sources: `router.ex:237-241`; `user_auth.ex:280-315`, `:364-378`, `:456-462`;
 `user_totp_controller.ex:7`, `:17-41`; `confirmation_lockout.ex:31-38`;
 `accounts.ex:994-1006`. Project roles, superuser and support access have no
 bearing on this page.
@@ -155,7 +155,7 @@ bearing on this page.
   `used_at` (`accounts.ex:485-494`).
 - The account must still pass `login_blocked?`; disabling it while the second
   factor is pending drops the session user and sends the visitor to log in
-  (`accounts.ex:994-1006`; `user_auth.ex:290-299`).
+  (`accounts.ex:994-1006`; `user_auth.ex:282-291`).
 
 ## 4. What it touches
 
@@ -169,15 +169,15 @@ bearing on this page.
 - `user_backup_codes.used_at` on a valid backup code, written by replacing the
   user's backup code association (`accounts.ex:485-502`)
 - Session: `user_totp_pending` deleted and `user_return_to` deleted on success
-  (`user_auth.ex:486-488`, `:63-70`)
+  (`user_auth.ex:460-462`, `:64-71`)
 - Response cookie `_lightning_web_user_remember_me` (signed, 60 days, SameSite
-  Lax) when `remember_me` is "true" (`user_auth.ex:18-21`, `:72-79`)
+  Lax) when `remember_me` is "true" (`user_auth.ex:19-22`, `:73-80`)
 - Signed-out GET only: session key `user_return_to` = "/users/two-factor"
-  (`user_auth.ex:490-492`; see 6.2)
+  (`user_auth.ex:464-466`; see 6.2)
 
 **Immediate side effects**
 
-- Redirect to the stored return path or /projects (`user_auth.ex:63-70`, `:514`)
+- Redirect to the stored return path or /projects (`user_auth.ex:64-71`, `:488`)
 - No email or broadcast on success (`user_totp_controller.ex:17-31`)
 
 **Deferred side effects**
@@ -193,7 +193,7 @@ bearing on this page.
 - `require_email_verification`: the path is on the lockout allow list
   (`confirmation_lockout.ex:31-32`)
 - `allow_first_setup`: the FirstSetup plug runs ahead of this page
-  (`router.ex:29`)
+  (`router.ex:30`)
 - sso-provider: arrivals from the provider callback always carry
   `remember_me=true` (`oidc_controller.ex:255`)
 
@@ -203,7 +203,7 @@ bearing on this page.
   `:485-494`)
 - Authenticator codes are 6 digits; anything else is refused
   (`user_totp.ex:58-64`)
-- The remember-me cookie, when chosen, lasts 60 days (`user_auth.ex:18-21`)
+- The remember-me cookie, when chosen, lasts 60 days (`user_auth.ex:19-22`)
 
 ## 5. Scenarios
 
@@ -224,7 +224,7 @@ Feature: Two-factor authentication
     When I enter the current code from my authenticator and click "Verify"
     Then I am on "/projects"
     And visiting "/projects" no longer sends me to "/users/two-factor"
-    # user_totp_controller.ex:17-24, :60-65; user_auth.ex:486-488, :63-70; accounts.ex:462-467
+    # user_totp_controller.ex:17-24, :60-65; user_auth.ex:460-462, :64-71; accounts.ex:462-467
     # user_totp_controller_test.exs:21-30 (page copy), :78-88 (redirect to /projects, pending flag cleared)
 
   @S02
@@ -270,7 +270,7 @@ Feature: Two-factor authentication
     When I enter "000000" and click "Verify"
     Then I see "Invalid two-factor authentication code"
     And when I visit "/projects" I am sent back to "/users/two-factor"
-    # user_totp_controller.ex:25-29; user_auth.ex:302-303
+    # user_totp_controller.ex:25-29; user_auth.ex:294-295
     # user_totp_controller_test.exs:128-136 (error copy, pending flag kept; asserted for backup codes only)
 
   @S06
@@ -280,7 +280,7 @@ Feature: Two-factor authentication
     And I entered the right password with "Keep me logged in for 60 days" <ticked>
     When I enter a valid <factor>
     Then a remember-me cookie <is_set>
-    # user_session_controller.ex:41-46 (choice carried in the URL); user_totp_controller.ex:12, :23; new.html.heex:40; user_auth.ex:72-79
+    # user_session_controller.ex:41-46 (choice carried in the URL); user_totp_controller.ex:12, :23; new.html.heex:40; user_auth.ex:73-80
     # user_totp_controller_test.exs:48-58 (hidden field from URL), :90-105 and :150-165 (cookie set); no test asserts the unticked case here
 
     Examples:
@@ -306,7 +306,7 @@ Feature: Two-factor authentication
     Given I am not logged in
     When I visit "/users/two-factor"
     Then I am on "/users/log_in"
-    # router.ex:189-193; user_auth.ex:290-299; user_totp_controller_test.exs:60-67
+    # router.ex:237-241; user_auth.ex:282-291; user_totp_controller_test.exs:60-67
 
   @S09
   Scenario: The two-factor page gives a pending session no live socket token
@@ -315,7 +315,7 @@ Feature: Two-factor authentication
     And I have entered the right password for "amara@example.org"
     When I am on "/users/two-factor"
     Then the page's user socket token is empty
-    # user_auth.ex:302-303 (this path is exempt from the redirect), :378-392; root.html.heex:19-21
+    # user_auth.ex:294-295 (this path is exempt from the redirect), :378-392; root.html.heex:19-21
     # user_auth_test.exs:541-551
 
   @S10
@@ -325,7 +325,7 @@ Feature: Two-factor authentication
     And my account has MFA enabled
     When I enter a valid authentication code
     Then the flow "flow-login-return-to" continues to the run page I opened
-    # user_totp_controller.ex:23; user_auth.ex:63-70
+    # user_totp_controller.ex:23; user_auth.ex:64-71
     # user_totp_controller_test.exs:107-119 (code), :167-182 (backup code); end-to-end owned by flow-login-return-to S02
 
   @S11
@@ -335,7 +335,7 @@ Feature: Two-factor authentication
     And my account has MFA enabled
     When I enter a valid authentication code
     Then I am on "/projects"
-    # user_auth.ex:69, :514; user_totp_controller_test.exs:78-88
+    # user_auth.ex:70, :488; user_totp_controller_test.exs:78-88
 
   @S12 @variant:require-email-verification
   Scenario: An unconfirmed account past its deadline can still finish the second factor
@@ -346,7 +346,7 @@ Feature: Two-factor authentication
     Then I see "Two-factor authentication"
     When I enter a valid authentication code
     Then the gate in shared-authenticated-session S04 sends me to "/users/confirm-required"
-    # confirmation_lockout.ex:31-32; user_auth.ex:305-306; confirmation_lockout_test.exs:7-21, :48-69
+    # confirmation_lockout.ex:31-32; user_auth.ex:297-298; confirmation_lockout_test.exs:7-21, :48-69
     # no test runs this page under the variant
 
   @S13 @variant:sso-provider
@@ -378,12 +378,12 @@ Feature: Two-factor authentication
 | The form is built `for={@conn}`, so after a wrong code the input is pre-filled with the code just rejected                                                               | `new.html.heex:21-31`                                                        | decide      |
 | Backup codes are compared exactly: lowercase or spaced entry is refused; an authenticator code with a space is refused because it is not 6 bytes                         | `accounts.ex:487-488`; `user_totp.ex:60-61`                                  | decide      |
 | Visiting with no second factor pending (including a fully signed-in user) redirects to /projects, for GET and POST alike                                                 | `user_totp_controller.ex:7`, `:33-41`; `user_totp_controller_test.exs:69-74` | preserve    |
-| A signed-out GET stores "/users/two-factor" as the return path; after login it bounces once more to /projects (or to this page again for an MFA account, then /projects) | `user_auth.ex:490-492`; `user_totp_controller.ex:33-41`                      | preserve    |
+| A signed-out GET stores "/users/two-factor" as the return path; after login it bounces once more to /projects (or to this page again for an MFA account, then /projects) | `user_auth.ex:464-466`; `user_totp_controller.ex:33-41`                      | preserve    |
 | The page has two `h1` headings ("Two-factor authentication" and "Authentication Code"/"Backup Code"); the second is title case; the logo links to "#"                    | `new.html.heex:3-12`; `user_totp_html.ex:105-115`                            | decide      |
 | Backup code help reads "Kindly note that a backup code can only be used once" with no closing period                                                                     | `new.html.heex:65`                                                           | decide      |
-| No log out or cancel link; a person without their device or backup codes has no visible way off this page except closing the browser or knowing /users/log_out           | `new.html.heex:1-95`; `router.ex:71`                                         | decide      |
-| `remember_me` is taken from the query string, so `user[remember_me]=true` can be added to the URL; it only affects the visitor's own browser after a valid code          | `user_totp_controller.ex:12`; `user_auth.ex:72-75`                           | preserve    |
-| The session is renewed at the password step; only the pending flag is removed here                                                                                       | `user_auth.ex:486-488`, `:28-31`, `:96-103`                                  | preserve    |
+| No log out or cancel link; a person without their device or backup codes has no visible way off this page except closing the browser or knowing /users/log_out           | `new.html.heex:1-95`; `router.ex:98`                                         | decide      |
+| `remember_me` is taken from the query string, so `user[remember_me]=true` can be added to the URL; it only affects the visitor's own browser after a valid code          | `user_totp_controller.ex:12`; `user_auth.ex:73-76`                           | preserve    |
+| The session is renewed at the password step; only the pending flag is removed here                                                                                       | `user_auth.ex:460-462`, `:29-32`, `:97-104`                                  | preserve    |
 | Backup codes are compared with `Plug.Crypto.secure_compare/2` across all of the account's codes                                                                          | `accounts.ex:485-494`                                                        | preserve    |
 | `last_totp_at` is shared with the re-authenticate page, so a code accepted here is also refused there within the same window                                             | `user_totp.ex:45-56`; flow-reauth-backup-codes                               | preserve    |
 | The `title/1` component declares `authentication_type` as `:string` but is passed atoms                                                                                  | `user_totp_html.ex:103`                                                      | decide      |

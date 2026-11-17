@@ -49,8 +49,8 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit    # router.ex:303; owned by shared-editor-session; this view is the ?chat= state
-    - get /api/ai_assistant/sessions  API.AiAssistantController :list_sessions   # router.ex:140 (cookie-authenticated JSON)
+    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit    # router.ex:351; owned by shared-editor-session; this view is the ?chat= state
+    - get /api/ai_assistant/sessions  API.AiAssistantController :list_sessions   # router.ex:225 (cookie-authenticated JSON)
   events:
     - AiAssistantChannel#join                     # ai_assistant_channel.ex:34-104
     - AiAssistantChannel#new_message              # :111-130
@@ -145,7 +145,8 @@ questions and answers silently lost.
 - **Ask and get answers** (members)
   - Start a conversation with a first message; every message carries the current
     workflow, and with a run open they can attach its logs and the shape of its
-    data, never a run from another project
+    data, never a run from another project; a leading `/design`, `/diagnose` or
+    `/qa` picks a skill, the last two only on a saved workflow
   - Replies stream in, and nobody can send again until the answer is in
   - A failed reply, a failed code edit or a message stuck by a crash or deploy
     says why and offers "Try again", keeping any text that already streamed
@@ -155,7 +156,8 @@ questions and answers silently lost.
     being lost
   - A change that did not reach the canvas says so, offers a retry and is still
     flagged after reload; the last reply's changes can be reverted and restored
-  - Open a step the assistant changed straight in the code editor
+  - Open a step the assistant changed straight from its diff block, with the
+    code it added highlighted
 - **Limits on what people can do**
   - Viewers can ask but cannot apply changes or change the assistant's job
     context
@@ -184,6 +186,9 @@ that happens, take real thought.
 - **(3)** Changes are only applied in the asker's browser, and they're left
   unsaved on an existing workflow but saved straight away on a new one, so the
   same action behaves differently depending on where you start. (6.2, S07, S09)
+- **(2)** The assistant's memory of a conversation is the history Apollo hands
+  back after each reply, not the messages shown in the panel; only conversations
+  from before that was stored are rebuilt from the messages. (S36)
 - **(3)** Viewers can't change anything, but they can chat, so they add to the
   team's shared history and spend the project's AI quota. (6.2)
 - **(3)** A direct link to the assistant may open a working-looking panel even
@@ -196,7 +201,7 @@ Source: `lib/lightning/policies/workflows.ex:14-22` (`:access_read` and
 `:access_write` are both `ProjectUsers :access_project`);
 `lib/lightning/policies/project_users.ex:39-49`, `:134-136`, `:160-172`,
 `:190-194`; channel resolution `ai_assistant_channel.ex:831-945`, `:1539-1569`;
-controller `ai_assistant_controller.ex:96-164`; client gate
+controller `ai_assistant_controller.ex:125-171`; client gate
 `AIAssistantPanelWrapper.tsx:189-191`, `useWorkflow.tsx:1036-1112`.
 
 | Action                                                          | Viewer | Editor | Admin | Owner | Superuser (no row) | Support (no row)               |
@@ -216,7 +221,7 @@ controller `ai_assistant_controller.ex:96-164`; client gate
 - On a pinned version, release or as-run view the header button is disabled and
   the panel closes (`Header.tsx:367-368`; `useAIPanelDiffManager.ts:88-97`).
 - Members of an MFA-required project who have not enrolled are refused
-  (`project_users.ex:134`).
+  (`decision.ex:59-66`).
 - Every inbound frame re-reads the session row and re-authorises; joining is a
   snapshot (`ai_assistant_channel.ex:1539-1569`).
 - Applying changes also requires the workflow not to be read-only: deleted,
@@ -230,7 +235,7 @@ controller `ai_assistant_controller.ex:96-164`; client gate
   retries (`ai_assistant_channel.ex:119`, `:142-148`).
 - A session with no project, job or unsaved workflow falls back to "creator
   only" (`ai_assistant_channel.ex:861-868`, `:884-891`;
-  `ai_assistant_controller.ex:152-157`).
+  `ai_assistant_controller.ex:158-159`).
 
 ## 4. What it touches
 
@@ -242,11 +247,12 @@ to serialise the workflow (`AIAssistantPanelWrapper.tsx:413-427`, `:473-490`)
 **Writes**
 
 - `ai_chat_sessions`: insert on a first message with the title cut from it
-  (`ai_assistant.ex:233-282`, `:1115-1136`); `meta` merged per message
-  (`:737-743`); `runtime_context` per job context update
-  (`ai_assistant_channel.ex:236-271`); `follow_run_id` on join (`:722-736`);
-  `workflow_id`/`job_id` linked and `unsaved_*` dropped on first save
-  (`session.ex:528-533`; `ai_assistant.ex:297-415`)
+  (`ai_assistant.ex:233-282`, `:1115-1136`); `meta` merged per message and
+  Apollo's returned `history` stored in `apollo_history` when a complete reply
+  arrives (`ai_assistant.ex:755-766`, `:1192-1199`); `runtime_context` per job
+  context update (`ai_assistant_channel.ex:236-271`); `follow_run_id` on join
+  (`:722-736`); `workflow_id`/`job_id` linked and `unsaved_*` dropped on first
+  save (`session.ex:528-533`; `ai_assistant.ex:297-415`)
 - `ai_chat_messages`: user message insert (`ai_assistant.ex:667-687`); status
   `processing`/`success`/`error` with failure category and sentence
   (`message_processor.ex:456-518`); assistant reply or partial reply insert
@@ -277,6 +283,9 @@ to serialise the workflow (`AIAssistantPanelWrapper.tsx:413-427`, `:473-490`)
   the reply, marks `success` or `error`, and broadcasts each step on
   `ai_session:<id>`, which the channel relays to every subscriber
   (`message_processor.ex:39-88`, `:405-415`; `ai_assistant_channel.ex:342-466`)
+- The session context the workflow channel sends includes the skill list
+  (`/design`, `/diagnose`, `/qa`) (`workflow_channel.ex:1382`;
+  `skills.ex:19-38`)
 - AI usage is incremented in the same transaction as each assistant reply
   (`ai_assistant.ex:681`, `:1874-1896`)
 - Oban exception and non-success stop handlers mark the message `error` and
@@ -289,12 +298,14 @@ to serialise the workflow (`AIAssistantPanelWrapper.tsx:413-427`, `:473-490`)
 **External, non-transactional effects**
 
 - Apollo: `POST /services/global_chat/stream` with the message, workflow YAML,
-  page, history, session meta (including any `runtime_context` job code), user
-  id and any run attachments (`apollo_client.ex:157-186`;
-  `ai_assistant.ex:908-922`, `:977-1003`; `message_processor.ex:156-261`).
-  Apollo calls Anthropic, which keeps messages up to 30 days per the About copy
-  (`AIAssistantPanel.tsx:569-571`). Nothing can be recalled if the job then
-  fails.
+  page, history (the stored `apollo_history` as Apollo last returned it, or one
+  rebuilt from the messages for older conversations), session meta (including
+  any `runtime_context` job code), user id, any run attachments and the skill
+  named by a leading slash command (`apollo_client.ex:157-186`;
+  `ai_assistant.ex:1004-1018`, `:1890-1894`; `message_processor.ex:166-180`;
+  `skills.ex:44-52`). Apollo calls Anthropic, which keeps messages up to 30 days
+  per the About copy (`AIAssistantPanel.tsx:569-571`). Nothing can be recalled
+  if the job then fails.
 - Sentry messages on apply failure, AI timeouts and stops
   (`ai_assistant_channel.ex:189-201`; `message_processor.ex:597-617`,
   `:668-687`)
@@ -387,7 +398,7 @@ Feature: AI assistant in the workflow editor
   Scenario: A reply streams in and sending waits until it is done
     # Value: long answers show progress, and nobody fires a second request that would race the first.
     Given I have sent a message in a conversation
-    Then I see a status such as "Thinking..." while the assistant works
+    Then I see a status such as "Thinking..." or "Working on it..." while the assistant works
     And the reply text appears as it arrives and stays once complete
     And the message box is disabled until the reply is in
     # ai_assistant.ex:1532-1572; ai_assistant_channel.ex:342-376, :404-457; AIChannelRegistry.ts:167-276, :755-777
@@ -586,7 +597,7 @@ Feature: AI assistant in the workflow editor
       | a registered user not on "Malawi HIV"                    |
       | a support user while support access is off               |
       | an editor who has not enrolled in MFA, on an MFA project |
-    # ai_assistant_channel.ex:44-45, :874-945; ai_assistant_controller.ex:122-164; project_users.ex:134
+    # ai_assistant_channel.ex:44-45, :874-945; ai_assistant_controller.ex:125-171; target.ex:50-62; decision.ex:59-66
     # ai_assistant_channel_test.exs:1536-1726, :2814-2915, :4326-4357; ai_assistant_controller_test.exs:225-245, :591-611
 
   @S24
@@ -674,11 +685,69 @@ Feature: AI assistant in the workflow editor
 
   @S32
   Scenario: A step the assistant changed opens in the code editor
-    # Value: people can read the code the assistant wrote before saving it.
+    # Value: people can read the code the assistant wrote before saving it, and see which lines are new.
     Given a reply lists changes to step "Send to DHIS2"
-    When I click "Send to DHIS2" in the reply
+    Then its diff block shows the step's adaptor logo and name, with a "Go to step" link
+    When I click the step name or "Go to step"
     Then the code editor opens on "Send to DHIS2" (handoff to workflow-editor-ide)
-    # AIAssistantPanelWrapper.tsx:204-228; MessageList.tsx:1199-1230
+    And the lines the reply added are highlighted in the code, and clicking again flashes them again
+    And clicking or typing in the code clears the highlight
+    # WorkflowDiffBlocks.tsx:309-422; AIAssistantPanelWrapper.tsx:215-236; CollaborativeMonaco.tsx:181-232
+    # locateAddedRuns.ts:1-35; workflowDiff.ts:113-136; MessageList.test.tsx; locateAddedRuns.test.ts
+
+  @S33 @variant:ai-enabled
+  Scenario: Typing a slash in the message box offers the assistant's skills
+    # Value: people can ask the assistant to design, diagnose or review a workflow without knowing how to phrase it.
+    Given I am an editor with the saved workflow "Intake" open and the assistant panel in a conversation
+    When I type "/" in the message box
+    Then I see a menu listing "/design", "/diagnose" and "/qa", each with a description
+    When I type "/d"
+    Then the menu lists only "/design" and "/diagnose"
+    When I press Enter or Tab, or click an entry
+    Then the message box shows the command as a coloured "/diagnose" with the placeholder "Add details (optional)"
+    And pressing Escape closes the menu without choosing, and Backspace at the start turns the command back into text
+    # useSlashCommand.ts:12-135; SkillMenu.tsx:14-58; ChatInput.tsx:84, :256-336; skills.ex:19-38
+    # ChatInput.slashCommands.test.tsx
+
+  @S34 @variant:ai-enabled
+  Scenario: A new workflow is offered only the skills that fit it
+    # Value: nobody is offered a diagnosis or review of a workflow that has no steps or runs yet.
+    Given I am building a new, unsaved workflow with the assistant open
+    When I type "/" in the message box
+    Then the menu lists only "/design"
+    And on a saved workflow it lists "/design", "/diagnose" and "/qa"
+    # useSessionContext.ts:170-189; skills.ex:19-38, :44-52; LandingScreen.test.tsx; useSessionContext.test.tsx
+
+  @S35 @variant:ai-enabled
+  Scenario: A sent skill command stays visible in the conversation and reaches the assistant
+    # Value: everyone reading the conversation can see how the assistant was asked, and it does the kind of work asked for.
+    Given I have chosen "/qa" and typed "check the credentials"
+    When I send the message
+    Then my message in the conversation reads "/qa check the credentials" with "/qa" in colour, and hovering it shows the skill's description
+    And the request to the assistant names the skill "qa" and still carries the message text
+    And sending "/qa" alone, with nothing after it, is allowed
+    And a message that starts with an unknown name such as "/qafoo" is sent as ordinary text
+    # ChatInput.tsx:84-90, :227-234; MessageList.tsx:736-751, :1515-1518; SkillCommand.tsx:4-25; slashCommand.ts:1-16
+    # message_processor.ex:166-180; apollo_client.ex:166-178; skills.ex:44-52; message_processor_test.exs
+
+  @S36
+  Scenario: A conversation continues from the history the assistant last returned
+    # Value: the assistant keeps the context it chose to keep, so long conversations stay coherent without Lightning second-guessing it.
+    Given I am in a conversation and the assistant has replied
+    When I send another message
+    Then the request to the assistant carries the history it returned with its last reply, unchanged
+    And for a conversation from before that was stored, the history is built from its saved messages
+    # ai_assistant.ex:684-699, :755-766, :1192-1199, :1890-1894; chat_session.ex:44, :86; ai_assistant_test.exs; message_processor_test.exs
+
+  @S37
+  Scenario: A conversation listing with bad parameters is refused with every problem named, but only to someone who may open the project
+    # Value: a caller outside the project learns nothing about it from how its request is answered, while a member fixes every mistake in one try.
+    Given a project "Malawi HIV" I am a member of, and another I am not
+    When I list conversations with "session_type" "workflow_template", the project's id, "limit" 0 and "offset" -1
+    Then the response is 400 and names both "limit" and "offset"
+    When I send the same request for the project I am not on
+    Then the response is 403 with no mention of the parameters
+    # ai_assistant_controller.ex:42-66, :125-190; api/filters.ex; ai_assistant/refusals_test.exs; job_code_sessions_test.exs
 ```
 
 ## 6. Unclear value
@@ -706,7 +775,7 @@ Feature: AI assistant in the workflow editor
 | Search and the Latest/Oldest toggle work only on the loaded page; in "Oldest" order, "Load more" appends the next page of newest-first results                                                          | `SessionList.tsx:48-80`; `ai_assistant.ex:1056`                                      | decide      |
 | Conversation titles are the first message cut to 40 characters on a word boundary, trailing punctuation dropped                                                                                         | `ai_assistant.ex:31`, `:1115-1136`                                                   | preserve    |
 | The attachment ticks are remembered per workflow (or per project on a new workflow) in browser storage                                                                                                  | `ChatInput.tsx:80-186`; `useAIMode.ts:77-79`                                         | preserve    |
-| While waiting, a random phrase ("Thinking about the question...", "Taking a look...") stands in for status until the server sends one                                                                   | `AIAssistantPanelWrapper.tsx:3-15`, `:455`, `:515`                                   | preserve    |
+| While waiting, a random phrase ("Thinking...", "Taking a look...") stands in for status until the server sends one                                                                                      | `AIAssistantPanelWrapper.tsx:3-15`, `:455`, `:515`                                   | preserve    |
 | Reply text is revealed one character every 15 ms regardless of how fast it arrived                                                                                                                      | `AIChannelRegistry.ts:158`, `:228-249`                                               | decide      |
 | After a successful apply on an existing workflow the canvas fits the view                                                                                                                               | `useAIWorkflowApplications.ts:356-358`                                               | preserve    |
 | A failure is shown once, on the reply rather than the question, and "Please try again" is dropped when a button says it                                                                                 | `MessageList.tsx:781-829`, `:1073-1100`                                              | preserve    |
@@ -818,7 +887,7 @@ Feature: AI assistant in the workflow editor
 
 ## Summary
 
-- Scenarios: 32 (S01 to S32); S14 tagged `@variant:experimental-features`, S19
+- Scenarios: 36 (S01 to S36); S14 tagged `@variant:experimental-features`, S19
   and S20 `@variant:ai-limit-reached`, S01 read under `default`, the rest under
   `ai-enabled`.
 - Section 6: 6.1 has 6, 6.2 has 17, 6.3 has 8, 6.4 has 9, 6.5 has 6.

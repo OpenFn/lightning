@@ -31,15 +31,15 @@ url_params:
 config_variants:
   default: { max_sandbox_nesting_depth: 5, purge_deleted_after_days: 7, Lightning.Extensions.usage_limiter: Lightning.Extensions.UsageLimiter }   # bootstrap.ex:273-278, :372-373; read under this one
   nesting-capped: { max_sandbox_nesting_depth: 1 }   # MAX_SANDBOX_NESTING_DEPTH; index_test.exs:166-187 stubs it
-  usage-limited: { Lightning.Extensions.usage_limiter: <adapter returning {:error, _, %{text: _}} for :new_sandbox or provisioning> }   # a usage limiter with sandbox limits
+  usage-limited: { Lightning.Extensions.usage_limiter: <adapter returning {:error, _, %{text: _}} for :new_sandbox, or refusing workflow activation or new collections at merge> }   # a usage limiter with sandbox limits
   purge-immediate: { purge_deleted_after_days: 0 }   # bootstrap.ex:306-316 registers no purge cron
   github-sync: { target project has a project_repo_connection }   # data state, index_test.exs:4750-4885
 
 inventory:
   routes:
-    - live /projects/:project_id/sandboxes  SandboxLive.Index :index          # router.ex:317
-    - live /projects/:project_id/sandboxes/new  SandboxLive.Index :new        # router.ex:318
-    - live /projects/:project_id/sandboxes/:id/edit  SandboxLive.Index :edit  # router.ex:319
+    - live /projects/:project_id/sandboxes  SandboxLive.Index :index          # router.ex:365
+    - live /projects/:project_id/sandboxes/new  SandboxLive.Index :new        # router.ex:366
+    - live /projects/:project_id/sandboxes/:id/edit  SandboxLive.Index :edit  # router.ex:367
   events:
     - SandboxLive.Index#open-delete-modal                 # index.ex:107-127
     - SandboxLive.Index#confirm-delete-validate           # index.ex:130-145
@@ -65,7 +65,7 @@ inventory:
     - ModalHook (assets/js/hooks/index.ts:522; via the shared <.modal>)
   policies:
     - Lightning.Policies.Sandboxes (:provision_sandbox, :merge_sandbox, :update_sandbox, :delete_sandbox, :cancel_scheduled_deletion; manage_permissions/3) (policies/sandboxes.ex:90-181)
-    - Lightning.Projects.Scope.role_in?/3 and fetch/2 (scope.ex:139-147)
+    - Lightning.Scope.role_in?/3 and fetch/2 (scope.ex:267-276)
     - Lightning.Policies.Credentials :create_keychain_credential (inside merge, sandboxes.ex:619-626)
   workers:
     - Lightning.Projects purge_deleted (Oban cron 45 2 * * *; projects.ex:194-221; bootstrap.ex:311)   # deferred; owned by proposed flow-sandbox-scheduled-deletion
@@ -178,7 +178,7 @@ current project). Sources: `policies/sandboxes.ex:90-181`, `index.ex:677-697`,
   merge target (`policies/sandboxes.ex:90-92`, `:160-166`).
 - Rename and delete go through `Scope`, so they also require the sandbox's MFA
   requirement to be met and the sandbox not to be scheduled for deletion
-  (`policies/sandboxes.ex:109-119`; `scope.ex:139-152`).
+  (`policies/sandboxes.ex:109-119`; `scope.ex:267-276`).
 - Create is refused at the nesting cap (`index.ex:685-687`;
   `sandboxes.ex:268-271`, `:1015-1017`) and when the usage limiter refuses
   `:new_sandbox` (`index.ex:37-40`; `form_component.ex:75`).
@@ -205,7 +205,7 @@ current project). Sources: `policies/sandboxes.ex:90-181`, `index.ex:677-697`,
   `workflow_versions`, `collections` (names, empty) (`sandboxes.ex:1009-1051`,
   `:1265-1267`)
 - Rename or recolour: `projects.name`, `projects.color` (`sandboxes.ex:743-757`;
-  `projects.ex:589-617`)
+  `projects.ex:620-650`)
 - Delete: `projects.scheduled_deletion` on the whole subtree;
   `triggers.enabled = false` on the whole subtree (`sandboxes.ex:942-973`)
 - Restore: clears `projects.scheduled_deletion` on the subtree; triggers stay
@@ -218,9 +218,10 @@ current project). Sources: `policies/sandboxes.ex:90-181`, `index.ex:677-697`,
 
 **Immediate side effects** (in the same request)
 
-- `Events.project_created` after create (`projects.ex:572-574`)
-- Project audit events derived from the rename changeset (`projects.ex:597`,
-  `:620-625`)
+- `Events.project_created` after create (`projects.ex:582-584`)
+- Project audit events: `created` and `collaborator_added` for the creator when
+  a sandbox is created, and `name_updated` when it is renamed, with the acting
+  user as actor (`projects.ex:2297-2303`, `:620-650`; `projects/audit.ex:24-66`)
 - `Events.project_deletion_scheduled` for every project in a deleted subtree,
   after commit (`sandboxes.ex:965-972`); open pages on those projects leave
   (shared-project-scope S10, S11)
@@ -243,7 +244,7 @@ current project). Sources: `policies/sandboxes.ex:90-181`, `index.ex:677-697`,
 
 - With GitHub sync on the merge target: two `openfn-pull.yml` dispatches,
   "pre-merge commit" before the merge and "Merged sandbox <name>" after it
-  (`index.ex:1128-1160`; `version_control.ex:178-215`). The first one fires even
+  (`index.ex:1128-1160`; `version_control.ex:473-513`). The first one fires even
   if the merge then fails.
 
 **Depends on config**
@@ -420,6 +421,7 @@ Feature: Sandboxes
     When I change the name to "sb-2" and click "Save changes"
     Then I am on the sandboxes page
     And I see "Sandbox updated"
+    And an audit event "name_updated" is recorded with me as the actor
     # components.ex:821-849; form_component.ex:116-136, :277-282; index_test.exs:309-321; form_component_test.exs:316-340, :362-381
 
   @S17
@@ -691,12 +693,15 @@ Feature: Sandboxes
     # index.ex:1181-1193, :1227-1231; sandboxes.ex:357-362, :683-716; index_test.exs:2069-2241, :2722-2748
 
   @S45 @variant:usage-limited
-  Scenario: A usage limit hit during the merge shows the limiter's message
-    # Value: people learn the merge was blocked by the usage limiter, not by a fault.
-    Given the usage limiter refuses the merge with "Custom import error message"
+  Scenario: A usage limit hit during the merge refuses it with the generic merge message
+    # Value: a merge that would take the project past its plan's limits changes nothing, and the person is told to try again rather than shown a fault.
+    Given merging "child1" into "root" would exceed the plan's workflow-activation or collection limit
     When I merge "child1" into "root"
-    Then I see "Custom import error message"
-    # index.ex:1227; sandboxes.ex:691-692; index_test.exs:2167-2201
+    Then I see "Couldn't merge this sandbox. Please try again."
+    And the merge modal closes
+    And "root" is unchanged
+    # provisioner.ex:105-107, :657-670 (the refusal is an exceeds_limit error on the document, not the limiter's message); sandboxes.ex:335, :681-692; index.ex:1227-1230
+    # index_test.exs:2167-2201 stubs import_document to return a bare message, which the provisioner no longer returns for these limits (see flow-github-sync-actions S10 for the one limit that still returns its message)
 
   @S46
   Scenario: A merge that can't schedule the sandbox for deletion still reports success
@@ -714,6 +719,7 @@ Feature: Sandboxes
     When I merge "test-sandbox" into "parent"
     Then the flow "flow-github-sync-actions" has started for "parent" with commit message "pre-merge commit"
     And it has started again with commit message "Merged sandbox test-sandbox"
+    # a v2 connection is dispatched with the v2 inputs (workspace, endpoint), not a snapshot list (flow-github-sync-actions S18)
     # index.ex:1128-1160; index_test.exs:4750-4885; no dispatch without a connection, index_test.exs:4887-4906
 
   @S48
@@ -726,24 +732,47 @@ Feature: Sandboxes
     And the "Merge" button is disabled
     And nothing is merged
     # drafted from 6.1 row 5 by the sandboxes scenario run; index.ex:221-225, :949-969; components.ex:326; new_inputs.ex:517
+
+  @S49
+  Scenario Outline: A rename that cannot be saved says so and returns to the page
+    # Value: someone whose rename was refused or lost to a deletion elsewhere is told why instead of the page breaking.
+    Given I am an admin on sandbox "sb-1" with its edit form open
+    And <reason>
+    When I change the name and click "Save changes"
+    Then I see "<message>"
+    Examples:
+      | reason                                                                  | message                                                                                      |
+      | the sandbox was deleted while I edited it                               | Someone else changed or deleted this record while you were editing it. Reload and try again. |
+      | the audit event was refused                                             | Changes couldn't be saved, please try again                                                   |
+      | my permission on the sandbox was withdrawn (for example it is now scheduled for deletion) | You are not authorized to perform this action.                                    |
+    # form_component.ex:116-150, live_helpers.ex:213-222, projects/sandboxes.ex:722-760; form_component_test.exs
+
+  @S50
+  Scenario: Creating a sandbox records who created it
+    # Value: a project's audit trail shows who made each sandbox and who was made its first member.
+    Given I am an editor on project "Malawi HIV"
+    When I create sandbox "test-sandbox"
+    Then an audit event "created" is recorded for "test-sandbox" with me as the actor
+    And an audit event "collaborator_added" is recorded for me on it
+    And no email is sent to its members
+    # projects.ex:2297-2303, :571-586; projects/audit.ex:51-66; projects/sandboxes.ex:1038
 ```
 
 ## 6. Unclear value
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                                                               | Where                                                                                 | What a user sees                                                                                               | Disposition |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------- |
-| Edit save has no clause for `{:error, :unauthorized}`; `update_sandbox` returns it when the sandbox's MFA requirement isn't met, the sandbox was scheduled for deletion in another tab, or a role changed on the sandbox (not the current project) | `form_component.ex:131-149`; `sandboxes.ex:743-757`; `policies/sandboxes.ex:109-119`  | the page crashes and reloads instead of an error                                                               | fix         |
-| `/new` doesn't check the nesting cap, only the button does; submitting at the cap returns `{:error, :nesting_too_deep}`, which the save `with` doesn't match (nor `{:error, :unauthorized}`)                                                       | `index.ex:69-100`; `form_component.ex:75-113`; `sandboxes.ex:1015-1017`               | typing the URL at the cap opens the form, and submitting crashes the page                                      | fix         |
-| Delete modal says "you'll be redirected to <root project>", but the redirect goes to the deleted sandbox's parent                                                                                                                                  | `components.ex:188-191`; `index.ex:848-851`                                           | for a nested sandbox, a different project from the one promised                                                | fix         |
-| After deleting the current sandbox, and on the edit link, the URL uses the sandbox's parent id; a viewer with no row on the parent lands on Not Found (delete) or gets an edit URL that 404s on reload                                             | `index.ex:849-851`; `components.ex:835-837`                                           | sandbox-only members are thrown out of the workspace after deleting, or can't reload the edit modal            | fix         |
-| A sandbox-only member's access-root sandbox has an enabled merge button but no target options; the copy names "MAIN" and Merge is enabled because workflows are preselected                                                                        | `index.ex:221-225`, `:949-969`; `components.ex:337-340`, `:979-984`                   | a merge modal that can only end in "Target project not found"                                                  | fix         |
-| "Deleted in sandbox" compares target workflows with the source sandbox's creation time, not with the sandbox's own history; merging into a sibling or grandparent labels the target's older workflows as deleted in the sandbox                    | `index.ex:1013-1018`, `:1034-1040`; `components.ex:406-412`                           | a workflow the sandbox never had offered for deletion with a label saying the sandbox deleted it               | decide      |
-| A failed schedule-deletion flash prints `inspect(reason)`, while merge errors are scrubbed                                                                                                                                                         | `index.ex:869-875`                                                                    | raw Elixir terms in a flash                                                                                    | fix         |
-| `limit_new_sandbox` is read once at mount (for the current project) and not refreshed after delete or restore; restore's tooltip uses the current project's limit while the context checks the sandbox's                                           | `index.ex:37-40`, `:726-743`; `sandboxes.ex:925`                                      | Create and Restore stay enabled or disabled until reload, and the Restore tooltip can disagree with the result | decide      |
-| Under `purge-immediate` the modal promises "retained for 0 days before being permanently removed", but no purge cron is registered, so the sandbox sits under "Scheduled for deletion" indefinitely                                                | `components.ex:197-201`, `:240-246`; `sandboxes.ex:1001-1006`; `bootstrap.ex:306-316` | copy that contradicts what happens                                                                             | decide      |
-| The "pre-merge commit" dispatch fires before the merge and its result is ignored; if the merge fails, GitHub has a commit for a merge that never happened, and a failed dispatch is silent                                                         | `index.ex:1136`, `:1155-1160`                                                         | nothing in Lightning; an extra commit in the repo                                                              | decide      |
+| What                                                                                                                                                                                                                            | Where                                                                                 | What a user sees                                                                                               | Disposition |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------- |
+| `/new` doesn't check the nesting cap, only the button does; submitting at the cap returns `{:error, :nesting_too_deep}`, which the save `with` doesn't match (nor `{:error, :unauthorized}`)                                    | `index.ex:69-100`; `form_component.ex:75-113`; `sandboxes.ex:1015-1017`               | typing the URL at the cap opens the form, and submitting crashes the page                                      | fix         |
+| Delete modal says "you'll be redirected to <root project>", but the redirect goes to the deleted sandbox's parent                                                                                                               | `components.ex:188-191`; `index.ex:848-851`                                           | for a nested sandbox, a different project from the one promised                                                | fix         |
+| After deleting the current sandbox, and on the edit link, the URL uses the sandbox's parent id; a viewer with no row on the parent lands on Not Found (delete) or gets an edit URL that 404s on reload                          | `index.ex:849-851`; `components.ex:835-837`                                           | sandbox-only members are thrown out of the workspace after deleting, or can't reload the edit modal            | fix         |
+| A sandbox-only member's access-root sandbox has an enabled merge button but no target options; the copy names "MAIN" and Merge is enabled because workflows are preselected                                                     | `index.ex:221-225`, `:949-969`; `components.ex:337-340`, `:979-984`                   | a merge modal that can only end in "Target project not found"                                                  | fix         |
+| "Deleted in sandbox" compares target workflows with the source sandbox's creation time, not with the sandbox's own history; merging into a sibling or grandparent labels the target's older workflows as deleted in the sandbox | `index.ex:1013-1018`, `:1034-1040`; `components.ex:406-412`                           | a workflow the sandbox never had offered for deletion with a label saying the sandbox deleted it               | decide      |
+| A failed schedule-deletion flash prints `inspect(reason)`, while merge errors are scrubbed                                                                                                                                      | `index.ex:869-875`                                                                    | raw Elixir terms in a flash                                                                                    | fix         |
+| `limit_new_sandbox` is read once at mount (for the current project) and not refreshed after delete or restore; restore's tooltip uses the current project's limit while the context checks the sandbox's                        | `index.ex:37-40`, `:726-743`; `sandboxes.ex:925`                                      | Create and Restore stay enabled or disabled until reload, and the Restore tooltip can disagree with the result | decide      |
+| Under `purge-immediate` the modal promises "retained for 0 days before being permanently removed", but no purge cron is registered, so the sandbox sits under "Scheduled for deletion" indefinitely                             | `components.ex:197-201`, `:240-246`; `sandboxes.ex:1001-1006`; `bootstrap.ex:306-316` | copy that contradicts what happens                                                                             | decide      |
+| The "pre-merge commit" dispatch fires before the merge and its result is ignored; if the merge fails, GitHub has a commit for a merge that never happened, and a failed dispatch is silent                                      | `index.ex:1136`, `:1155-1160`                                                         | nothing in Lightning; an extra commit in the repo                                                              | decide      |
 
 ### 6.2 Quirks and implementation details
 

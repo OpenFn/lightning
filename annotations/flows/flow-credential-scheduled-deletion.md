@@ -16,7 +16,8 @@ trigger:
   reachable_when:
     - credentials-index:
         the signed-in user owns the credential
-        (`credential_index_component.html.heex:72`, `policies/users.ex:42-44`)
+        (`credential_index_component.html.heex:72`,
+        `policies/credentials.ex:76-147`)
 
 inherits:
   - shared-credential-index-component # S05 owns the cancel click and its flash; S06 owns refusal of events sent outside the page
@@ -33,8 +34,9 @@ inventory:
     - CredentialIndexComponent#cancel_credential_deletion # owned by shared-credential-index-component S05
   js_hooks: []
   policies:
-    - Lightning.Policies.Users (:delete_credential), via
-      Credentials.authorize_credential_owner/2 (credentials.ex:948-959)
+    - Lightning.Policies.Credentials (:delete_credential), via
+      Credentials.authorize_credential/3 (credentials.ex:1154-1155;
+      policies/credentials.ex:76-147)
   workers:
     - Lightning.Credentials (Oban, queue :background, max_attempts 1, args type
       purge_deleted; cron 02:30) # credentials.ex:6-8, :42-71; bootstrap.ex:310-311
@@ -102,8 +104,8 @@ back into use before the cleanup destroys it.
 
 ## 3. Who can do what
 
-Ownership, not project role (`policies/users.ex:42-44`,
-`credentials.ex:948-959`).
+Ownership, not project role (`policies/credentials.ex:76-147`,
+`credentials.ex:1154-1155`).
 
 | Action                                      | Credential owner | Anyone else | System (purge job)               |
 | ------------------------------------------- | ---------------- | ----------- | -------------------------------- |
@@ -148,7 +150,7 @@ Ownership, not project role (`policies/users.ex:42-44`,
 **Immediate side effects** (in the same request)
 
 - Hop 1: flash "Credential scheduled for deletion" and navigate back to the list
-  (`credential_deletion_modal.ex:47-51`); the row's menu now shows "Cancel
+  (`credential_deletion_modal.ex:44`); the row's menu now shows "Cancel
   deletion" and "Delete now" (`credential_index_component.ex:459-490`)
 - Hop 2: email "Your "<name>" credential will be deleted" to the owner, sent
   from inside the transaction (`credentials.ex:908-911`, `:1054-1059`,
@@ -203,7 +205,7 @@ Feature: Scheduled credential deletion
     And "DHIS2 prod" is no longer shared with any project and the job has no credential
     And I receive an email "Your \"DHIS2 prod\" credential will be deleted"
     And the email says the credential has been disconnected from all projects, its secrets will be scrubbed after 7 days, and the deletion can be cancelled from the "Credentials" menu
-    # credential_deletion_modal.ex:40-51, credentials.ex:889-925, :1036-1059, user_notifier.ex:154-162, :226-246
+    # credential_deletion_modal.ex:40-44, credentials.ex:889-925, :1036-1059, user_notifier.ex:154-162, :226-246
     # credentials_test.exs:150-201 (date, unshare, job, subject and recipient; body copy not asserted)
 
   @S02
@@ -263,6 +265,17 @@ Feature: Scheduled credential deletion
     When the purge runs
     Then both credentials and their secrets are unchanged
     # credentials.ex:44-47; credentials_test.exs:1077-1082, :1100-1113 (unscheduled case only; a future date is not tested)
+
+  @S08
+  Scenario: Scheduling a credential that is already scheduled leaves its date and secrets alone
+    # Value: a second confirmation, from a stale list or another tab, can't push the deletion date back or repeat the owner's email and the provider revocation.
+    Given credential "DHIS2 prod" is already scheduled for deletion
+    When its owner confirms "Delete credential" again from a page that still showed it as live
+    Then the owner sees "This credential is already scheduled for deletion"
+    And the deletion date is unchanged
+    And no second email is sent and no tokens are revoked again
+    # credential_deletion_modal.ex:46-72; credentials.ex:1088-1092, :1161-1169; policies/credentials.ex:106-114
+    # not driven through the page; read from code (credentials_test.exs covers the context refusal)
 ```
 
 ## 6. Unclear value

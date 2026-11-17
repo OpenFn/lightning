@@ -14,7 +14,7 @@ trigger:
     - the collaboration channel join succeeds (workflow_channel.ex:43-111), and the shared document has synced, otherwise "Loading workflow" (LoadingBoundary.tsx:284-330; part of shared-editor-session)
 
 inherits:
-  - shared-authenticated-session    # live_session :default mounts InitAssigns (router.ex:288, :303)
+  - shared-authenticated-session    # live_session :default mounts InitAssigns (router.ex:336, :351)
   - shared-project-scope            # login, MFA, membership, live revocation (collaborate.ex:25); S10, S11, S12 are the receiving ends of project deletion, sandbox archive and workflow deletion
   - shared-usage-limits-banner      # :check_limits on_mount and the banner render (collaborate.ex:27, :238-242)
   - shared-project-header           # picker modal only (S04 to S12): the editor draws its own React header (Header.tsx) with a PickerButton that opens the layout's global picker (CollaborativeEditor.tsx:244-252; live.html.heex:109-113)
@@ -47,7 +47,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit       # router.ex:303
+    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit       # router.ex:351
   events:
     # LiveView handle_event clauses in this module are the credential and webhook auth modals, owned by workflow-editor-inspectors:
     - WorkflowLive.Collaborate#open_credential_modal              # collaborate.ex:145-187; owned by workflow-editor-inspectors
@@ -201,9 +201,6 @@ those combine in ways you have to think through.
   saved yet, so half-finished changes can go straight into production. (S15)
 - **(3)** While anyone has the workflow open in the editor, updates to it
   through the API are refused with a conflict message. (S29, 6.5)
-- **(3)** If two people save at almost the same moment, the second save may fail
-  with a vague "internal error" rather than telling them someone else saved
-  first. (6.1)
 
 ## 3. Who can do what
 
@@ -663,7 +660,6 @@ Feature: Workflow editor canvas and header
 | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `handle_in("request_current_user")`                                                                        | `workflow_channel.ex:172-180`                                                                                   | no client pushes it (grep of `assets/js`)                                                                       |
 | `handle_in("set_suppress_enable_trigger_warning")` and the `suppress_enable_trigger_warning` context field | `workflow_channel.ex:325-340`, `:1374-1378`; `createSessionContextStore.ts:361`; `useSessionContext.ts:395-409` | the hooks `useSuppressEnableTriggerWarning` and `useMarkEnableTriggerWarningSuppressed` have no caller          |
-| `determine_error_type` returning `optimistic_lock_error`                                                   | `workflow_channel.ex:1763-1769`                                                                                 | no stale_error_field (6.1)                                                                                      |
 | `useConnectionStatus`                                                                                      | `ConnectionStatusContext.tsx:72-82`                                                                             | no consumer                                                                                                     |
 | `showAiAssistant` drawer refit in the diagram                                                              | `WorkflowDiagram.tsx:560-622`                                                                                   | `CollaborativeWorkflowDiagram` always passes `showAiAssistant={false}` (`CollaborativeWorkflowDiagram.tsx:301`) |
 
@@ -699,8 +695,6 @@ Feature: Workflow editor canvas and header
 
 - Should the lifecycle lock follow the workflow (or project) rather than each
   viewer's experimental flag (6.2)?
-- Should the stale-entry race on save surface as a reload prompt rather than an
-  internal error (6.1)?
 - Should the canvas offer keyboard delete, and should undo stop hijacking form
   fields (6.2)?
 - Is refusing API writes while the workflow is open in the editor the intended
@@ -805,8 +799,8 @@ Feature: Workflow editor canvas and header
     `workflow_channel_test.exs:298-353`). Save button states and tooltips:
     disconnected, no permission, deleted, pinned view, live lock, AI applying
     (`useWorkflow.tsx:886-944`); label "Create" for a new workflow
-    (`Header.tsx:895`). Possible bug to carry: concurrent-save race (this file
-    6.1).
+    (`Header.tsx:895`). A save that loses a race with another save is told
+    "Someone else saved this workflow. Try again." (shared-editor-session S23).
   - **Read-only computation**: `useWorkflowReadOnly` priority deleted > no
     permission > as-run > pinned version > live lock > unsaved new workflow, not
     read-only while permissions load, connection not considered

@@ -45,7 +45,7 @@ inventory:
   policies:
     - Lightning.Policies.ProjectUsers (:edit_data_retention to start,
       project_users.ex:33; :access_project per recipient via
-      MailRecipients.may_receive?, project_users.ex:134-136,
+      MailRecipients.may_receive?, decision.ex:59-66; project_users.ex:160-162,
       mail_recipients.ex:27-32)
   workers: [] # sent inline, not through Oban (projects.ex:787-801)
   api_endpoints: []
@@ -127,7 +127,7 @@ is an admin action), `:134` (MFA unsatisfied denies everything), `:136`
   deletion, when it is unconfirmed past 48 hours under
   `email-verification-required`, or when the project requires MFA and they
   haven't enrolled (`mail_recipients.ex:28-31`; `accounts.ex:328-332`,
-  `:1360-1370`; `project_users.ex:134`).
+  `:1360-1370`; `decision.ex:59-66`).
 - Membership and role are read after the save commits, not when the page loaded
   (`projects.ex:599-605`, `:788-794`).
 
@@ -224,7 +224,7 @@ Feature: Data retention change notice
     When an admin saves a new history retention period for project "Malawi HIV"
     Then "chen@example.org" receives the data retention email
     And "amara@example.org" receives no data retention email
-    # user_notifier.ex:69-85, :180; mail_recipients.ex:27-32; accounts.ex:328-332, :1360-1370; project_users.ex:134
+    # user_notifier.ex:69-85, :180; mail_recipients.ex:27-32; accounts.ex:328-332, :1360-1370; decision.ex:59-66
     # projects_test.exs:4978-5022; user_notifier_test.exs:525-549 (withheld returns {:ok, :suppressed}, logged, nothing sent)
 
     Examples:
@@ -245,7 +245,7 @@ Feature: Data retention change notice
     And "amara@example.org" is an admin on it with MFA enabled
     When an admin saves a new history retention period for project "Malawi HIV"
     Then "amara@example.org" receives the data retention email
-    # mail_recipients.ex:31; project_users.ex:134-136; projects_test.exs:4960-4976
+    # mail_recipients.ex:31; decision.ex:59-66; project_users.ex:160-162; projects_test.exs:4960-4976
 
   @S05
   Scenario: A save that changes no period sends no email

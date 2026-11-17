@@ -9,8 +9,8 @@ trigger:
   new_route:
   old_route_disposition: unchanged
   reachable_when:
-    - the route sits in a scope piped through `[:browser, :require_authenticated_user]` (`lib/lightning_web/router.ex:189-190`, `:349`)
-    - the live_session declares `on_mount: LightningWeb.InitAssigns` (`router.ex:242`, `:268`, `:288`; `:services` via `config/config.exs:51`)
+    - the route sits in a scope piped through `[:browser, :require_authenticated_user]` (`lib/lightning_web/router.ex:237-238`, `:397`)
+    - the live_session declares `on_mount: LightningWeb.InitAssigns` (`router.ex:290`, `:316`, `:336`; `:services` via `config/config.exs:51`)
 
 inherits: []
 
@@ -53,7 +53,7 @@ related:
   - project-settings-collaborators
   - project-settings-setup
   - workflows-index
-  # Not yet annotated, same live_sessions (router.ex:242-330, config/config.exs:52-61):
+  # Not yet annotated, same live_sessions (router.ex:290-378, config/config.exs:52-61):
   # :default  ProjectLive.MFARequired, ProjectLive.Settings(:delete), RunLive.Index, RunLive.Show,
   #           ChannelRequestLive.Show, DataclipLive.Show, WorkflowLive.Collaborate, WorkflowLive.Health,
   #           ChannelLive.Index, SandboxLive.Index, ProfileLive.Edit(:delete), TokensLive.Index
@@ -62,7 +62,7 @@ related:
   # :auth     ReAuthenticateLive.New
   # :services DashboardLive.Index, ProjectLive.Settings, ProfileLive.Edit, UserLive.Index
   # Also attach InitAssigns outside the four named sessions: :sudo_auth BackupCodesLive.Index
-  # (router.ex:258-262) and LiveDashboard /dashboard (router.ex:363-369)
+  # (router.ex:306-310) and LiveDashboard /dashboard (router.ex:411-417)
 flows: []
 ---
 
@@ -120,14 +120,14 @@ for a while, and the banners don't reach every page.
 | Toggle the sidebar             | n/a        | n/a                               | n/a          | n/a                                     | yes                      |
 | Dismiss the book-a-demo banner | n/a        | n/a                               | n/a          | n/a                                     | yes                      |
 
-Sources: `lib/lightning_web/controllers/user_auth.ex:288-311`,
+Sources: `lib/lightning_web/controllers/user_auth.ex:280-303`,
 `lib/lightning_web/init_assigns.ex:17-35`, `lib/lightning/accounts.ex:994-1006`,
 `:329-332`, `:1360-1370`.
 
 **Preconditions beyond role**
 
 - Session token must exist (session or signed remember-me cookie) and be under
-  60 days old (`user_auth.ex:194-206`,
+  60 days old (`user_auth.ex:195-207`,
   `lib/lightning/accounts/user_token.ex:34`, `:111-117`).
 - Lockout applies only when `require_email_verification` is on, `confirmed_at`
   is nil and the account is 48 hours old or more (`accounts.ex:1362-1368`).
@@ -150,7 +150,7 @@ on every browser request while first setup is open (`accounts.ex:1341-1344`,
 (`init_assigns.ex:88-89`, `accounts.ex:1417-1423`); `users.preferences` key
 `demo_banner.dismissed_at` (`lib/lightning_web/live/book_demo_banner.ex:29-37`);
 session keys `user_token` (from remember-me cookie), `live_socket_id`,
-`user_return_to` (`user_auth.ex:184-206`, `:490-492`)
+`user_return_to` (`user_auth.ex:185-207`, `:464-466`)
 
 **Immediate side effects**
 
@@ -159,9 +159,9 @@ session keys `user_token` (from remember-me cookie), `live_socket_id`,
   `handle_params` (`init_assigns.ex:63-82`); `shared-project-scope` relies on
   `current_uri` for its re-mount
 - Writes `live_socket_id = "users_live:<user id>"` to the session so
-  account-wide revocations can reach open pages (`user_auth.ex:151`, `:184-192`)
+  account-wide revocations can reach open pages (`user_auth.ex:152`, `:185-193`)
 - A socket token is minted only for a fully authenticated, non-TOTP-pending,
-  non-locked-out session (`user_auth.ex:378-392`)
+  non-locked-out session (`user_auth.ex:364-378`)
 
 **Deferred side effects**
 
@@ -188,7 +188,7 @@ session keys `user_token` (from remember-me cookie), `live_socket_id`,
 - 48-hour grace period before an unconfirmed account is locked out
   (`accounts.ex:1367`)
 - Sessions last 60 days (`user_token.ex:34`; remember-me cookie
-  `user_auth.ex:19`)
+  `user_auth.ex:20`)
 
 ## 5. Scenarios
 
@@ -205,7 +205,7 @@ Feature: Authenticated session gate and app chrome
     When I visit "/credentials"
     Then I am on "/users/log_in"
     And the flow "flow-login-return-to" has started for "/credentials"
-    # user_auth.ex:290-300, :490-492; init_assigns.ex:22-24 on a websocket-only mount
+    # user_auth.ex:282-292, :464-466; init_assigns.ex:22-24 on a websocket-only mount
     # Project pages: shared-project-scope S01
 
   @S02
@@ -224,7 +224,7 @@ Feature: Authenticated session gate and app chrome
     And I have not entered my authentication code
     When I visit "/projects"
     Then I am on "/users/two-factor"
-    # user_auth.ex:302-303, :313-323
+    # user_auth.ex:294-295, :305-315
 
   @S04 @variant:require-email-verification
   Scenario: An unconfirmed account past the deadline is sent to confirm
@@ -233,7 +233,7 @@ Feature: Authenticated session gate and app chrome
     When I visit "/settings/users"
     Then I am on "/users/confirm-required"
     And I see "Your account is blocked pending email confirmation"
-    # user_auth.ex:305-306, :327-351; init_assigns.ex:26-30; confirmation_lockout.ex:8-9, :43
+    # user_auth.ex:297-298, :319-343; init_assigns.ex:26-30; confirmation_lockout.ex:8-9, :43
     # test/lightning_web/live/confirmation_lockout_live_test.exs:43-97
 
   @S05 @variant:require-email-verification
@@ -242,7 +242,7 @@ Feature: Authenticated session gate and app chrome
     Given my account was created 50 hours ago and my email is unconfirmed
     When I visit "/users/confirm-required"
     Then I see "blocked pending email confirmation"
-    # router.ex:246-250, confirmation_lockout.ex:25-27; confirmation_lockout_live_test.exs:99-112
+    # router.ex:294-298, confirmation_lockout.ex:25-27; confirmation_lockout_live_test.exs:99-112
 
   @S06 @variant:require-email-verification
   Scenario: An unconfirmed account inside the deadline is warned
@@ -313,7 +313,7 @@ Feature: Authenticated session gate and app chrome
 | What                                                                                                                             | Where                                             | What a user sees                                                                                                         | Disposition |
 | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------- |
 | "Schedule a call" matches `{:ok, %{status: 200}}` on the external post; any other status or a network error crashes the LiveView | `book_demo_banner.ex:71`                          | the page crashes and reconnects, the banner stays, no redirect to Calendly                                               | fix         |
-| A websocket-only mount that finds no valid session redirects to log in without storing the current path or a flash               | `init_assigns.ex:23-24` vs `user_auth.ex:296-299` | after a session expires on an open page, logging back in lands on `/projects`, not where they were, and nothing says why | decide      |
+| A websocket-only mount that finds no valid session redirects to log in without storing the current path or a flash               | `init_assigns.ex:23-24` vs `user_auth.ex:288-291` | after a session expires on an open page, logging back in lands on `/projects`, not where they were, and nothing says why | decide      |
 
 ### 6.2 Quirks and implementation details
 
@@ -326,9 +326,9 @@ Feature: Authenticated session gate and app chrome
 | Ctrl/Cmd+M toggles the sidebar by clicking the toggle button                                                                                                                           | `assets/js/hooks/KeyHandlers.ts:363-390`                                                                                | preserve    |
 | `current_path` is assigned without the query string, `current_uri` with it; the project picker and the scope re-mount depend on the split                                              | `init_assigns.ex:69-82`                                                                                                 | preserve    |
 | `:current_path` hook is skipped silently when `attach_hook` raises, to let unit tests use a bare socket                                                                                | `init_assigns.ex:60-67`                                                                                                 | preserve    |
-| BlockRoutes runs before `redirect_if_user_is_authenticated`, so a signed-in user visiting `/users/register` with signup off gets a plain-text 404 instead of being sent to `/projects` | `router.ex:31-42`, `:175-178`; `lib/lightning_web/plugs/block_routes.ex:63-75`                                          | decide      |
-| A signed-in user visiting `/first_setup` after a superuser exists is redirected to `/projects`; with first setup disabled it is a plain-text 404                                       | `first_setup.ex:135-141`, `router.ex:38-41`                                                                             | preserve    |
-| The lockout flash is added on the HTTP path only if no error flash is already set                                                                                                      | `user_auth.ex:345-351`                                                                                                  | preserve    |
+| BlockRoutes runs before `redirect_if_user_is_authenticated`, so a signed-in user visiting `/users/register` with signup off gets a plain-text 404 instead of being sent to `/projects` | `router.ex:32-43`, `:223-226`; `lib/lightning_web/plugs/block_routes.ex:63-75`                                          | decide      |
+| A signed-in user visiting `/first_setup` after a superuser exists is redirected to `/projects`; with first setup disabled it is a plain-text 404                                       | `first_setup.ex:135-141`, `router.ex:39-42`                                                                             | preserve    |
+| The lockout flash is added on the HTTP path only if no error flash is already set                                                                                                      | `user_auth.ex:337-343`                                                                                                  | preserve    |
 
 ### 6.3 Unreachable or dead code
 
@@ -373,17 +373,17 @@ Feature: Authenticated session gate and app chrome
 ## Proposed flows
 
 - `flow-login-return-to`: a signed-out GET to a signed-in page stores
-  `user_return_to` (`user_auth.ex:490-492`) and redirects to `/users/log_in`;
+  `user_return_to` (`user_auth.ex:464-466`) and redirects to `/users/log_in`;
   after a successful login, `redirect_with_return_to` sends the user back
-  (`user_auth.ex:63-70`). Surfaces: any inheriting view,
+  (`user_auth.ex:64-71`). Surfaces: any inheriting view,
   controller:user-session, the original view. This file asserts only the handoff
   (S01).
 - `flow-account-revocation-teardown`: disabling an account, changing or
   resetting a password revokes tokens and broadcasts `disconnect` on
   `users_live:<id>` and `user_socket:<id>` (`accounts.ex:192`, `:934`, `:971`,
-  `:1328`; `user_auth.ex:163-166`); every open page on every device drops and,
+  `:1328`; `user_auth.ex:164-167`); every open page on every device drops and,
   on reconnect, is refused by this gate. Logout broadcasts on the session's own
-  `live_socket_id` (`user_auth.ex:114-132`). Surfaces: profile / user admin,
+  `live_socket_id` (`user_auth.ex:115-133`). Surfaces: profile / user admin,
   pubsub:users_live:<user_id>, any inheriting view. This file asserts only that
   `live_socket_id` is written (section 4) and that a reload is refused (S02).
   Test: `account_revocation_teardown_test.exs:28-67`.

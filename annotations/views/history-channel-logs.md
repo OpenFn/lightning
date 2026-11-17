@@ -11,14 +11,14 @@ trigger:
   reachable_when:
     - the project scope gate admits the viewer (shared-project-scope;
       index.ex:67)
-    - live_action is :channel_logs (router.ex:295); the same LiveView serves
+    - live_action is :channel_logs (router.ex:343); the same LiveView serves
       /history as history-work-orders
     - the tab bar that links here renders only with experimental features on
       (index.ex:142-143, index.html.heex:22-38); the route itself has no
       experimental check (see 6.1)
 
 inherits:
-  - shared-authenticated-session # live_session :default with InitAssigns (router.ex:288)
+  - shared-authenticated-session # live_session :default with InitAssigns (router.ex:336)
   - shared-project-scope # index.ex:67
   - shared-usage-limits-banner # index.ex:68, index.html.heex:2-8 (the banner slot renders on both tabs)
   - shared-project-header # index.html.heex:10-21, side menu marked History (index.ex:144)
@@ -138,7 +138,7 @@ when it hides things or quietly shows the wrong state.
 ## 3. Who can do what
 
 Source: the project scope gate only
-(`lib/lightning/policies/project_users.ex:136`, `:193`, via
+(`lib/lightning/policies/project_users.ex:160-162`, `:193`, via
 shared-project-scope). This tab checks no policy of its own.
 
 | Action                                  | Viewer                          | Editor                          | Admin                           | Owner                           | Superuser (no row) | Support (no row)                |
@@ -378,7 +378,7 @@ Feature: Channel logs
 
 | What                                                                                                                                | Where                                                                              | What a user sees                                                                                                                    | Disposition                             |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| The route has no experimental-features check, unlike the request detail page                                                        | `router.ex:295`, `index.ex:172-179` vs `channel_request_live/show.ex:23`, `:45-46` | a user without the flag who has the URL sees the full list with no tab bar, and every row's ID link bounces them back to `/history` | decide                                  |
+| The route has no experimental-features check, unlike the request detail page                                                        | `router.ex:343`, `index.ex:172-179` vs `channel_request_live/show.ex:23`, `:45-46` | a user without the flag who has the URL sees the full list with no tab bar, and every row's ID link bounces them back to `/history` | decide                                  |
 | The Request path column reads the path only from a `destination_response` event, though `error` events store it too                 | `channel_logs_component.ex:200-201`; `handler.ex:117`, `:186`                      | errored requests show "—" for a path the system knows                                                                               | fix                                     |
 | A `channel_id` that is a valid UUID but not one of this project's channels filters to nothing while the chip reads "Channel is any" | `channel_logs_component.ex:54-57`, `channels.ex:120-124`                           | an empty list with a chip saying no filter is applied                                                                               | fix                                     |
 | `channel_state_pill` raises on a state missing from its map                                                                         | `components.ex:154`; listed in shared-run-components 6.1                           | the tab crashes                                                                                                                     | decide (owned by shared-run-components) |

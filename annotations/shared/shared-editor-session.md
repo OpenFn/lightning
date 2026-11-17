@@ -19,7 +19,7 @@ trigger:
     - the user socket token resolves to a live session (user_socket.ex:30-51)
 
 inherits:
-  - shared-authenticated-session # live_session :default (router.ex:303); socket token minted by the same session
+  - shared-authenticated-session # live_session :default (router.ex:351); socket token minted by the same session
   - shared-project-scope # S07 to S12 are the LiveView half of every teardown below
   - shared-usage-limits-banner # :check_limits on_mount and the banner slot (collaborate.ex:27, :238-242)
 
@@ -39,8 +39,8 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w/:id   WorkflowLive.Collaborate :edit # router.ex:303; mount plumbing only, panels own the rest
-    - live /projects/:project_id/w/new   WorkflowLive.Collaborate :new # router.ex:302; creation itself owned by workflow-editor-new
+    - live /projects/:project_id/w/:id   WorkflowLive.Collaborate :edit # router.ex:351; mount plumbing only, panels own the rest
+    - live /projects/:project_id/w/new   WorkflowLive.Collaborate :new # router.ex:350; creation itself owned by workflow-editor-new
   events:
     - WorkflowChannel#join # workflow_channel.ex:43-116
     - WorkflowChannel#yjs # workflow_channel.ex:218-231
@@ -162,9 +162,6 @@ saves, lost connections and refused access don't behave the way you'd expect.
 
 ### Most surprising behaviours
 
-- **(2)** When two people save the same workflow at nearly the same moment, the
-  second may get "An internal error occurred" and their editor drops and
-  reconnects, rather than being told someone else just saved. (6.1)
 - **(2)** "Unsaved" doesn't mean private or at risk: your half-finished edits
   are stored and shown to the next person who opens the workflow, and the
   leave-page warning only exists with experimental features on. (S03, 6.2)
@@ -504,18 +501,26 @@ Feature: Collaborative editor session
     When my tab sends that event
     Then it gets an error reply and my session stays connected
     # workflow_channel.ex:831-837, :1155-1168; workflow_channel_test.exs:4903-4935
+
+  @S23
+  Scenario: A save that lost to someone else's save says so and keeps my edits
+    # Value: two people saving the same workflow at once are told to try again, instead of one of them being dropped from the editor.
+    Given I am an editor with "Intake" open and a colleague has saved it since I loaded it
+    When I save
+    Then I see "Failed to save workflow" with "Someone else saved this workflow. Try again."
+    And my editor stays connected with my edits intact
+    # workflows.ex:329-335, :476-483; session.ex:574-583; workflow_channel.ex:1666-1675; useChannel.ts:47-60; workflow_channel_test.exs
 ```
 
 ## 6. Unclear value
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                                                                                                                                                                                                                                                         | Where                                                                                                                                                                                | What a user sees                                                                                                                                            | Disposition |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Two saves of the same workflow that overlap (two editors, or an editor and a lifecycle change) raise `Ecto.StaleEntryError` inside the second user's `Session`, which is deliberately not rescued. The session dies, the deferred reply becomes `internal_error`, and that user's next document frame calls a dead process, crashing their channel. Read from code; the only test accepts any outcome. Moved from workflow-editor-canvas 6.1 | `workflows.ex:216-219`; `workflow.ex:98`; `session.ex:432-436`, `:507-523`; `workflow_channel.ex:218-231`, `:1229-1252`; `session.ex:198-200`; `workflow_channel_test.exs:3401-3434` | "Failed to save workflow: An internal error occurred", then the editor reconnects and rejoins                                                               | fix         |
-| `getLimits` pushes `get_limits` and listens for a `get_limits` event, but the server answers with a reply, never an event, and `await push(...)` reads nothing from the Push. Limits only change when the session context is fetched again (join, reconnect, membership or lifecycle change)                                                                                                                                                 | `createSessionContextStore.ts:605-661`, `:721-737`; `workflow_channel.ex:188-199`, `:1273-1288`; callers `Header.tsx:402`, `:462`, `useRunRetry.ts:300`, `:403`                      | after a run tips the project over its run limit, the run button stays enabled and the next run is refused by the server instead of being explained up front | fix         |
-| The Save button and Ctrl/Cmd+S call `void saveWorkflow()` on a function that rethrows after toasting, so every failed save is also an unhandled promise rejection. Moved from workflow-editor-canvas 6.1                                                                                                                                                                                                                                     | `Header.tsx:630`, `:892`; `useWorkflow.tsx:572-584`                                                                                                                                  | nothing visible; console and Sentry noise                                                                                                                   | fix         |
-| Join pattern-matches `{:ok, session_pid} = Collaborate.start(...)`; if the document or session fails to start (for example `:shared_doc_not_found`) the join raises instead of refusing. Read from code                                                                                                                                                                                                                                      | `workflow_channel.ex:66-71`; `collaboration.ex:55-72`; `session.ex:117-120`                                                                                                          | "Loading workflow" while the client keeps retrying the join                                                                                                 | fix         |
+| What                                                                                                                                                                                                                                                                                         | Where                                                                                                                                                           | What a user sees                                                                                                                                            | Disposition |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `getLimits` pushes `get_limits` and listens for a `get_limits` event, but the server answers with a reply, never an event, and `await push(...)` reads nothing from the Push. Limits only change when the session context is fetched again (join, reconnect, membership or lifecycle change) | `createSessionContextStore.ts:605-661`, `:721-737`; `workflow_channel.ex:188-199`, `:1273-1288`; callers `Header.tsx:402`, `:462`, `useRunRetry.ts:300`, `:403` | after a run tips the project over its run limit, the run button stays enabled and the next run is refused by the server instead of being explained up front | fix         |
+| The Save button and Ctrl/Cmd+S call `void saveWorkflow()` on a function that rethrows after toasting, so every failed save is also an unhandled promise rejection. Moved from workflow-editor-canvas 6.1                                                                                     | `Header.tsx:630`, `:892`; `useWorkflow.tsx:572-584`                                                                                                             | nothing visible; console and Sentry noise                                                                                                                   | fix         |
+| Join pattern-matches `{:ok, session_pid} = Collaborate.start(...)`; if the document or session fails to start (for example `:shared_doc_not_found`) the join raises instead of refusing. Read from code                                                                                      | `workflow_channel.ex:66-71`; `collaboration.ex:55-72`; `session.ex:117-120`                                                                                     | "Loading workflow" while the client keeps retrying the join                                                                                                 | fix         |
 
 ### 6.2 Quirks and implementation details
 
@@ -539,7 +544,6 @@ Feature: Collaborative editor session
 | What                                                             | Where                                                                 | Why unreachable                                                                                                                                         |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `getLimitsHandler` listening for a `get_limits` event            | `createSessionContextStore.ts:605-661`                                | the server never pushes that event (6.1)                                                                                                                |
-| `determine_error_type` returning `optimistic_lock_error`         | `workflow_channel.ex:1763-1769`                                       | `Workflow.changeset` sets no `stale_error_field`, so a lock conflict raises instead (6.1)                                                               |
 | `handle_info({:DOWN, ...})` stopping with "remote process crash" | `workflow_channel.ex:971-976`                                         | the channel module monitors nothing                                                                                                                     |
 | `useConnectionStatus`                                            | `ConnectionStatusContext.tsx:72-82`                                   | no consumer                                                                                                                                             |
 | `user_presences_test.exs` non-skipped tests                      | `test/lightning_web/live/workflow_live/user_presences_test.exs:16-99` | they only refute legacy presence elements (`#canvas-online-users`, `#canvas-banner`) that nothing in `lib/` renders; the positive tests are `@tag skip` |
@@ -572,16 +576,14 @@ Feature: Collaborative editor session
 
 ## 8. Open questions
 
-- Should overlapping saves surface as a reload prompt rather than killing the
-  session (6.1)?
 - Should limits refresh after a run, or is the server's refusal enough (6.1)?
 - Should the unload warning leave the experimental flag (6.2)?
 - Should a refused join say why instead of loading forever (6.2)?
 - flow-schedule-project-deletion S04 and S05 should keep only the run log and AI
   assistant channels and reference S15 here. workflow-editor-canvas 6.1 rows 1
   and 3, 6.2 "unsaved dot" and "connection-lost icon", 6.3
-  `optimistic_lock_error` and `useConnectionStatus`, and 6.5 "awareness names"
-  now live here and can be dropped there.
+  `useConnectionStatus`, and 6.5 "awareness names" now live here and can be
+  dropped there.
 
 ## Proposed flows
 
@@ -599,15 +601,15 @@ payloads.
 
 ## Summary
 
-- Scenarios: 22 (S01 to S22); S20 tagged `@variant:experimental-features`.
-- Section 6: 6.1 has 4, 6.2 has 11, 6.3 has 5, 6.4 has 4, 6.5 has 2.
+- Scenarios: 23 (S01 to S23); S20 tagged `@variant:experimental-features`.
+- Section 6: 6.1 has 3, 6.2 has 11, 6.3 has 4, 6.4 has 4, 6.5 has 2.
 - Flows: none proposed; references flow-delete-open-workflow,
   flow-schedule-project-deletion, flow-toggle-workflow-open-editor,
   flow-workflow-api-edit-conflict, flow-account-revocation-teardown.
 - Shared: none proposed; inherits shared-authenticated-session,
   shared-project-scope, shared-usage-limits-banner.
-- Unsure: the save race, the join MatchError and the duplicate `workflow_saved`
-  are read from code only; the "refused join never reaches the UI" claim rests
-  on a code comment because `y-phoenix-channel` was not available to read; the
-  canvas file's `LoadingBoundary.tsx:284-330` citations were wrong (the file is
-  72 lines) and are corrected here.
+- Unsure: the join MatchError and the duplicate `workflow_saved` are read from
+  code only; the "refused join never reaches the UI" claim rests on a code
+  comment because `y-phoenix-channel` was not available to read; the canvas
+  file's `LoadingBoundary.tsx:284-330` citations were wrong (the file is 72
+  lines) and are corrected here.

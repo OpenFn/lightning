@@ -11,10 +11,10 @@ trigger:
   reachable_when:
     - the visitor has no valid session and no valid remember-me cookie;
       otherwise every request (GET, POST and PUT) redirects to /projects
-      (`router.ex:175-176`, `:183-186`; `user_auth.ex:271-279`, `:514`)
+      (`router.ex:223-224`, `:231-234`; `user_auth.ex:263-271`, `:488`)
     - first-setup-open only:
         a superuser exists; otherwise every request is redirected to
-        /first_setup (`router.ex:29`; `plugs/first_setup.ex:11-33`)
+        /first_setup (`router.ex:30`; `plugs/first_setup.ex:11-33`)
     - /users/reset_password/:token only:
         the token matches an unexpired `reset_password` row whose `sent_to`
         equals the account's current email
@@ -22,7 +22,7 @@ trigger:
         `user_token.ex:168-191`)
 
 inherits:
-  - shared-authenticated-session # the :browser pipeline only (fetch_current_user writes live_socket_id, router.ex:28; user_auth.ex:175-192) and its S11 first-setup gate. Its S01 to S06 gates do not run here: this scope has no :require_authenticated_user
+  - shared-authenticated-session # the :browser pipeline only (fetch_current_user writes live_socket_id, router.ex:29; user_auth.ex:176-193) and its S11 first-setup gate. Its S01 to S06 gates do not run here: this scope has no :require_authenticated_user
   - shared-flash-messages
 
 url_params:
@@ -48,10 +48,10 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/reset_password  UserResetPasswordController :new # router.ex:183
-    - post /users/reset_password  UserResetPasswordController :create # router.ex:184
-    - get /users/reset_password/:token  UserResetPasswordController :edit # router.ex:185
-    - put /users/reset_password/:token  UserResetPasswordController :update # router.ex:186
+    - get /users/reset_password  UserResetPasswordController :new # router.ex:231
+    - post /users/reset_password  UserResetPasswordController :create # router.ex:232
+    - get /users/reset_password/:token  UserResetPasswordController :edit # router.ex:233
+    - put /users/reset_password/:token  UserResetPasswordController :update # router.ex:234
   events:
     - UserResetPasswordController#new
     - UserResetPasswordController#create
@@ -60,7 +60,7 @@ inventory:
   js_hooks: [] # the password reveal eye on the edit page is an inline phx-click JS command (new_inputs.ex:685-695); see 6.5
   policies:
     - LightningWeb.UserAuth.redirect_if_user_is_authenticated/2
-      (user_auth.ex:271-279)
+      (user_auth.ex:263-271)
     - LightningWeb.UserResetPasswordController.get_user_by_reset_password_token/2
       plug (user_reset_password_controller.ex:6, :48-58)
     - LightningWeb.Plugs.FirstSetup (plugs/first_setup.ex:11-33)
@@ -74,7 +74,7 @@ inventory:
     - :lightning, Lightning.Mailer adapter # config/config.exs:83; bootstrap.ex:398-425
     - Lightning.Config.reset_password_token_validity_in_days/0 # config.ex:161-163, used only in the email copy (user_notifier.ex:261)
   not_reachable_here:
-    - LightningWeb.Plugs.BlockRoutes (router.ex:31-42); its rules for
+    - LightningWeb.Plugs.BlockRoutes (router.ex:32-43); its rules for
       /users/register and /first_setup never match these paths
     - Lightning.Projects.generate_user_tokens/1 (projects.ex:2102-2119); mints
       the same `reset_password` token for invitees; owned by
@@ -137,7 +137,7 @@ page will reset for, and what it gives away, takes some explaining.
 
 ## 3. Who can do what
 
-Sources: `router.ex:175-186`; `user_auth.ex:271-279`;
+Sources: `router.ex:223-234`; `user_auth.ex:263-271`;
 `user_reset_password_controller.ex:6`, `:48-58`; `user_token.ex:168-191`. There
 is no policy module; access is the route scope and the token plug.
 
@@ -185,7 +185,7 @@ to `users` (`user_token.ex:168-188`)
   to reset your password shortly." and redirect to /projects
   (`user_reset_password_controller.ex:20-25`).
 - Set password: after commit, `disconnect` broadcast on `user_socket:<id>` and
-  `users_live:<id>` (`accounts.ex:1328`; `user_auth.ex:163-166`), the hand-off
+  `users_live:<id>` (`accounts.ex:1328`; `user_auth.ex:164-167`), the hand-off
   into flow-account-revocation-teardown.
 - Set password: flash "Password reset successfully." and redirect to
   /users/log_in; the session is not written
@@ -240,7 +240,7 @@ Feature: Reset password
     And the flow "flow-forgot-password" has started for "amara@example.org"
     # user_reset_password_controller.ex:8-26; new.html.heex:5, :29-39; accounts.ex:1268-1282
     # user_reset_password_controller_test.exs:13-17, :20-35 (redirect to /projects, flash, token row)
-    # the /projects to /users/log_in bounce is user_auth.ex:287-299, see 6.2
+    # the /projects to /users/log_in bounce is user_auth.ex:279-291, see 6.2
 
   @S02
   Scenario: An unregistered email gets the same response and no email
@@ -284,7 +284,7 @@ Feature: Reset password
     When a new password is set for "amara@example.org" from a valid reset link
     Then every user token for "amara@example.org" is deleted, including the API token
     And the flow "flow-account-revocation-teardown" has started for "amara@example.org"
-    # accounts.ex:1318-1334; user_token.ex:236-238; user_auth.ex:163-166
+    # accounts.ex:1318-1334; user_token.ex:236-238; user_auth.ex:164-167
     # accounts_test.exs:1946-1953 (tokens deleted), :1955-1961 (transports disconnected)
 
   @S07
@@ -365,7 +365,7 @@ Feature: Reset password
     Given no superuser exists
     When I visit "/users/reset_password"
     Then I am redirected to "/first_setup"
-    # plugs/first_setup.ex:11-33; router.ex:29; shared-authenticated-session S11
+    # plugs/first_setup.ex:11-33; router.ex:30; shared-authenticated-session S11
 ```
 
 ## 6. Unclear value
@@ -384,8 +384,8 @@ Feature: Reset password
 
 | What                                                                                                                                                                                                                | Where                                                                                           | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------- |
-| After requesting instructions, and after a refused link, the redirect is to /projects, which a signed-out browser bounces to /users/log_in, storing /projects as the return path; the flash survives both redirects | `user_reset_password_controller.ex:25`, `:56`; `user_auth.ex:287-299`                           | decide      |
-| A signed-in browser can't reach any of these routes, even to set a password from a link meant for a different account; it goes to /projects with no message                                                         | `router.ex:175-176`; `user_auth.ex:271-279`                                                     | decide      |
+| After requesting instructions, and after a refused link, the redirect is to /projects, which a signed-out browser bounces to /users/log_in, storing /projects as the return path; the flash survives both redirects | `user_reset_password_controller.ex:25`, `:56`; `user_auth.ex:279-291`                           | decide      |
+| A signed-in browser can't reach any of these routes, even to set a password from a link meant for a different account; it goes to /projects with no message                                                         | `router.ex:223-224`; `user_auth.ex:263-271`                                                     | decide      |
 | Disabled and scheduled-for-deletion accounts get the email and can set a password; the account stays disabled and login is still refused. A test asserts the email reaches a disabled account                       | `accounts.ex:318-320`, `:1296-1304`; `user_notifier_test.exs:573-585`; `user_notifier.ex:62-68` | preserve    |
 | A reset does not touch the second factor, so an MFA account still needs its authenticator or a backup code to sign in                                                                                               | `accounts.ex:1318-1334`                                                                         | preserve    |
 | A reset does not confirm the email address, though following the link proves ownership (variant `require-email-verification`; owned by flow-invite-new-collaborator 6.1 row 1)                                      | `user.ex:357-362`; `accounts.ex:1318-1334`                                                      | decide      |

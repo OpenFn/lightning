@@ -9,13 +9,13 @@ trigger:
   new_route:
   old_route_disposition: unchanged
   reachable_when:
-    - signup-allowed only: `allow_signup` is true; otherwise GET and POST (and every path beneath /users/register) get a plain-text 404 before any controller runs (`router.ex:31-36`; `plugs/block_routes.ex:12-33`, `:62-64`)
-    - the visitor has no valid session and no valid remember-me cookie; otherwise both GET and POST redirect to /projects (`router.ex:175-179`; `user_auth.ex:271-279`, `:514`)
-    - first-setup-open only: a superuser exists; otherwise every request is redirected to /first_setup (`router.ex:29`; `plugs/first_setup.ex:11-33`)
+    - signup-allowed only: `allow_signup` is true; otherwise GET and POST (and every path beneath /users/register) get a plain-text 404 before any controller runs (`router.ex:32-37`; `plugs/block_routes.ex:12-33`, `:62-64`)
+    - the visitor has no valid session and no valid remember-me cookie; otherwise both GET and POST redirect to /projects (`router.ex:223-227`; `user_auth.ex:263-271`, `:488`)
+    - first-setup-open only: a superuser exists; otherwise every request is redirected to /first_setup (`router.ex:30`; `plugs/first_setup.ex:11-33`)
     - linked from auth-login, auth-confirm-account and auth-reset-password, each only when `allow_signup` is true (`user_session_html/new.html.heex:84`; `user_confirmation_html/new.html.heex:51`, `edit.html.heex:44`; `user_reset_password_html/new.html.heex:52`, `edit.html.heex:66`)
 
 inherits:
-  - shared-authenticated-session     # the :browser pipeline (fetch_current_user, router.ex:28; user_auth.ex:175-206), its S11 first-setup gate (S12 here) and its S06 confirmation warning (S13 here). Its S01 to S05 gates do not run on this scope: it has :redirect_if_user_is_authenticated, not :require_authenticated_user
+  - shared-authenticated-session     # the :browser pipeline (fetch_current_user, router.ex:29; user_auth.ex:176-207), its S11 first-setup gate (S12 here) and its S06 confirmation warning (S13 here). Its S01 to S05 gates do not run on this scope: it has :redirect_if_user_is_authenticated, not :require_authenticated_user
   - shared-flash-messages
 
 url_params: []                        # nothing is read from the query string; a pending return path lives in the session (flow-login-return-to)
@@ -31,22 +31,22 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/register  UserRegistrationController :new       # router.ex:178
-    - post /users/register  UserRegistrationController :create   # router.ex:179
+    - get /users/register  UserRegistrationController :new       # router.ex:274
+    - post /users/register  UserRegistrationController :create   # router.ex:275
   events:
     - UserRegistrationController#new
     - UserRegistrationController#create
   js_hooks: []                         # the show-password eye is an inline phx-click JS command (new_inputs.ex:685-695); see 6.5
   policies:
-    - LightningWeb.UserAuth.redirect_if_user_is_authenticated/2 (user_auth.ex:271-279)
-    - LightningWeb.Plugs.BlockRoutes with {"/users/register", :allow_signup, ...} (router.ex:31-36; plugs/block_routes.ex:12-64)
+    - LightningWeb.UserAuth.redirect_if_user_is_authenticated/2 (user_auth.ex:263-271)
+    - LightningWeb.Plugs.BlockRoutes with {"/users/register", :allow_signup, ...} (router.ex:32-37; plugs/block_routes.ex:12-64)
     - LightningWeb.Plugs.FirstSetup (plugs/first_setup.ex:11-33)
   workers: []
   api_endpoints: []
   emails:
     - email:confirmation                # "Confirm your OpenFn account" welcome variant (user_notifier.ex:90-102), sent by Accounts.register_user/1 (accounts.ex:579-589)
   config:
-    - :lightning, :allow_signup                  # router.ex:34
+    - :lightning, :allow_signup                  # router.ex:35
     - :lightning, :init_project_for_new_user     # user_registration_controller.ex:29
     - :lightning, :require_email_verification    # affects the landing after sign-up (layout_components.ex:261-277; accounts.ex:1362-1368)
     - :lightning, :allow_first_setup             # plugs/first_setup.ex:12
@@ -54,7 +54,7 @@ inventory:
     - :lightning, :default_retention_period      # starter project's history retention (setup_utils.ex:196-197; config.exs:219)
     - Lightning.Extensions account_hook adapter  # Services.AccountHook.handle_register_user/1 (services/account_hook.ex:12-15)
   not_reachable_here:
-    - LightningWeb.API.RegistrationController.create/2 (api/registration_controller.ex:4-13); POST /api/users/register, :api pipeline; 501 unless an extension provides it
+    - LightningWeb.API.RegistrationController.create/2 (api/registration_controller.ex:6-15); POST /api/users/register on the plain :api pipeline in its own router block (router.ex:211-215), so it needs no token; 501 `not_implemented` as a problem document unless an extension provides it
     - Lightning.Accounts.deliver_user_confirmation_instructions/2 (accounts.ex:1177-1190) and its email variant (user_notifier.ex:107-119); the admin-creates-user path, not self-signup
     - SetupUtils.create_starter_project/3 with_workflow: true branch (setup_utils.ex:203-333); this view always passes false (user_registration_controller.ex:33-36)
     - Lightning.Accounts.deliver_user_confirmation_instructions/1 :already_confirmed and :rate_limited arms (accounts.ex:1163-1167); a brand-new account is unconfirmed and has no sends in its bucket
@@ -134,8 +134,8 @@ you wouldn't expect.
 
 ## 3. Who can do what
 
-Sources: `router.ex:21-43`, `:175-179`; `plugs/block_routes.ex:12-33`;
-`plugs/first_setup.ex:11-33`; `user_auth.ex:271-279`;
+Sources: `router.ex:22-44`, `:223-227`; `plugs/block_routes.ex:12-33`;
+`plugs/first_setup.ex:11-33`; `user_auth.ex:263-271`;
 `user_registration_controller.ex:7-50`; `user.ex:184-206`. There is no policy
 module; the gates are config and session state, not roles.
 
@@ -153,8 +153,8 @@ module; the gates are config and session state, not roles.
   `:157-165`; schema default `user.ex:32`).
 - A signed-in visitor with signup off gets the 404, not the redirect:
   BlockRoutes runs in `:browser` before `redirect_if_user_is_authenticated`
-  (`router.ex:31-36`, `:176`; see shared-authenticated-session 6.2).
-- First setup is checked before the signup block (`router.ex:29` precedes
+  (`router.ex:32-37`, `:224`; see shared-authenticated-session 6.2).
+- First setup is checked before the signup block (`router.ex:30` precedes
   `:31`).
 
 ## 4. What it touches
@@ -162,7 +162,7 @@ module; the gates are config and session state, not roles.
 **Reads**: `users` by email for the existence check (citext, unique:
 `priv/repo/migrations/20220405135153_create_users.exs:12`, `:19`;
 `user.ex:241-250`); `user_tokens` and `users` for the current session or
-remember-me cookie (`user_auth.ex:175-206`); `users` superuser count under
+remember-me cookie (`user_auth.ex:176-207`); `users` superuser count under
 first-setup-open (`plugs/first_setup.ex:28`); `project_users` and `projects` for
 the new user's projects (`user_registration_controller.ex:41`)
 
@@ -174,10 +174,10 @@ the new user's projects (`user_registration_controller.ex:41`)
   `validators.ex:20-28`, `:81-90`, `:346-351`; `accounts_test.exs:620-638`)
 - `user_tokens` insert, context "confirm", for the email link
   (`accounts.ex:1135-1142`)
-- `user_tokens` insert, context "session" (`user_auth.ex:28-31`)
+- `user_tokens` insert, context "session" (`user_auth.ex:29-32`)
 - Session renewed and cleared, keeping only `user_return_to`; then `user_token`
-  set (`user_auth.ex:54-58`, `:96-103`); `user_return_to` deleted on the default
-  redirect (`user_auth.ex:63-70`)
+  set (`user_auth.ex:55-59`, `:97-104`); `user_return_to` deleted on the default
+  redirect (`user_auth.ex:64-71`)
 - init-project-for-new-user: `projects` insert named `<first name>-demo`, env
   `main`, and `project_users` insert with role `owner`
   (`user_registration_controller.ex:28-37`; `setup_utils.ex:191-201`;
@@ -245,7 +245,7 @@ Feature: Register
     And I am on "/projects"
     And I see "User created successfully."
     And I see "No projects found."
-    # user_registration_controller.ex:13-21, :40-49; user_auth.ex:28-31, :63-70, :514
+    # user_registration_controller.ex:13-21, :40-49; user_auth.ex:29-32, :64-71, :488
     # user_registration_controller_test.exs:41-60 (session token set, redirect to /projects, flash and empty list on the next page)
 
   @S02 @variant:init-project-for-new-user
@@ -340,7 +340,7 @@ Feature: Register
     When I register successfully
     Then the session id is renewed
     And nothing from the old session remains except the page I was going to
-    # user_registration_controller.ex:20; user_auth.ex:54-58, :96-103; user_auth_test.exs:162-190
+    # user_registration_controller.ex:20; user_auth.ex:55-59, :97-104; user_auth_test.exs:162-190
 
   @S10 @variant:signup-allowed
   Scenario: A signed-in visitor is sent to their projects
@@ -348,7 +348,7 @@ Feature: Register
     Given I am logged in
     When I open "/users/register"
     Then I am on "/projects"
-    # router.ex:176-179; user_auth.ex:271-279; user_registration_controller_test.exs:29-36
+    # router.ex:224-227; user_auth.ex:263-271; user_registration_controller_test.exs:29-36
 
   @S11
   Scenario Outline: Instances without self-signup refuse the page
@@ -365,7 +365,7 @@ Feature: Register
       | GET    | ///users/register  |
       | GET    | /users/%72egister  |
       | POST   | /users/register    |
-    # router.ex:31-36; plugs/block_routes.ex:12-64
+    # router.ex:32-37; plugs/block_routes.ex:12-64
     # block_routes_test.exs:23-40, :69-99 (GET spellings through the :browser pipeline); the POST row is not tested but the plug ignores the method
 
   @S12 @variant:first-setup-open
@@ -375,7 +375,7 @@ Feature: Register
     And there is no superuser
     When I open "/users/register"
     Then I am on "/first_setup"
-    # router.ex:29; plugs/first_setup.ex:11-33; shared-authenticated-session S11 owns the gate
+    # router.ex:30; plugs/first_setup.ex:11-33; shared-authenticated-session S11 owns the gate
     # first_setup_test asserts on "/", not on this route
 
   @S13 @variant:require-email-verification
@@ -385,7 +385,7 @@ Feature: Register
     When I register successfully
     Then I am logged in
     And the warning in shared-authenticated-session S06 asks me to confirm my email
-    # accounts.ex:1358-1368; layout_components.ex:261-277; user_auth.ex:305-306
+    # accounts.ex:1358-1368; layout_components.ex:261-277; user_auth.ex:297-298
     # user_registration_controller_test.exs:10-15 runs under this variant but asserts no banner
 
   @S14 @variant:signup-allowed
@@ -435,10 +435,10 @@ Feature: Register
 
 | What                                                                                                                                                                                                                        | Where                                                                                        | Disposition |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------- |
-| A signed-in visitor with signup off gets the plain-text 404, not the redirect to /projects; already recorded in shared-authenticated-session 6.2                                                                            | `router.ex:31-36`, `:176`                                                                    | decide      |
-| A pending return path is honoured only when the new user has no project; under init-project-for-new-user the user always goes to the starter project's /w/new. Already recorded in flow-login-return-to 6.2                 | `user_registration_controller.ex:40-49`; `user_auth.ex:63-70`                                | decide      |
+| A signed-in visitor with signup off gets the plain-text 404, not the redirect to /projects; already recorded in shared-authenticated-session 6.2                                                                            | `router.ex:32-37`, `:224`                                                                    | decide      |
+| A pending return path is honoured only when the new user has no project; under init-project-for-new-user the user always goes to the starter project's /w/new. Already recorded in flow-login-return-to 6.2                 | `user_registration_controller.ex:40-49`; `user_auth.ex:64-71`                                | decide      |
 | The confirmation email is sent even when `require_email_verification` is false, and with MAIL_PROVIDER unset it goes to Swoosh's local mailbox; the delivery result is discarded, so a failed send is invisible to the user | `accounts.ex:583-588`; `config.exs:83`; `bootstrap.ex:398-400`                               | decide      |
-| Sign-up never sets the remember-me cookie; there is no "Keep me logged in" option here                                                                                                                                      | `user_registration_controller.ex:20-21`, `:48`; `user_auth.ex:72-79`                         | preserve    |
+| Sign-up never sets the remember-me cookie; there is no "Keep me logged in" option here                                                                                                                                      | `user_registration_controller.ex:20-21`, `:48`; `user_auth.ex:73-80`                         | preserve    |
 | `contact_preference` is cast from the POST; the form has no control for it                                                                                                                                                  | `user.ex:163-164`, `:189-195`; `accounts_test.exs:640-650`                                   | decide      |
 | Labels "First Name" and "Last Name" are title case; "Email" and "Password" are not                                                                                                                                          | `new.html.heex:31-62`                                                                        | decide      |
 | No hint of the 12-character minimum before the first failed submit                                                                                                                                                          | `new.html.heex:55-63`; `user.ex:261`                                                         | decide      |
@@ -507,7 +507,7 @@ Feature: Register
   your OpenFn account" email with a `/users/confirm/:token` link; opening it
   confirms the account and clears the require-email-verification warning
   (`accounts.ex:583-588`, `:1135-1142`, `:1161-1175`; `user_notifier.ex:90-102`;
-  `router.ex:229-230`). Distinct from flow-resend-account-confirmation, which
+  `router.ex:277-278`). Distinct from flow-resend-account-confirmation, which
   starts from the banner's reminder email (`user_notifier.ex:121-133`).
   Surfaces: auth-register, email:confirmation, auth-confirm-account,
   projects-dashboard. This file asserts only the send (S14).

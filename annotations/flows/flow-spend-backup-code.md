@@ -10,11 +10,11 @@ trigger:
   surfaces:
     - auth-two-factor                        # GET /users/two-factor, backup code variant (user_totp_controller.ex:9-15, :43-51; new.html.heex:55-66, :76-89)
     - controller:user-totp                   # POST /users/two-factor, UserTOTPController.create/2 (user_totp_controller.ex:17-31, :53-58)
-    - profile-backup-codes                   # reached through flow-reauth-backup-codes (router.ex:252-263)
+    - profile-backup-codes                   # reached through flow-reauth-backup-codes (router.ex:300-311)
   reachable_when:
     - the account has `mfa_enabled` and the session carries `user_totp_pending`, set only after the password or the external provider was accepted (user_session_controller.ex:40-46; oidc_controller.ex:250-256; user_totp_controller.ex:7, :33-41)
     - the account holds at least one backup code with no `used_at` (accounts.ex:485-494); codes are created on first enrolment or by "Generate new backup codes" (accounts.ex:423-431, :509-519)
-    - the exit hop additionally needs a sudo window, so it runs after flow-reauth-backup-codes (router.ex:252-262; user_auth.ex:211-231, :397-410, :443-475)
+    - the exit hop additionally needs a sudo window, so it runs after flow-reauth-backup-codes (router.ex:300-310; user_auth.ex:212-232, :383-396, :417-449)
 
 inherits:
   - shared-authenticated-session    # every hop: login redirect (its S01), disabled account (its S02); its S03 is the gate that holds a pending session on /users/two-factor until this flow's second hop clears it
@@ -30,9 +30,9 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/two-factor  UserTOTPController :new                       # router.ex:192
-    - post /users/two-factor  UserTOTPController :create                   # router.ex:193
-    - live /profile/auth/backup_codes  BackupCodesLive.Index :index        # router.ex:263
+    - get /users/two-factor  UserTOTPController :new                       # router.ex:240
+    - post /users/two-factor  UserTOTPController :create                   # router.ex:241
+    - live /profile/auth/backup_codes  BackupCodesLive.Index :index        # router.ex:311
   events:
     - UserTOTPController#create                                            # user_totp_controller.ex:17-31
   js_hooks:
@@ -40,7 +40,7 @@ inventory:
   policies:
     - UserTOTPController.redirect_if_totp_is_not_pending/2                 # user_totp_controller.ex:7, :33-41
     - Lightning.Accounts.valid_user_backup_code?/2                         # accounts.ex:472-502
-    - LightningWeb.UserAuth.totp_validated/1                               # user_auth.ex:486-488
+    - LightningWeb.UserAuth.totp_validated/1                               # user_auth.ex:460-462
   workers: []
   api_endpoints: []
   emails: []
@@ -101,8 +101,8 @@ after a code is spent has real gaps that are easy to miss.
 
 ## 3. Who can do what
 
-Sources: `router.ex:189-193`, `:252-263`; `user_totp_controller.ex:7`, `:17-41`;
-`accounts.ex:472-502`; `user_auth.ex:288-311`, `:486-488`. No policy module:
+Sources: `router.ex:237-241`, `:300-311`; `user_totp_controller.ex:7`, `:17-41`;
+`accounts.ex:472-502`; `user_auth.ex:280-303`, `:460-462`. No policy module:
 every hop acts on the session's own user, and the code is checked only against
 that user's rows (`accounts.ex:474`, `:527`).
 
@@ -119,19 +119,19 @@ that user's rows (`accounts.ex:474`, `:527`).
 - A code counts only if it matches exactly and its `used_at` is empty
   (`accounts.ex:487-488`).
 - The exit hop needs a `sudo_session` token under five minutes old
-  (`user_auth.ex:211-231`, `:443-475`; `user_token.ex:35`).
+  (`user_auth.ex:212-232`, `:417-449`; `user_token.ex:35`).
 
 ## 4. What it touches
 
 **Reads**
 
 - Hop 1, GET `/users/two-factor?authentication_type=backup_code`: `user_tokens`,
-  `users` for the session (`user_auth.ex:288-299`); session `user_totp_pending`
+  `users` for the session (`user_auth.ex:280-291`); session `user_totp_pending`
   (`user_totp_controller.ex:33-41`)
 - Hop 2, POST `/users/two-factor`: every `user_backup_codes` row for the user,
   decrypted (`accounts.ex:474`, `:525-530`; `user_backup_code.ex:13-15`); the
   user's `backup_codes` association again for the update (`accounts.ex:498`);
-  session `user_return_to` (`user_auth.ex:64`)
+  session `user_return_to` (`user_auth.ex:65`)
 - Hop 3, `/profile/auth/backup_codes`: `user_tokens` (session and
   `sudo_session`), every `user_backup_codes` row with `used_at`
   (`index.ex:37-44`; `index.html.heex:88-106`)
@@ -143,7 +143,7 @@ that user's rows (`accounts.ex:474`, `:527`).
   `Repo.update` (`accounts.ex:485-502`; `user.ex:51-52`)
 - Hop 2, valid code: session `user_totp_pending` and `user_return_to` deleted;
   `_lightning_web_user_remember_me` cookie written when `user[remember_me]` is
-  "true" (`user_auth.ex:486-488`, `:63-79`)
+  "true" (`user_auth.ex:460-462`, `:64-80`)
 - Hop 2, wrong or spent code: nothing; the `with` stops before the update and
   the page re-renders (`accounts.ex:476-482`; `user_totp_controller.ex:25-29`)
 - Hop 3: none (view only)
@@ -151,7 +151,7 @@ that user's rows (`accounts.ex:474`, `:527`).
 **Immediate side effects**
 
 - Hop 2: redirect to the stored return path or `/projects`
-  (`user_auth.ex:63-70`, `:514`); the return path journey is owned by
+  (`user_auth.ex:64-71`, `:488`); the return path journey is owned by
   flow-login-return-to S02
 - No PubSub broadcast or Oban job at any hop (`user_totp_controller.ex:17-31`;
   `accounts.ex:472-502`; `index.ex:27-44`)
@@ -195,7 +195,7 @@ Feature: Signing in with a recovery code
     And visiting "/projects" no longer sends me to "/users/two-factor"
     And "K7Q2M9XPA" has a used time on "amara@example.org"'s account
     And her other nine codes have none
-    # new.html.heex:76-89; user_totp_controller.ex:17-24, :53-58; accounts.ex:472-502; user_auth.ex:486-488, :63-70
+    # new.html.heex:76-89; user_totp_controller.ex:17-24, :53-58; accounts.ex:472-502; user_auth.ex:460-462, :64-71
     # user_totp_controller_test.exs:122-148 (redirect, pending flag cleared; used_at not asserted)
     # accounts_test.exs:531-533 (returns true; used_at not asserted)
 
@@ -210,7 +210,7 @@ Feature: Signing in with a recovery code
     And visiting "/projects" sends me back to "/users/two-factor"
     When I choose "Use your backup code" and enter another of my unused recovery codes
     Then I am on "/projects"
-    # router.ex:71 (log out); accounts.ex:485-494 (is_nil(backup.used_at)); user_totp_controller.ex:25-29
+    # router.ex:98 (log out); accounts.ex:485-494 (is_nil(backup.used_at)); user_totp_controller.ex:25-29
     # accounts_test.exs:535-541 (second use false, every other code still true); no controller test spends a code twice
 
   @S03
@@ -248,7 +248,7 @@ fixed.
 
 | What                                                                                                                                                               | Where                                       | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- | ----------- |
-| Nothing tells the user how many codes they have left after spending one, or prompts them to regenerate when they run low or out                                    | `user_auth.ex:63-70`; `new.html.heex:61-66` | decide      |
+| Nothing tells the user how many codes they have left after spending one, or prompts them to regenerate when they run low or out                                    | `user_auth.ex:64-71`; `new.html.heex:61-66` | decide      |
 | Codes are compared exactly: lowercase or a pasted trailing space is refused (auth-two-factor 6.2)                                                                  | `accounts.ex:487`                           | decide      |
 | The spent code is kept with a timestamp rather than deleted, which is what would let the exit hop show it                                                          | `accounts.ex:489`; `index.html.heex:93`     | preserve    |
 | `used_at` is set in UTC and the tooltip would show it raw, not in the viewer's time zone (profile-backup-codes 6.2; shared-local-datetime is the existing pattern) | `accounts.ex:489`; `index.html.heex:100`    | decide      |

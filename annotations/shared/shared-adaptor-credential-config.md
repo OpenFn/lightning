@@ -72,16 +72,16 @@ inventory:
     - hooks/useAdaptors.ts, stores/createAdaptorStore.ts,
       hooks/useCredentials.ts, stores/createCredentialStore.ts
   policies:
-    - Lightning.Policies.Users :edit_credential (users.ex:40-44;
-      collaborate.ex:156-162)
+    - Lightning.Policies.Credentials :edit_credential
+      (policies/credentials.ex:76-147; collaborate.ex:153-165)
     - Lightning.Policies.ProjectUsers :create_project_credential
       (project_users.ex:39-49, :132-158; collaborate.ex:316-323;
       credential_form_component.ex:525-542)
     - Lightning.Policies.Credentials :create_keychain_credential
-      (policies/credentials.ex:32-38, :51-67, :87-98; credentials.ex:1956-1971)
+      (policies/credentials.ex:119-146, :203-206; credentials.ex:1956-1971)
   workers: []
   api_endpoints:
-    - get /adaptors/catalogue  AdaptorController :index (router.ex:155-160;
+    - get /adaptors/catalogue  AdaptorController :index (router.ex:199-204;
       adaptor_controller.ex:21-49); read here, owned by a capability not yet
       written
   emails: []
@@ -93,7 +93,7 @@ inventory:
       opens)
     - KeychainCredentialFormComponent; the editor builds keychains through
       CredentialFormComponent's own keychain page
-      (credential_form_component.ex:1181-1204)
+      (credential_form_component.ex:1186-1209)
     - Adaptor catalogue loading, the Adaptors.ChannelBroadcaster and the
       adaptors_updated PubSub source (channel_broadcaster.ex:58-80); see
       Proposed flows
@@ -173,7 +173,7 @@ Sources: `project_users.ex:39-49` (`:edit_workflow` and
 `:create_project_credential` are editor actions), `:132-158` (MFA unsatisfied
 denies all; support with no row counts when support access is on);
 `users.ex:40-44` (credential edit by its owner only);
-`policies/credentials.ex:32-38`, `:87-98` (keychain create: owner, admin, or
+`policies/credentials.ex:119-146, :203-206` (keychain create: owner, admin, or
 support access, MFA required). The UI gate on the entry buttons is the host's
 read-only flag (`AdaptorDisplay.tsx:182`, `:263`); document writes are gated
 server side by shared-editor-session.
@@ -189,7 +189,7 @@ server side by shared-editor-session.
 **Preconditions beyond role**
 
 - A member who has not met the project's MFA requirement is denied every action
-  (`project_users.ex:134`; `policies/credentials.ex:87-98`).
+  (`decision.ex:59-66`; `policies/credentials.ex:119-146, :203-206`).
 - Read-only states (deleted workflow, pinned version, new unsaved workflow,
   live-workflow lock) hide the entry buttons; they belong to
   shared-editor-session.
@@ -217,7 +217,7 @@ only; `catalogue.ex:262-300`, `:332-337`) over `GET /adaptors/catalogue`;
   `project_credential_id` / `keychain_credential_id` (`JobForm.tsx:254-298`,
   `:129-165`; `FullScreenIDE.tsx:646-708`).
 - Database, immediately, through the credential form: `credentials` and
-  `project_credentials` (`credential_form_component.ex:1255-1305`),
+  `project_credentials` (`credential_form_component.ex:1260-1323`),
   `keychain_credentials` (`credentials.ex:1956-1971`).
 
 **Immediate side effects** (in the same request)
@@ -355,7 +355,7 @@ Feature: Adaptor and credential configuration
   @S09
   Scenario: A catalogue that has not loaded can be retried
     # Value: a transient failure does not look like "there are no adaptors".
-    Given the adaptor catalogue answers 503 "adaptor catalogue unavailable"
+    Given the adaptor catalogue answers 503 with code "not_ready" and a retry-after of 5 seconds
     When I open the adaptor picker
     Then I see "Couldn't load adaptors. Please try again." and "Retry"
     When the catalogue becomes available and I click "Retry"
@@ -403,7 +403,7 @@ Feature: Adaptor and credential configuration
     When the credential form is opened for the id of "DHIS2 prod"
     Then no credential form opens and nothing of "DHIS2 prod" is rendered
     And "credential_modal_closed" is pushed back and "Configure connection" reopens
-    # ConfigureAdaptorModal.tsx:108-143, :449-465; collaborate.ex:145-178; users.ex:40-44; CredentialModalContext.tsx:207-228
+    # ConfigureAdaptorModal.tsx:108-143, :449-465; collaborate.ex:145-178; policies/credentials.ex:76-147; CredentialModalContext.tsx:207-228
     # collaborate_test.exs:998-1057; ConfigureAdaptorModal.test.tsx:1319-1440
 
   @S14
@@ -413,7 +413,7 @@ Feature: Adaptor and credential configuration
     When I open a new credential from "Fetch", click "Advanced", choose "Keychain" and save "Per facility" with path "$.facility_id"
     Then the keychain credential exists on "Malawi HIV"
     And "Fetch" has "Per facility" as its keychain credential
-    # credential_form_component.ex:312-366, :461-472, :1038-1046, :1181-1204, :1366-1377; collaborate.ex:393-430, :486-517
+    # credential_form_component.ex:312-366, :461-472, :1043-1051, :1186-1209, :1384-1395; collaborate.ex:393-430, :486-517
     # collaborate_test.exs:1756-1828
 
   @S15
@@ -422,8 +422,8 @@ Feature: Adaptor and credential configuration
     Given I am a viewer on "Malawi HIV"
     When I submit a keychain credential "Planted" from the step's advanced credential setup
     Then no keychain credential "Planted" exists
-    # credentials.ex:1956-1971; policies/credentials.ex:32-38, :87-98; collaborate_test.exs:1829-1873
-    # Only the viewer case is tested; an editor is refused by the same policy clause (policies/credentials.ex:91-93)
+    # credentials.ex:1956-1971; policies/credentials.ex:119-146, :203-206; collaborate_test.exs:1829-1873
+    # Only the viewer case is tested; an editor is refused by the same policy clause (policies/credentials.ex:119-146, :203-206)
 
   @S16
   Scenario: A step cannot be saved with another project's credential
@@ -455,6 +455,14 @@ Feature: Adaptor and credential configuration
     Then I see the DHIS2 adaptor, its version and a "DHIS2 prod" badge
     And I see no "Change adaptor", "Edit" or "Connect" button
     # AdaptorDisplay.tsx:182-205, :215-241, :263; JobForm.tsx:59, :351-358; FullScreenIDE.tsx:849-862
+
+  @S19
+  Scenario: Even its owner cannot edit a credential that is scheduled for deletion from a step
+    # Value: a credential on its way out is not changed from the editor, though the owner can still cancel or bring forward the deletion on the credentials page.
+    Given I own "DHIS2 prod", it is shared with "Malawi HIV", and it is scheduled for deletion
+    When the credential form is opened for the id of "DHIS2 prod"
+    Then no credential form opens and "credential_modal_closed" is pushed back
+    # collaborate.ex:153-165; policies/credentials.ex:106-114 (:edit_credential refused with :scheduled_for_deletion)
 ```
 
 ## 6. Unclear value
@@ -463,10 +471,10 @@ Feature: Adaptor and credential configuration
 
 | What                                                                                                                                                                                                                                                                                                                       | Where                                                                                                                                                  | What a user sees                                                                                                                                                                      | Disposition |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Editing a credential or creating a keychain never yields `credential_modal_closed`: only a new-credential save pushes `close_modal` (which the ModalHook turns into the close event); edit and keychain saves do not, and the server's own `close_credential_modal` push has no listener. The React modal state stays open | `credential_form_component.ex:1255-1289`, `:461-472`; `helpers.ex:160-163`; `collaborate.ex:417-429`; `CredentialModalContext.tsx:110-118`, `:207-228` | inspector: Escape stops closing the step panel; IDE: Escape and Ctrl/Cmd+E stop closing the IDE (`FullScreenIDE.tsx:723-726`) and "Configure connection" does not come back (not run) | fix         |
+| Editing a credential or creating a keychain never yields `credential_modal_closed`: only a new-credential save pushes `close_modal` (which the ModalHook turns into the close event); edit and keychain saves do not, and the server's own `close_credential_modal` push has no listener. The React modal state stays open | `credential_form_component.ex:1260-1307`, `:461-472`; `helpers.ex:160-163`; `collaborate.ex:417-429`; `CredentialModalContext.tsx:110-118`, `:207-228` | inspector: Escape stops closing the step panel; IDE: Escape and Ctrl/Cmd+E stop closing the IDE (`FullScreenIDE.tsx:723-726`) and "Configure connection" does not come back (not run) | fix         |
 | The saved-credential payload takes the credential's first `project_credentials` row, whatever its project; a credential saved without this project is reported as non-project and its credential id is written as `keychain_credential_id`                                                                                 | `collaborate.ex:402-409`, `:486-497`, `:512-516`; `JobForm.tsx:131-153`; `FullScreenIDE.tsx:691-702`                                                   | after editing a credential shared with several projects, or deselecting this project in the form, the step shows "Not found" and the save is refused (S16) (not run)                  | fix         |
 | `:clear_credential_page` reads `original_credential_schema` from the LiveView's assigns, but only the component sets it                                                                                                                                                                                                    | `collaborate.ex:356-363`; `credential_form_component.ex:312-317`, `:410-416`                                                                           | after "Cancel" from the advanced picker the page's `credential_schema` becomes nil and the form may re-render without its schema (not run)                                            | fix         |
-| Refusals from the editor's credential form put the flash on the component socket; the advanced picker offers "Keychain" to everyone                                                                                                                                                                                        | `credential_form_component.ex:474-480`, `:529-541`, `:1366-1377`; `collaborate_test.exs:1866-1872`                                                     | a viewer saving a credential, or an editor or viewer saving a keychain, clicks save and nothing happens                                                                               | fix         |
+| Refusals from the editor's credential form put the flash on the component socket; the advanced picker offers "Keychain" to everyone                                                                                                                                                                                        | `credential_form_component.ex:474-480`, `:529-541`, `:1384-1395`; `collaborate_test.exs:1866-1872`                                                     | a viewer saving a credential, or an editor or viewer saving a keychain, clicks save and nothing happens                                                                               | fix         |
 | "Adaptors in this project" lists only adaptors used by this workflow's steps                                                                                                                                                                                                                                               | `AdaptorSelectionModal.tsx:277-278`; `useAdaptors.ts:126-167`                                                                                          | adaptors used in the project's other workflows appear under "All adaptors"; copy does not match the list                                                                              | fix         |
 | A failed credential request leaves the list empty and the error unread (`useCredentialsError` has no caller)                                                                                                                                                                                                               | `createCredentialStore.ts:323-348`; `ConfigureAdaptorModal.tsx:610-624`; `useCredentials.ts:49-55`                                                     | "No credentials found in this project" when the request failed (not run)                                                                                                              | fix         |
 | In the IDE the dialog is not reset when the job changes, so its "adaptor changed" check compares against the previous job                                                                                                                                                                                                  | `ConfigureAdaptorModal.tsx:241-276`; `FullScreenIDE.tsx:508-519`, `:1345-1371`; `WorkflowEditor.tsx:373-379`                                           | opening "Configure connection" after switching to a job with a different adaptor rewrites that job's version to the newest numbered release (not run)                                 | fix         |

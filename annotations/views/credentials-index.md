@@ -10,8 +10,8 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - signed in (scope `pipe_through [:browser, :require_authenticated_user]`,
-      router.ex:189-190; `live_session :default` with `InitAssigns`,
-      router.ex:288, init_assigns.ex:17-35)
+      router.ex:237-238; `live_session :default` with `InitAssigns`,
+      router.ex:336, init_assigns.ex:17-35)
     - account not locked out pending email confirmation (init_assigns.ex:26-30)
     - no project, role or MFA gate; any signed-in user reaches it (index.ex:1-37
       has no further on_mount beyond `:assign_projects`, index.ex:7)
@@ -21,7 +21,7 @@ inherits:
   - shared-authenticated-session
   - shared-flash-messages # added by lead (final pass)
 
-url_params: [] # live_action :index only (router.ex:322, index.ex:24-27); no params read
+url_params: [] # live_action :index only (router.ex:370, index.ex:24-27); no params read
 
 config_variants:
   default: {
@@ -30,7 +30,7 @@ config_variants:
       max_credential_sensitive_values: 50,
       book_demo_banner.enabled: false,
     } # read under this variant (config/config.exs:198, bootstrap.ex:273-278, config.ex:373-375, config.ex:268-269)
-  transfer-in-form: { allow_credential_transfer: true } # the test build (config/test.exs:158); adds a "Transfer ownership" section to the edit form (credential_form_component.ex:1022-1035)
+  transfer-in-form: { allow_credential_transfer: true } # the test build (config/test.exs:158); adds a "Transfer ownership" section to the edit form (credential_form_component.ex:1027-1040)
   purge-immediate: { purge_deleted_after_days: 0 } # bootstrap.ex:306-317, credentials.ex:922-925, user_notifier.ex:154-162
   superuser: { current_user.role: superuser } # OAuth client "global" checkbox (credential_index_component.html.heex:175, :188; oauth_client_form_component.ex:513)
   support-user: { current_user.support_user: true } # project picker also lists support-access projects (projects.ex:1160-1170)
@@ -38,7 +38,7 @@ config_variants:
 inventory:
   routes:
     - live /credentials  CredentialLive.Index :index (live_session :default;
-      router.ex:288, :322)
+      router.ex:336, :370)
   events:
     - CredentialLive.Index handle_info {:forward, mod, opts} # index.ex:32-36; OAuth callback re-entry, see flow-oauth-credential-authorize
     - CredentialFormComponent#validate
@@ -77,10 +77,12 @@ inventory:
     - data-confirm on "Delete environment" (credential_form_component.ex:991)
       and on removing a project in use (components/credentials.ex:194)
   policies:
-    - Lightning.Policies.Users (:edit_credential, :delete_credential), owner
-      only (policies/users.ex:40-44)
-    - Lightning.Credentials authorize_credential_owner/2
-      (credentials.ex:948-959) on create, update, schedule, delete, cancel
+    - Lightning.Policies.Credentials (:create_credential, :edit_credential,
+      :delete_credential), through Credentials.authorize_credential/3
+      (policies/credentials.ex:76-147; credentials.ex:1154-1155) on create,
+      update, schedule, delete, cancel; the row actions ask it too
+      (credential_index_component.ex:394-419); OAuth clients still ask
+      Lightning.Policies.Users (policies/users.ex:51-54)
     - Lightning.OauthClients authorize_client_owner/2 (oauth_clients.ex:304-315)
       on create, update, delete
     - Credentials.initiate_credential_transfer/3 and revoke_transfer/2 owner
@@ -185,29 +187,30 @@ down and think through.
   the current owner, and nothing moves until they open that link. The form also
   says when an email has no account and which projects that person isn't in.
   (6.2, 6.1, S20)
-- **(3)** Saving an OAuth credential before signing in to the provider seems to
-  crash the form and lose what was entered. Not yet confirmed by running it.
-  (6.1)
+- **(3)** Saving an OAuth credential before signing in to the provider now comes
+  back as an error on the credential's body instead of an unmatched result, so
+  the form should stay open; what the form shows for it is not yet confirmed by
+  running it. (6.1)
 
 ## 3. Who can do what
 
 Ownership, not project role, decides every action here
-(`policies/users.ex:40-44`, `credentials.ex:948-959`,
+(`policies/credentials.ex:76-147`, `credentials.ex:1154-1155`,
 `oauth_clients.ex:304-315`). "Owner" means the user whose `user_id` is on the
 credential or client.
 
-| Action                                               | Owner                             | Other signed-in user | Superuser (not owner) | Support user (not owner)     |
-| ---------------------------------------------------- | --------------------------------- | -------------------- | --------------------- | ---------------------------- |
-| See the page                                         | yes                               | yes                  | yes                   | yes                          |
-| See a credential in the list                         | yes                               | no                   | no                    | no                           |
-| See an OAuth client in the list                      | yes                               | only if global       | only if global        | only if global               |
-| Create a credential                                  | yes (for self)                    | yes (for self)       | yes (for self)        | yes (for self)               |
-| Edit, schedule deletion, delete now, cancel deletion | yes                               | no                   | no                    | no                           |
-| Start or revoke a transfer                           | yes                               | no                   | no                    | no                           |
-| Create an OAuth client                               | yes (for self)                    | yes (for self)       | yes (for self)        | yes (for self)               |
-| Edit or delete an OAuth client                       | yes                               | no                   | no                    | no                           |
-| Make an OAuth client global                          | superuser only                    | no                   | yes                   | no                           |
-| Share with a project                                 | projects the owner is a member of | n/a                  | same as owner         | also support-access projects |
+| Action                                                                                | Owner                             | Other signed-in user | Superuser (not owner) | Support user (not owner)     |
+| ------------------------------------------------------------------------------------- | --------------------------------- | -------------------- | --------------------- | ---------------------------- |
+| See the page                                                                          | yes                               | yes                  | yes                   | yes                          |
+| See a credential in the list                                                          | yes                               | no                   | no                    | no                           |
+| See an OAuth client in the list                                                       | yes                               | only if global       | only if global        | only if global               |
+| Create a credential                                                                   | yes (for self)                    | yes (for self)       | yes (for self)        | yes (for self)               |
+| Edit, start or revoke a transfer (not while the credential is scheduled for deletion) | yes                               | no                   | no                    | no                           |
+| Schedule deletion, delete now, cancel deletion                                        | yes                               | no                   | no                    | no                           |
+| Create an OAuth client                                                                | yes (for self)                    | yes (for self)       | yes (for self)        | yes (for self)               |
+| Edit or delete an OAuth client                                                        | yes                               | no                   | no                    | no                           |
+| Make an OAuth client global                                                           | superuser only                    | no                   | yes                   | no                           |
+| Share with a project                                                                  | projects the owner is a member of | n/a                  | same as owner         | also support-access projects |
 
 **Preconditions beyond role**
 
@@ -232,7 +235,7 @@ credential or client.
 `projects`, `project_users`, `oauth_clients`, `project_oauth_clients`, `users`
 (transfer recipient lookup; all users when `transfer-in-form`), `steps`
 (activity check, `credentials.ex:1088-1093`), `workflows`/`jobs` (workflows
-using a credential, `credential_form_component.ex:1451-1455`)
+using a credential, `credential_form_component.ex:1469-1473`)
 
 **Writes**:
 
@@ -328,7 +331,7 @@ Feature: My credentials
     Then I see "Credential created successfully"
     And "Mailchimp" is listed with both projects
     And an audit event "created" and two "added_to_project" events are recorded
-    # credential_form_component.ex:525-566, :1291-1318, helpers.ex:160-168, credentials.ex:703-788; credential_live_test.exs:635-715
+    # credential_form_component.ex:525-566, :1309-1336, helpers.ex:160-168, credentials.ex:703-788; credential_live_test.exs:635-715
 
   @S03
   Scenario: Adaptor credentials ask for that adaptor's fields
@@ -338,7 +341,7 @@ Feature: My credentials
     Then I see an input for each field in the dhis2 schema
     And a required field I have touched and left empty shows an error
     And "Save credential" stays disabled until the required fields are valid
-    # credential_form_component.ex:660-690, :1072-1075, json_schema_body_component.ex:96-149; credential_live_test.exs:832-896
+    # credential_form_component.ex:660-690, :1077-1080, json_schema_body_component.ex:96-149; credential_live_test.exs:832-896
 
   @S04
   Scenario: A raw body must be valid JSON
@@ -347,7 +350,7 @@ Feature: My credentials
     When I enter "{not json" as the body
     Then I see "Invalid JSON format"
     And "Save credential" is disabled
-    # raw_body_component.ex:112-142, credential_form_component.ex:653-658, :1072-1075; credential_live_test.exs:717-753
+    # raw_body_component.ex:112-142, credential_form_component.ex:653-658, :1077-1080; credential_live_test.exs:717-753
 
   @S05
   Scenario: Two of my credentials cannot share a name
@@ -356,7 +359,7 @@ Feature: My credentials
     When I create another credential named "DHIS2 prod"
     Then I see "you have another credential with the same name"
     And no second credential is created
-    # credential.ex:77-79, credential_form_component.ex:1315-1316
+    # credential.ex:77-79, credential_form_component.ex:1333-1334
 
   @S06
   Scenario: Owner updates a credential's values
@@ -366,11 +369,11 @@ Feature: My credentials
     Then I see "Credential updated successfully"
     And the stored value for environment "main" is the new password
     And an audit event "updated" is recorded
-    # credential_form_component.ex:1255-1289, credentials.ex:256-300, :344-368; credential_live_test.exs:1153-1179
+    # credential_form_component.ex:1260-1307, credentials.ex:256-300, :344-368; credential_live_test.exs:1153-1179
 
   @S07
   Scenario: A credential keeps separate values per environment
-    # Value: sandbox runs pick up the environment whose name matches theirs, so staging never uses production secrets (copy at credential_form_component.ex:1211).
+    # Value: sandbox runs pick up the environment whose name matches theirs, so staging never uses production secrets (copy at credential_form_component.ex:1216).
     Given I am creating a raw JSON credential named "Mailchimp"
     When I add an environment and rename it "staging"
     And I enter different bodies on "main" and "staging"
@@ -409,7 +412,7 @@ Feature: My credentials
     Given I own credential "DHIS2 prod" used by workflow "Daily sync" in project "Malawi HIV"
     When I edit "DHIS2 prod" and remove "Malawi HIV"
     Then I am asked to confirm a warning naming "Daily sync"
-    # components/credentials.ex:194, credential_form_component.ex:1451-1455; credential_live_test.exs:1338-1408
+    # components/credentials.ex:194, credential_form_component.ex:1469-1473; credential_live_test.exs:1338-1408
 
   @S12
   Scenario: Removing project access is recorded
@@ -452,11 +455,11 @@ Feature: My credentials
     Given I own credential "DHIS2 prod" shared with "Malawi HIV" and used by a job there
     When I delete "DHIS2 prod" and confirm
     Then I see "Credential scheduled for deletion"
-    And "DHIS2 prod" shows "Cancel deletion" and "Delete now"
+    And "DHIS2 prod" shows "Cancel deletion" and "Delete now" and no longer offers "Edit" or "Transfer"
     And "DHIS2 prod" is no longer shared with any project
     And the job no longer has a credential
     And the flow "flow-credential-scheduled-deletion" has started for "DHIS2 prod"
-    # credential_deletion_modal.ex:40-51, credentials.ex:883-920, :1036-1052; credential_live_test.exs:156-230
+    # credential_deletion_modal.ex:40-44, credentials.ex:883-920, :1036-1052; credential_live_test.exs:156-230; policies/credentials.ex:106-114; credential_index_component.html.heex:72-115
 
   @S17
   Scenario: Owner deletes a scheduled credential for good
@@ -466,7 +469,7 @@ Feature: My credentials
     Then I see "Credential deleted successfully"
     And "Old token" no longer exists
     And an audit event "deleted" is recorded
-    # credential_deletion_modal.ex:69-98, credentials.ex:836-849; credential_live_test.exs:339-376
+    # credential_deletion_modal.ex:69-107, credentials.ex:836-849; credential_live_test.exs:339-376
 
   @S18
   Scenario: A credential used in runs cannot be deleted now
@@ -476,7 +479,7 @@ Feature: My credentials
     Then I see "Credential marked for deletion" with only an "Ok, understood" button
     And forcing the delete shows "Cannot delete a credential that has activities in projects"
     And "DHIS2 prod" still exists
-    # credential_deletion_modal.ex:60-67, :107-135; credential_live_test.exs:378-413
+    # credential_deletion_modal.ex:60-67, :92-99, :116-144; credentials.ex:1025-1036 (delete_credential refuses a credential runs have used); credential_live_test.exs:378-413
 
   @S19
   Scenario: A delete confirmation cannot be pointed at another credential
@@ -554,7 +557,7 @@ Feature: My credentials
     When I add an OAuth client and tick "Make client global"
     Then the project picker is hidden
     And other users see the client in their list as "GLOBAL" and can pick it for a new credential
-    # oauth_client_form_component.ex:513-523, :549-559, oauth_clients.ex:82-88, credential_form_component.ex:1359-1392
+    # oauth_client_form_component.ex:513-523, :549-559, oauth_clients.ex:82-88, credential_form_component.ex:1377-1410
 
   @S27
   Scenario: Creating an OAuth credential hands off to the provider sign-in
@@ -572,7 +575,7 @@ Feature: My credentials
     When I tick an extra optional scope "write"
     Then I am told to reauthorize
     And "Save credential" is disabled until I do
-    # generic_oauth_component.ex:310-372, components/oauth.ex:177-178, credential_form_component.ex:1072-1075; credential_live_test.exs:3109-3151
+    # generic_oauth_component.ex:310-372, components/oauth.ex:177-178, credential_form_component.ex:1077-1080; credential_live_test.exs:3109-3151
 
   @S29
   Scenario: Opening an OAuth credential with an expired token refreshes it
@@ -605,34 +608,76 @@ Feature: My credentials
     When I start a new credential
     Then I see "Couldn't load adaptors. Please try again." with a "Retry" button
     And "Raw JSON" is still offered
-    # credential_form_component.ex:731-744, :1364-1396, :187-189; credential_live_test.exs:3927-3951
+    # credential_form_component.ex:731-744, :1382-1414, :187-189; credential_live_test.exs:3927-3951
+
+  @S33
+  Scenario: A credential can't be saved with a link to a project its owner can't reach
+    # Value: a credential only ever reaches projects its owner is part of, even when the form is out of date.
+    Given I am a member of "Malawi HIV" and not of "Kenya TB"
+    And I am editing credential "DHIS2 prod" with "Kenya TB" added to its projects, for example from a page opened before I left "Kenya TB"
+    When I click "Save credential"
+    Then I see an error under the project list that names the project ids I can't reach
+    And "DHIS2 prod" is not linked to "Kenya TB"
+    And the credential can still be saved without that link
+    # credentials.ex:606-635 (links being added only, checked on create and update); credential_form_component.ex:1020-1024 (error shown under the project list)
+    # credentials_test.exs covers the context; not driven through the form
+
+  @S34
+  Scenario: Scheduling a credential that is already scheduled is refused
+    # Value: a second confirmation, from a stale list or another tab, can't push back the date the credential is deleted.
+    Given I own credential "DHIS2 prod" that is already scheduled for deletion
+    When I confirm "Delete credential" from a page that still shows it as live
+    Then I see "This credential is already scheduled for deletion"
+    And its deletion date is unchanged
+    # credential_deletion_modal.ex:46-72; credentials.ex:1088-1092; policies/credentials.ex:106-114
+    # not driven through the page; read from code
+
+  @S35
+  Scenario: A credential scheduled for deletion can't be edited
+    # Value: a credential on its way out isn't quietly changed; the owner is told to cancel the deletion first.
+    Given I own credential "DHIS2 prod" scheduled for deletion, and its edit form is open from before it was scheduled
+    When I click "Save credential"
+    Then I see "This credential is scheduled for deletion. Cancel the deletion to edit it."
+    And "DHIS2 prod" is unchanged
+    # credential_form_component.ex:1291-1297; credentials.ex:326-345; policies/credentials.ex:106-114
+    # credential_live_test.exs covers the context refusal; not driven through the form
+
+  @S36
+  Scenario: Saving a credential that was deleted or changed by someone else meanwhile is refused with a reload message
+    # Value: an owner whose edit lost a race with a delete is told the record changed, instead of a crash or a silent no-op.
+    Given I am editing credential "DHIS2 prod"
+    And "DHIS2 prod" is deleted from another tab
+    When I click "Save credential"
+    Then I see "Someone else changed or deleted this record while you were editing it. Reload and try again."
+    # credential_form_component.ex:1299-1302; credentials.ex:326-345; live_helpers.ex:217-219
+    # not tested through the form; read from code
 ```
 
 ## 6. Unclear value
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                                  | Where                                                                                                                            | What a user sees                                                                                                                                          | Disposition |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Saving an OAuth credential whose body fails token validation (for example before signing in, body `%{}`) returns `{:error, %OauthValidation.Error{}}`, which neither `save_credential` clause matches. Read, not run. | `credential_form_component.ex:1262-1288`, `:1299-1317`; `credentials.ex:211`, `:277-282`, `:416-436`                             | "Save credential" is enabled for OAuth (`body_valid?` is true for `"oauth"`, `:648-651`), and submitting appears to crash the LiveView and lose the modal | fix         |
-| Under `transfer-in-form` the edit form shows "Transfer ownership" with an owner select that lists every user by name and email; the chosen `user_id` is dropped because `Credential.changeset/2` does not cast it     | `credential_form_component.ex:1022-1035`, `:1241-1249`, `:1463-1468`; `components/credentials.ex:327-346`; `credential.ex:38-46` | "Credential updated successfully" but the owner is unchanged                                                                                              | fix         |
-| With `purge_deleted_after_days` 0 the deletion is dated now and the email says secrets are scrubbed "after a few minutes", but the purge cron is only registered when the setting is above 0                          | `credentials.ex:922-925`; `user_notifier.ex:154-162`, `:239`; `bootstrap.ex:306-317`                                             | secrets are never scrubbed; the credential stays "scheduled" until someone uses "Delete now"                                                              | decide      |
-| A changeset error from `schedule_credential_deletion` is swallowed with `{:noreply, socket}`                                                                                                                          | `credential_deletion_modal.ex:56-57`                                                                                             | clicking "Delete credential" does nothing, with no message                                                                                                | fix         |
-| Transfer and revoke failures flash `inspect(reason)`                                                                                                                                                                  | `transfer_credential_modal.ex:57-64`, `:105-107`                                                                                 | "Could not revoke transfer: :not_found" or an inspected changeset                                                                                         | fix         |
-| The transfer form shows "User does not exist" when no account matches the email, and on blur names the credential's projects the recipient is not in                                                                  | `credentials.ex:1863-1864`, `:1819-1823`; `transfer_credential_modal.ex:31-39`                                                   | shows "User does not exist" when no account matches                                                                                                       | decide      |
+| What                                                                                                                                                                                                                                                                                                                             | Where                                                                                                                            | What a user sees                                                                                                                                                                                       | Disposition |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| Saving an OAuth credential whose body fails token validation (for example before signing in, body `%{}`) is now returned as a changeset error on `credential_bodies`, with a code and the key of the token field at fault, and a message that no longer quotes token values. Whether the form shows that error is read, not run. | `credential_form_component.ex:1260-1308`; `credentials.ex:520-540`; `credentials/oauth_validation.ex`                            | "Save credential" is enabled for OAuth (`body_valid?` is true for `"oauth"`, `:648-651`); submitting keeps the form open with the error assigned, but the error may not render next to a visible field | decide      |
+| Under `transfer-in-form` the "Transfer ownership" owner choice is not saved, because `Credential.changeset/2` does not cast `user_id`                                                                                                                                                                                            | `credential_form_component.ex:1027-1040`, `:1246-1254`, `:1481-1486`; `components/credentials.ex:327-346`; `credential.ex:38-46` | "Credential updated successfully" but the owner is unchanged                                                                                                                                           | fix         |
+| With `purge_deleted_after_days` 0 the deletion is dated now and the email says secrets are scrubbed "after a few minutes", but the purge cron is only registered when the setting is above 0                                                                                                                                     | `credentials.ex:922-925`; `user_notifier.ex:154-162`, `:239`; `bootstrap.ex:306-317`                                             | secrets are never scrubbed; the credential stays "scheduled" until someone uses "Delete now"                                                                                                           | decide      |
+| A changeset error from `schedule_credential_deletion` is swallowed with `{:noreply, socket}`                                                                                                                                                                                                                                     | `credential_deletion_modal.ex:57-58`                                                                                             | clicking "Delete credential" does nothing, with no message                                                                                                                                             | fix         |
+| Transfer and revoke failures flash `inspect(reason)`                                                                                                                                                                                                                                                                             | `transfer_credential_modal.ex:57-64`, `:105-107`                                                                                 | "Could not revoke transfer: :not_found" or an inspected changeset                                                                                                                                      | fix         |
+| The transfer form shows "User does not exist" when no account matches the email, and on blur names the credential's projects the recipient is not in                                                                                                                                                                             | `credentials.ex:1863-1864`, `:1819-1823`; `transfer_credential_modal.ex:31-39`                                                   | shows "User does not exist" when no account matches                                                                                                                                                    | decide      |
 
 ### 6.2 Quirks and implementation details
 
 | What                                                                                                                                                                                                              | Where                                                                                                                                         | Disposition |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Old copy is title case ("Save Credential", "Add an OAuth Client", "Transfer Credential Ownership", "Revoke Credential Transfer", "Credential Name"); flash "Oauth client created successfully" lowercases the "A" | `credential_form_component.ex:845`, `:1077`; `oauth_client_form_component.ex:316`, `:326`, `:365-369`; `transfer_credential_modal.ex:123-127` | fix         |
-| Every successful save, delete, transfer or revoke does `push_navigate` back to `/credentials`, remounting the page rather than patching                                                                           | `helpers.ex:160-168`; `credential_form_component.ex:1320-1326`; `credential_deletion_modal.ex:49-51`; `transfer_credential_modal.ex:52-55`    | preserve    |
+| Old copy is title case ("Save Credential", "Add an OAuth Client", "Transfer Credential Ownership", "Revoke Credential Transfer", "Credential Name"); flash "Oauth client created successfully" lowercases the "A" | `credential_form_component.ex:845`, `:1082`; `oauth_client_form_component.ex:316`, `:326`, `:365-369`; `transfer_credential_modal.ex:123-127` | fix         |
+| Every successful save, delete, transfer or revoke does `push_navigate` back to `/credentials`, remounting the page rather than patching                                                                           | `helpers.ex:160-168`; `credential_form_component.ex:1338-1344`; `credential_deletion_modal.ex:44`; `transfer_credential_modal.ex:52-55`       | preserve    |
 | Project picker lists top-level projects only; sandboxes get access through propagation                                                                                                                            | `projects.ex:1138-1147`; `credentials.ex:738-761`, `:782-822`                                                                                 | decide      |
-| Cancelling a scheduled deletion does not restore project access or job assignments removed when it was scheduled (the delete modal copy warns about this; the "Credential deletion canceled" flash does not)      | `credentials.ex:1036-1052`, `:936-942`; `credential_deletion_modal.ex:146-149`                                                                | preserve    |
-| `@openfn/language-googlesheets` and `@openfn/language-gmail` are excluded from the credential type list                                                                                                           | `credential_form_component.ex:1220-1222`                                                                                                      | decide      |
-| Type list is adaptors with a schema, plus "Raw JSON", plus OAuth clients, sorted case-insensitively by name                                                                                                       | `credential_form_component.ex:1214-1226`, `:1385-1394`                                                                                        | preserve    |
-| Environments sort with "main", "production", "prod", "master", "principal", "primary", "default" first; the first of those is the tab opened on edit                                                              | `credential_form_component.ex:1521-1540`, `:1560-1577`                                                                                        | preserve    |
-| New environments are named "untitled", "untitled-1", ...                                                                                                                                                          | `credential_form_component.ex:1542-1558`                                                                                                      | preserve    |
+| Cancelling a scheduled deletion does not restore project access or job assignments removed when it was scheduled (the delete modal copy warns about this; the "Credential deletion canceled" flash does not)      | `credentials.ex:1036-1052`, `:936-942`; `credential_deletion_modal.ex:155-158`                                                                | preserve    |
+| `@openfn/language-googlesheets` and `@openfn/language-gmail` are excluded from the credential type list                                                                                                           | `credential_form_component.ex:1225-1227`                                                                                                      | decide      |
+| Type list is adaptors with a schema, plus "Raw JSON", plus OAuth clients, sorted case-insensitively by name                                                                                                       | `credential_form_component.ex:1219-1231`, `:1403-1412`                                                                                        | preserve    |
+| Environments sort with "main", "production", "prod", "master", "principal", "primary", "default" first; the first of those is the tab opened on edit                                                              | `credential_form_component.ex:1539-1558`, `:1578-1595`                                                                                        | preserve    |
+| New environments are named "untitled", "untitled-1", ...                                                                                                                                                          | `credential_form_component.ex:1560-1576`                                                                                                      | preserve    |
 | Environment names are trimmed and lowercased as typed, with a 300 ms debounce                                                                                                                                     | `credential_form_component.ex:231-233`, `:936`                                                                                                | preserve    |
 | Schema field errors only show for fields the user has touched                                                                                                                                                     | `credential_form_component.ex:637-644`, `:681-690`                                                                                            | preserve    |
 | An empty raw body renders as "{}" and only reports "can't be blank" once touched                                                                                                                                  | `raw_body_component.ex:126-142`                                                                                                               | preserve    |
@@ -642,7 +687,7 @@ Feature: My credentials
 | Global OAuth clients owned by others appear on every user's `/credentials` with no actions                                                                                                                        | `oauth_clients.ex:82-88`; shared-credential-index-component 6.2                                                                               | preserve    |
 | "Revoke transfer" and "Transfer" are the same menu item; the label follows `transfer_status`, and a completed transfer reads "Transfer" again                                                                     | `credential_index_component.html.heex:81-95`; `transfer_credential_modal.ex:12`                                                               | preserve    |
 | The transfer confirmation email goes to the owner, not the recipient, matching the flash                                                                                                                          | `credentials.ex:1597-1602`; `user_notifier.ex:482`                                                                                            | preserve    |
-| `/credentials` sits in `live_session :default` alongside project pages but mounts no project scope or limits banner; it shows the book-a-demo banner when enabled                                                 | `router.ex:288`, `:322`; `index.html.heex:2-8`; `init_assigns.ex:46-54`                                                                       | preserve    |
+| `/credentials` sits in `live_session :default` alongside project pages but mounts no project scope or limits banner; it shows the book-a-demo banner when enabled                                                 | `router.ex:336`, `:370`; `index.html.heex:2-8`; `init_assigns.ex:46-54`                                                                       | preserve    |
 | The host hard-codes `can_create_project_credential={true}`                                                                                                                                                        | `index.html.heex:33`                                                                                                                          | preserve    |
 
 ### 6.3 Unreachable or dead code
@@ -654,26 +699,25 @@ Feature: My credentials
 | `handle_event("select_project")` in both forms                                            | `credential_form_component.ex:487-493`; `oauth_client_form_component.ex:156-165` | the picker only emits `add_selected_project` and `remove_selected_project` (`components/credentials.ex:170`, `:191`) |
 | `handle_event("edit_mandatory_scope" / "edit_optional_scope")` and `phx-hook="EditScope"` | `oauth_client_form_component.ex:148-154`, `:228-243`, `:478`, `:489`, `:584`     | no `EditScope` hook exists in `assets/js`; the browser reports an unknown hook                                       |
 | Second `schema_selected` clause matching only `_target`                                   | `credential_form_component.ex:176-178`                                           | the first clause matches whenever `selected` is present                                                              |
-| `update_body` assign and `update_body/3`                                                  | `credential_form_component.ex:1251-1253`, `:1470-1474`, `:1506`                  | assigned but never called                                                                                            |
-| Advanced picker and keychain pages of the credential form                                 | `credential_form_component.ex:312-485`, `:1038-1059`, `:1087-1204`               | `from_collab_editor` is only set by the workflow editor (`workflow_live/collaborate.ex:291`)                         |
+| `update_body` assign and `update_body/3`                                                  | `credential_form_component.ex:1256-1258`, `:1488-1492`, `:1524`                  | assigned but never called                                                                                            |
+| Advanced picker and keychain pages of the credential form                                 | `credential_form_component.ex:312-485`, `:1043-1064`, `:1092-1209`               | `from_collab_editor` is only set by the workflow editor (`workflow_live/collaborate.ex:291`)                         |
 | "Maximum of 5 environments allowed per credential" flash                                  | `credential_form_component.ex:203-209`                                           | the button is disabled at 5 (`:907`)                                                                                 |
 | "Cannot delete the last environment" flash                                                | `credential_form_component.ex:281-287`                                           | the delete button renders only with more than one environment (`:984`)                                               |
 | Not-authorized branches of both forms' `save`                                             | `credential_form_component.ex:526-541`; `oauth_client_form_component.ex:200-211` | this host always passes `true` (`index.html.heex:33`)                                                                |
-| `{:error, :unauthorized}` on credential create                                            | `credential_form_component.ex:1307-1313`                                         | `user_id` is seeded with the current user (`credential_index_component.ex:101-104`)                                  |
+| `{:error, :unauthorized}` on credential create                                            | `credential_form_component.ex:1325-1331`                                         | `user_id` is seeded with the current user (`credential_index_component.ex:101-104`)                                  |
 | Keychain events and modals of the index component                                         | `credential_index_component.ex:272-346`                                          | already listed in shared-credential-index-component 6.3                                                              |
 
 ### 6.4 Performance and operational limits
 
-| What                                                                                       | Where                                                        | User-visible?                                                    | Disposition |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------- | ----------- |
-| Max 5 environments                                                                         | `credential_form_component.ex:203`, `:897-915`               | yes, disabled button and tooltip                                 | preserve    |
-| Max sensitive keys per body (default 50, `max_credential_sensitive_values`)                | `credential_body.ex:57-67`; `config.ex:373-375`              | yes, "contains too many sensitive keys (N). Max allowed is 50"   | preserve    |
-| Environment name max 32 characters                                                         | `credential_form_component.ex:242-247`                       | yes                                                              | preserve    |
-| `list_users/0` loads every user in the instance into the edit form when `transfer-in-form` | `credential_form_component.ex:1241-1249`, `:1463-1468`       | no (until the instance is large)                                 | fix         |
-| Project list is loaded once on mount and not refreshed while the page is open              | `hooks.ex:194-201`                                           | yes, a newly joined project is missing until reload              | preserve    |
-| OAuth token and userinfo fetches run as `start_async` tasks with no timeout of their own   | `generic_oauth_component.ex:141-143`, `:198-203`, `:414-428` | yes, a hanging provider leaves "Authenticating with ..." showing | decide      |
-| Transfer link validity (`credential_transfer_token_validity_in_days`)                      | `user_notifier.ex:475-477`                                   | yes, in the email                                                | preserve    |
-| Purge runs daily at 02:30                                                                  | `bootstrap.ex:310-311`                                       | no                                                               | preserve    |
+| What                                                                                     | Where                                                        | User-visible?                                                    | Disposition |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- | ----------- |
+| Max 5 environments                                                                       | `credential_form_component.ex:203`, `:897-915`               | yes, disabled button and tooltip                                 | preserve    |
+| Max sensitive keys per body (default 50, `max_credential_sensitive_values`)              | `credential_body.ex:57-67`; `config.ex:373-375`              | yes, "contains too many sensitive keys (N). Max allowed is 50"   | preserve    |
+| Environment name max 32 characters                                                       | `credential_form_component.ex:242-247`                       | yes                                                              | preserve    |
+| Project list is loaded once on mount and not refreshed while the page is open            | `hooks.ex:194-201`                                           | yes, a newly joined project is missing until reload              | preserve    |
+| OAuth token and userinfo fetches run as `start_async` tasks with no timeout of their own | `generic_oauth_component.ex:141-143`, `:198-203`, `:414-428` | yes, a hanging provider leaves "Authenticating with ..." showing | decide      |
+| Transfer link validity (`credential_transfer_token_validity_in_days`)                    | `user_notifier.ex:475-477`                                   | yes, in the email                                                | preserve    |
+| Purge runs daily at 02:30                                                                | `bootstrap.ex:310-311`                                       | no                                                               | preserve    |
 
 ### 6.5 Things seen but not understood
 
@@ -717,7 +761,7 @@ Feature: My credentials
   link back to `/credentials`. Surfaces: credentials-index (also
   project-settings-credentials), email:credential-transfer-confirmation
   (`user_notifier.ex:469-497`), controller:credential-transfer-confirm
-  (`router.ex:238-240`, `credential_transfer_controller.ex:6-25`,
+  (`router.ex:286-288`, `credential_transfer_controller.ex:6-25`,
   `credentials.ex:1656-1702`), email:credential-transfer-completed
   (`user_notifier.ex:503-517`), credentials-index (recipient).
 - `flow-oauth-credential-authorize`: "Sign in with <provider>" opens the
@@ -727,7 +771,7 @@ Feature: My credentials
   forwards it to the component, which exchanges the code, validates scopes and
   fetches userinfo. Surfaces: credentials-index (also
   project-settings-credentials and the workflow editor), external OAuth
-  provider, controller:oauth-callback (`router.ex:79`,
+  provider, controller:oauth-callback (`router.ex:106`,
   `oidc_controller.ex:75-83`, `:269-280`), pubsub:oauth_credential:<socket id>
   (`oauth_credential_helper.ex:51-78`), credentials-index `handle_info`
   (`index.ex:32-36`).
@@ -747,7 +791,7 @@ Feature: My credentials
   lockout redirect for unconfirmed accounts, `toggle_sidebar` preference hook,
   book-a-demo and GDPR banners. Surfaces: every view in live_sessions
   `:default`, `:settings`, `:services` (`init_assigns.ex:17-90`,
-  `router.ex:268`, `:288`, `:351`).
+  `router.ex:316`, `:336`, `:399`).
 - `shared-credential-form-component` (optional): the credential form modal
   (`CredentialFormComponent`, `GenericOauthComponent`, body components) is
   catalogued here as its main home, but project-settings-credentials and the

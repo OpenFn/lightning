@@ -50,7 +50,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit # router.ex:303; both ends of the flow
+    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit # router.ex:351; both ends of the flow
   events:
     - WorkflowChannel#edit_in_sandbox # workflow_channel.ex:367-406; picker detail owned by workflow-editor-versions-and-promote, this file owns what follows the reply
     - WorkflowChannel#list_sandboxes # workflow_channel.ex:343-364; listing owned by workflow-editor-versions-and-promote S26, this file owns the join landing
@@ -66,7 +66,7 @@ inventory:
   api_endpoints:
     - get /projects/:project_id/runs/:run_id/dataclip  DataclipController
       :show_for_run # dataclip_controller.ex:211-244; called at EditInSandboxPicker.tsx:649
-    - get /dataclip/body/:id  DataclipController :show # router.ex:201; called at EditInSandboxPicker.tsx:656; owned by shared-dataclip-body-viewer
+    - get /dataclip/body/:id  DataclipController :show # router.ex:249; called at EditInSandboxPicker.tsx:656; owned by shared-dataclip-body-viewer
     - get /projects/:project_id/jobs/:job_id/dataclips  DataclipController
       :search # dataclip_controller.ex:114-160; in the sandbox, where the carried input is found (ManualRunPanel.tsx:298-337)
   emails: []
@@ -188,7 +188,7 @@ sandboxes-index S08 (`sandboxes.ex:1065-1084`).
 - Hop 1, picker: `projects` (active sandboxes of the parent with their owner
   `project_users` and `users`), `workflows` by name in each
   (`projects.ex:2184-2217`); the open run's first input through `runs`, `steps`,
-  `dataclips` (`dataclip_controller.ex:211-244`); its body (`router.ex:201`)
+  `dataclips` (`dataclip_controller.ex:211-244`); its body (`router.ex:249`)
 - Hop 1, create: the parent's `workflows`, `jobs`, `triggers`, `edges`,
   `project_credentials`, keychains, `collections`, the chosen `dataclips` row
   (`sandboxes.ex:1053-1060`, `:1574-1600`)

@@ -13,7 +13,7 @@ trigger:
   reachable_when:
     - the project scope gate admits the viewer (shared-project-scope;
       index.ex:13)
-    - the route sits in live_session :default with InitAssigns (router.ex:288,
+    - the route sits in live_session :default with InitAssigns (router.ex:336,
       :313-315)
     - nothing on the page checks experimental features; only the side menu link
       is gated on them (menu.ex:54-62). See 6.2
@@ -22,7 +22,7 @@ trigger:
       (index.ex:139-155, :157-182)
 
 inherits:
-  - shared-authenticated-session # live_session :default with InitAssigns (router.ex:288)
+  - shared-authenticated-session # live_session :default with InitAssigns (router.ex:336)
   - shared-project-scope # index.ex:13
   - shared-usage-limits-banner # index.ex:14, :20-26
   - shared-project-header # index.ex:27-40; side menu marked Channels via active_menu_item :channels (index.ex:113)
@@ -46,9 +46,9 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/channels  ChannelLive.Index :index # router.ex:313
-    - live /projects/:project_id/channels/new  ChannelLive.Index :new # router.ex:314
-    - live /projects/:project_id/channels/:id/edit  ChannelLive.Index :edit # router.ex:315
+    - live /projects/:project_id/channels  ChannelLive.Index :index # router.ex:361
+    - live /projects/:project_id/channels/new  ChannelLive.Index :new # router.ex:362
+    - live /projects/:project_id/channels/:id/edit  ChannelLive.Index :edit # router.ex:363
   events:
     - ChannelLive.Index#toggle_channel_state # index.ex:184-207
     - ChannelLive.Index#delete_channel # index.ex:209-230
@@ -337,7 +337,7 @@ Feature: Channels
     Given I am on the new channel form
     When I save with destination URL "ftp://example.com"
     Then the form stays open with "must be either a http or https URL"
-    # validators.ex:320-344; channel.ex:86. Not covered by a test.
+    # validators.ex:332-352; channel.ex:86. Not covered by a test.
 
   @S11
   Scenario: Channel names are unique within a project
@@ -516,6 +516,28 @@ Feature: Channels
     When I open any page in project "Malawi HIV"
     Then the side menu shows "Channels", marked active on this page
     # menu.ex:54-62; index.ex:113. Under default the link is absent but the page still mounts (6.2).
+
+  @S29
+  Scenario: A destination URL with a port above 65535 is refused
+    # Value: a channel never points at a port that doesn't exist, so requests aren't silently sent to a different one.
+    Given I am on the new channel form
+    When I save with destination URL "https://example.com:70000/data"
+    Then the form stays open with "port must be 65535 or lower"
+    And no channel is created
+    # validators.ex:349-350; channel.ex:86; validators_test.exs (port cases)
+
+  @S30
+  Scenario Outline: A save or toggle that lost to another change says so
+    # Value: someone working from an out-of-date page is told why nothing changed and can reload, instead of the save silently doing nothing.
+    Given channel "edit-me" was saved or deleted elsewhere after my page loaded
+    When I <action>
+    Then I see "Someone else changed or deleted this record while you were editing it. Reload and try again."
+    And the channel keeps what the other change left
+    Examples:
+      | action                                  |
+      | save the edit form                      |
+      | switch its toggle on the list           |
+    # form_component.ex:272-277, index.ex:201-205, channels.ex:240-256, live_helpers.ex:213-222; form_test.exs, index_test.exs
 ```
 
 ## 6. Unclear value
@@ -526,7 +548,6 @@ Feature: Channels
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | Loading `/channels/new` or `/channels/:id/edit` directly leaves the list and totals at their mount defaults; only `:index` loads them                                                                                    | `index.ex:117-118`, `:139-182` (no load in `:new`/`:edit`)                                                                                             | behind the modal, "Channels (0)", zero totals and "No channels found." on a project that has channels, until the modal closes | fix         |
 | Errors on nested auth methods are never shown: the destination select and client checkboxes are raw inputs, not bound to the changeset                                                                                   | `form_component.ex:166-215`; `channels.ex:294-331`; `channel_auth_method.ex:140-166`; `form_test.exs:799`, `:840` assert only that the form stays open | Save does nothing visible when a credential is out of scope, was deleted meanwhile, or hits a uniqueness constraint           | fix         |
-| A stale `lock_version` (the channel was saved or toggled elsewhere after the form opened) returns an error on `:lock_version`, which the form doesn't render                                                             | `channels.ex:231`; `channel.ex:92`; `form_component.ex:272-273`                                                                                        | Save does nothing visible; reopening the form works                                                                           | fix         |
 | Name and destination URL are `varchar(255)` with no length validation                                                                                                                                                    | migration `20260210120112_create_channels_tables.exs:12-13`; `channel.ex:81-93` (no `validate_name_fits_column`)                                       | a 256-character name or URL crashes the LiveView on save                                                                      | fix         |
 | Deleting a channel deletes all its request history, though `channel_requests` was made RESTRICT "so that deleting a channel cannot silently destroy its request history"; the confirm says only "This cannot be undone." | `channels.ex:333-358`; migration `20260330131728_change_channel_requests_cascade_to_restrict.exs:8-11`; `index.ex:422`                                 | every logged request for the channel disappears from channel logs and totals without warning                                  | decide      |
 | Request history is deleted outside the delete transaction, and a request inserted between the batch delete and the channel delete hits the RESTRICT FK with no declared constraint                                       | `channels.ex:344-353`; `channel.ex:47` (no `foreign_key_constraint`)                                                                                   | on a busy channel, delete can crash the page after the history is already gone, leaving the channel in place                  | fix         |
@@ -536,7 +557,7 @@ Feature: Channels
 
 | What                                                                                                                                                 | Where                                                                       | Disposition |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------- |
-| Only the side menu link checks experimental features; the routes mount for everyone on the project                                                   | `menu.ex:54-62`; `router.ex:313-315`; `index.ex:13-14`                      | decide      |
+| Only the side menu link checks experimental features; the routes mount for everyone on the project                                                   | `menu.ex:54-62`; `router.ex:361-363`; `index.ex:13-14`                      | decide      |
 | Channels sorted by name ascending; webhook auth methods by name; project credentials in no particular order                                          | `channels.ex:50`; `webhook_auth_methods.ex:470`; `projects.ex:1121-1125`    | decide      |
 | Webhook auth methods scheduled for deletion are not offered, and one already attached is neither shown nor removed by a save                         | `webhook_auth_methods.ex:469`; `form_component.ex:22-27`, `:305-319`        | decide      |
 | Heading count "Channels (n)" repeats the Total channels card                                                                                         | `index.ex:46-49`, `:264-267`                                                | decide      |
@@ -555,11 +576,11 @@ Feature: Channels
 
 ### 6.3 Unreachable or dead code
 
-| What                                                                                                                | Where              | Why unreachable                                                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Delete error "Cannot delete \"<name>\", it has request history that must be retained" (source copy uses an em dash) | `index.ex:220-225` | no constraint on `channel_snapshots` is declared on the schema and snapshots cascade (migration `20260305110335`); requests are deleted first |
-| `channel_proxy_url_parts/1` fallback `{"", url}`                                                                    | `helpers.ex:16-18` | `Endpoint.url()` always has a scheme                                                                                                          |
-| "Failed to update channel. Please try again." on toggle                                                             | `index.ex:201-204` | only an `enabled` change on a freshly fetched channel; reachable only by a concurrent stale update                                            |
+| What                                                                                                                | Where              | Why unreachable                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Delete error "Cannot delete \"<name>\", it has request history that must be retained" (source copy uses an em dash) | `index.ex:220-225` | no constraint on `channel_snapshots` is declared on the schema and snapshots cascade (migration `20260305110335`); requests are deleted first                                |
+| `channel_proxy_url_parts/1` fallback `{"", url}`                                                                    | `helpers.ex:16-18` | `Endpoint.url()` always has a scheme                                                                                                                                         |
+| "Failed to update channel. Please try again." on toggle                                                             | `index.ex:201-204` | only an `enabled` change on a freshly fetched channel that the changeset refuses; a stale update shows the "Someone else changed or deleted this record" flash instead (S30) |
 
 ### 6.4 Performance and operational limits
 

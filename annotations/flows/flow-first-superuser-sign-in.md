@@ -9,16 +9,16 @@ trigger:
   exit: projects-dashboard
   surfaces:
     - first-setup                         # "Save" on /first_setup creates the superuser and redirects (superuser.ex:44-62)
-    - controller:token-exchange           # GET /users/token_exchange/:token, UserSessionController.exchange_token/2 (router.ex:180; user_session_controller.ex:55-67); shared with flow-account-revocation-teardown
-    - projects-dashboard                  # /projects, where the new superuser lands with "Superuser account created." (user_auth.ex:514)
+    - controller:token-exchange           # GET /users/token_exchange/:token, UserSessionController.exchange_token/2 (router.ex:228; user_session_controller.ex:55-67); shared with flow-account-revocation-teardown
+    - projects-dashboard                  # /projects, where the new superuser lands with "Superuser account created." (user_auth.ex:488)
     - admin-user-edit
   reachable_when:
     - first-setup-open: `allow_first_setup` is true, set in bootstrap (`bootstrap.ex:230-234`); otherwise first-setup refuses the page (its S09, S10)
     - no user has role superuser when /first_setup is loaded (`superuser.ex:69-73`; `accounts.ex:1341-1344`)
-    - the browser holds no valid session, or the handoff is skipped (6.1 row 2): the exchange route is behind `:redirect_if_user_is_authenticated` (`router.ex:175-180`; `user_auth.ex:271-279`)
+    - the browser holds no valid session, or the handoff is skipped (6.1 row 2): the exchange route is behind `:redirect_if_user_is_authenticated` (`router.ex:223-228`; `user_auth.ex:263-271`)
 
 inherits:
-  - shared-authenticated-session    # the :browser pipeline on every hop (router.ex:21-43): fetch_current_user, and the FirstSetup redirect (its S11) that sends the operator to the entry and stops once this flow has created the superuser; on /projects its S01 to S06 gates and InitAssigns run for the new session
+  - shared-authenticated-session    # the :browser pipeline on every hop (router.ex:22-44): fetch_current_user, and the FirstSetup redirect (its S11) that sends the operator to the entry and stops once this flow has created the superuser; on /projects its S01 to S06 gates and InitAssigns run for the new session
 
 url_params:
   - name: token (path segment of /users/token_exchange/:token)
@@ -30,21 +30,21 @@ config_variants:
 
 inventory:
   routes:
-    - live /first_setup  FirstSetupLive.Superuser :show                       # router.ex:69; owned by first-setup
-    - get /users/token_exchange/:token  UserSessionController :exchange_token  # router.ex:180; also listed by flow-account-revocation-teardown
+    - live /first_setup  FirstSetupLive.Superuser :show                       # router.ex:96; owned by first-setup
+    - get /users/token_exchange/:token  UserSessionController :exchange_token  # router.ex:228; also listed by flow-account-revocation-teardown
   events:
     - FirstSetupLive.Superuser#save                                           # entry; superuser.ex:44-67, owned by first-setup S01
   js_hooks: []
   policies:
     - LightningWeb.Plugs.FirstSetup (plugs/first_setup.ex:11-33)              # runs on every hop; lets the exchange and /projects through once the superuser exists
-    - LightningWeb.UserAuth.redirect_if_user_is_authenticated/2 (user_auth.ex:271-279)
+    - LightningWeb.UserAuth.redirect_if_user_is_authenticated/2 (user_auth.ex:263-271)
   workers: []
   api_endpoints: []
   emails: []                                                                  # nothing is sent on any hop (accounts.ex:543-547; extensions/account_hook.ex:20-26; user_session_controller.ex:55-67)
   config:
     - :lightning, :allow_first_setup                                          # plugs/first_setup.ex:12; superuser.ex:17
   not_reachable_here:
-    - UserAuth.maybe_write_remember_me_cookie/2 remember-me branch (user_auth.ex:72-75); the exchange passes no params, so no remember-me cookie is written (user_session_controller.ex:65)
+    - UserAuth.maybe_write_remember_me_cookie/2 remember-me branch (user_auth.ex:73-76); the exchange passes no params, so no remember-me cookie is written (user_session_controller.ex:65)
     - FirstSetupLive.Superuser#validate (superuser.ex:29-42); owned by first-setup
 
 related:
@@ -97,8 +97,8 @@ edge around browsers that are already signed in is easy to miss.
 
 ## 3. Who can do what
 
-Sources: `router.ex:21-43`, `:66-69`, `:175-180`; `plugs/first_setup.ex:11-33`;
-`superuser.ex:14-22`, `:44-81`; `user_auth.ex:271-279`. No policy module is
+Sources: `router.ex:22-44`, `:93-96`, `:223-228`; `plugs/first_setup.ex:11-33`;
+`superuser.ex:14-22`, `:44-81`; `user_auth.ex:263-271`. No policy module is
 involved; each hop is gated by instance state and session state, not by role.
 
 | Action                                     | Visitor, no superuser yet, signed out | Visitor, no superuser yet, browser already signed in                  | Anyone, superuser exists                                       |
@@ -133,14 +133,14 @@ involved; each hop is gated by instance state and session state, not by role.
 
 - The :browser pipeline runs first: `fetch_current_user` and the FirstSetup
   plug, which now counts one superuser and lets the request through
-  (`router.ex:28-29`; `plugs/first_setup.ex:27-29`); then
-  `redirect_if_user_is_authenticated` (`router.ex:175`).
+  (`router.ex:29-30`; `plugs/first_setup.ex:27-29`); then
+  `redirect_if_user_is_authenticated` (`router.ex:223`).
 - Reads the `auth` token joined to `users` where it is under 30 seconds old
   (`accounts.ex:1076-1079`; `user_token.ex:96-102`).
 - Deletes that `auth` token and inserts a `session` token
   (`accounts.ex:1065-1066`, `:985-989`, `:1084-1087`).
 - Renews the session, clears it except `user_return_to`, writes `user_token`,
-  and redirects to `user_return_to` or `/projects` (`user_auth.ex:54-58`,
+  and redirects to `user_return_to` or `/projects` (`user_auth.ex:55-59`,
   `:63-70`, `:96-103`, `:514`). No remember-me cookie
   (`user_session_controller.ex:65`).
 - On an unknown or expired token: flash "Invalid token" and redirect to
@@ -150,7 +150,7 @@ involved; each hop is gated by instance state and session state, not by role.
 **Hop 3: projects-dashboard**
 
 - `fetch_current_user` finds the new session and writes `live_socket_id`
-  (`user_auth.ex:175-192`); the page renders the flash and, for a superuser, the
+  (`user_auth.ex:176-193`); the page renders the flash and, for a superuser, the
   "Admin Menu" and "Sys Info" side menu entries (`layouts/live.html.heex:45-57`,
   `:92-93`).
 - From here on every browser request still counts superusers, now finding one,
@@ -201,7 +201,7 @@ Feature: Create the first superuser and sign in
     And I am signed in as "foo@example.com"
     And I see "Admin Menu" in the side menu
     # superuser.ex:44-62; accounts.ex:543-547, :1051-1071; user_session_controller.ex:55-67;
-    # user_auth.ex:54-70, :514; layouts/live.html.heex:45-49, :92-93; first_setup_live_test.exs:31-52
+    # user_auth.ex:55-71, :488; layouts/live.html.heex:45-49, :92-93; first_setup_live_test.exs:31-52
 
   @S02 @variant:first-setup-open
   Scenario: Once the superuser exists, other visitors are no longer sent to first setup
@@ -242,16 +242,16 @@ the exchange (its 6.2) and the 30-second validity (its 6.4).
 
 | What                                                                                                                                                                                                                               | Where                                                                                                      | What a user sees                                                                              | Disposition |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------- |
-| A browser that is already signed in as another account skips the exchange but keeps the flash, so /projects says "Superuser account created." while the operator is still the old account; the new superuser's token is never used | `router.ex:175-180`; `user_auth.ex:271-279`; `superuser.ex:54`; `user_session_controller_test.exs:130-137` | a success message on a page that is not signed in as the account it refers to                 | decide      |
+| A browser that is already signed in as another account skips the exchange but keeps the flash, so /projects says "Superuser account created." while the operator is still the old account; the new superuser's token is never used | `router.ex:223-228`; `user_auth.ex:263-271`; `superuser.ex:54`; `user_session_controller_test.exs:130-137` | a success message on a page that is not signed in as the account it refers to                 | decide      |
 | The superuser insert commits before the auth token insert (`Repo.insert!`); if the second fails, the LiveView crashes after the account exists                                                                                     | `accounts.ex:543-547`, `:1051-1055`; `superuser.ex:50-60`                                                  | an error and reconnect, then /projects redirects to log in; the operator must sign in by hand | fix         |
 
 ### 6.2 Quirks and implementation details
 
 | What                                                                                                                                                                                    | Where                                                                       | Disposition |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------- |
-| The page the operator first asked for is not remembered: the FirstSetup plug halts before `require_authenticated_user` can store `user_return_to`, so the flow always ends on /projects | `router.ex:29`; `plugs/first_setup.ex:27-32`; `user_auth.ex:491`, `:63-70`  | decide      |
-| The flash set by the LiveView survives two redirects and the session renewal, and is rendered on /projects                                                                              | `superuser.ex:54`; `user_auth.ex:96-103`; `first_setup_live_test.exs:45-51` | preserve    |
-| The new session has no remember-me cookie, so it ends with the browser session; password log in offers "remember me", this path does not                                                | `user_session_controller.ex:65`; `user_auth.ex:72-79`                       | preserve    |
+| The page the operator first asked for is not remembered: the FirstSetup plug halts before `require_authenticated_user` can store `user_return_to`, so the flow always ends on /projects | `router.ex:30`; `plugs/first_setup.ex:27-32`; `user_auth.ex:465`, `:64-71`  | decide      |
+| The flash set by the LiveView survives two redirects and the session renewal, and is rendered on /projects                                                                              | `superuser.ex:54`; `user_auth.ex:97-104`; `first_setup_live_test.exs:45-51` | preserve    |
+| The new session has no remember-me cookie, so it ends with the browser session; password log in offers "remember me", this path does not                                                | `user_session_controller.ex:65`; `user_auth.ex:73-80`                       | preserve    |
 | The raw token is in the URL path, so it reaches request logs and browser history; it is single use and expires in 30 seconds                                                            | `superuser.ex:56-61`; `user_token.ex:67-72`                                 | preserve    |
 
 ### 6.3 Unreachable or dead code

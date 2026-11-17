@@ -8,22 +8,22 @@ trigger:
   entry: auth-register
   exit: workflow-editor-new
   surfaces:
-    - auth-register # GET/POST /users/register (router.ex:178-179)
+    - auth-register # GET/POST /users/register (router.ex:226-227)
     - controller:user-registration # UserRegistrationController.create/2 (user_registration_controller.ex:13-50)
     - email:confirmation # welcome "Confirm your OpenFn account", sent in the same request (accounts.ex:579-589; user_notifier.ex:90-102); handed off to flow-resend-account-confirmation
     - pubsub:users:all # %UserRegistered{} (accounts.ex:585; accounts/events.ex:13-18); no subscriber in lib/
     - pubsub:projects_events:all # %ProjectCreated{} for the starter project (projects.ex:573; projects/events.ex:81-86); no subscriber in lib/
-    - workflow-editor-new # /projects/:id/w/new (router.ex:302; user_registration_controller.ex:45)
+    - workflow-editor-new # /projects/:id/w/new (router.ex:350; user_registration_controller.ex:45)
   reachable_when:
     - self-signup is on, otherwise the entry is a plain-text 404 (auth-register
-      S11; router.ex:31-36)
-    - the visitor is signed out (router.ex:175-179; user_auth.ex:271-279)
+      S11; router.ex:32-37)
+    - the visitor is signed out (router.ex:223-227; user_auth.ex:263-271)
     - init_project_for_new_user is on; without it the new user has no project
       and lands on /projects or a stored return path
       (user_registration_controller.ex:29, :40-49; auth-register S01)
 
 inherits:
-  - shared-authenticated-session # the session this flow creates passes its gates on landing (user_auth.ex:288-311); its S06 deadline warning is the one missing here (6.1)
+  - shared-authenticated-session # the session this flow creates passes its gates on landing (user_auth.ex:280-303); its S06 deadline warning is the one missing here (6.1)
   - shared-project-scope # the landing page's on_mount :project_scope (collaborate.ex:25) admits the new owner
   - shared-editor-session # the landing page's channel join with action "new" (workflow_channel.ex:2214-2237)
 
@@ -43,8 +43,8 @@ config_variants:
 
 inventory:
   routes:
-    - post /users/register  UserRegistrationController :create # router.ex:179; owned by auth-register
-    - live /projects/:project_id/w/new  WorkflowLive.Collaborate :new # router.ex:302; owned by workflow-editor-new
+    - post /users/register  UserRegistrationController :create # router.ex:227; owned by auth-register
+    - live /projects/:project_id/w/new  WorkflowLive.Collaborate :new # router.ex:350; owned by workflow-editor-new
   events: [] # the hop between surfaces is a controller redirect, not a LiveView event
   js_hooks: []
   policies:
@@ -136,7 +136,7 @@ confusing half-made state.
 ## 3. Who can do what
 
 No policy module gates registration; the gates are config and session state
-(`router.ex:31-36`, `:175-179`; `user_auth.ex:271-279`). On landing,
+(`router.ex:32-37`, `:223-227`; `user_auth.ex:263-271`). On landing,
 `:create_workflow` is checked against the role the flow just granted
 (`collaborate.ex:35-42`; `project_users.ex:39-49`, `:167-172`).
 
@@ -155,7 +155,7 @@ No policy module gates registration; the gates are config and session state
   shared-project-scope S05 does not apply).
 - require-email-verification: the account is unconfirmed but not locked out for
   48 hours, so the landing page opens (`accounts.ex:1362-1368`;
-  `user_auth.ex:305-306`).
+  `user_auth.ex:297-298`).
 
 ## 4. What it touches
 
@@ -179,7 +179,7 @@ No policy module gates registration; the gates are config and session state
   `owner`, in a second transaction (`user_registration_controller.ex:28-37`;
   `setup_utils.ex:191-201`; `projects.ex:562-575`; `project.ex:94-103`)
 - Hop 2: `user_tokens` insert, context `session`; session renewed and cleared
-  except `user_return_to`, then `user_token` set (`user_auth.ex:28-31`,
+  except `user_return_to`, then `user_token` set (`user_auth.ex:29-32`,
   `:54-58`, `:96-103`)
 - Hop 3: none until the user picks a starting point (owned by
   workflow-editor-new)
@@ -250,7 +250,7 @@ Feature: Sign up and land on a first workflow
     And I see a "Build from scratch" card and a "Browse templates" card
     And the flow "flow-resend-account-confirmation" has started for "amara@example.org"
     # user_registration_controller.ex:13-21, :28-37, :40-45; setup_utils.ex:191-201; projects.ex:562-575
-    # user_auth.ex:28-31, :54-58; collaborate.ex:30-46; project_users.ex:39-49, :167-172; layouts/live.html.heex:92-93
+    # user_auth.ex:29-32, :55-59; collaborate.ex:30-46; project_users.ex:39-49, :167-172; layouts/live.html.heex:92-93
     # LandingScreen.tsx:59-166 (workflow-editor-new S01); accounts.ex:586; user_notifier.ex:90-102
     # user_registration_controller_test.exs:62-106 follows the redirect with get("/") and asserts the project, not the landing URL or the landing screen
 
@@ -276,7 +276,7 @@ Feature: Sign up and land on a first workflow
     Then I am on the new-workflow screen of "amara-demo"
     And I can click "Build from scratch"
     And my account is still unconfirmed
-    # accounts.ex:1362-1368 (no lockout inside 48 hours); user_auth.ex:305-306; collaborate.ex:30-46
+    # accounts.ex:1362-1368 (no lockout inside 48 hours); user_auth.ex:297-298; collaborate.ex:30-46
     # user_registration_controller_test.exs:66-71 runs this variant but asserts neither the landing nor the warning
     # the landing screen does not show the 48-hour warning (6.1)
 ```
@@ -295,7 +295,7 @@ Feature: Sign up and land on a first workflow
 
 | What                                                                                                                                                                                                                                                                                                      | Where                                                                                | Disposition |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------- |
-| On the project branch the stored `user_return_to` is neither honoured nor deleted; `renew_session` keeps it through sign-up and through a later logout, so it is applied at the next login in the same browser. The ignore half is already a decide row in flow-login-return-to 6.2 and auth-register 6.2 | `user_registration_controller.ex:43-45`; `user_auth.ex:63-70`, `:96-103`, `:114-130` | decide      |
+| On the project branch the stored `user_return_to` is neither honoured nor deleted; `renew_session` keeps it through sign-up and through a later logout, so it is applied at the next login in the same browser. The ignore half is already a decide row in flow-login-return-to 6.2 and auth-register 6.2 | `user_registration_controller.ex:43-45`; `user_auth.ex:64-71`, `:97-104`, `:115-131` | decide      |
 | The redirect goes to the first of `user.projects` with no ordering; if an `account_hook` extension also adds the user to a project, which one is chosen is undefined                                                                                                                                      | `user_registration_controller.ex:41-45`; `user.ex:49`                                | decide      |
 | The starter project is empty: registration passes `with_workflow` false, so the landing screen is the only thing in it                                                                                                                                                                                    | `user_registration_controller.ex:33-36`; `setup_utils.ex:203`                        | preserve    |
 | Repeated inner spaces in the first name become repeated hyphens in the project name ("emory--h-demo")                                                                                                                                                                                                     | `user_registration_controller.ex:30-31`                                              | decide      |

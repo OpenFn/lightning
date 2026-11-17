@@ -10,8 +10,8 @@ trigger:
   surfaces:
     - admin-user-edit # create, then Accounts.deliver_user_confirmation_instructions/2 inline (form_component.ex:75-99; accounts.ex:1177-1190)
     - email:enroller-confirmation # "Confirm your OpenFn account", enroller variant (user_notifier.ex:107-119); flow-resend-account-confirmation calls the same email family email:confirmation
-    - auth-login # the new user has no session, so the link sends them to log in first (router.ex:189-190, :229; user_auth.ex:290-299)
-    - auth-confirm-account # GET/POST /users/confirm/:token (router.ex:229-230; user_confirmation_controller.ex:30-32, :89-117)
+    - auth-login # the new user has no session, so the link sends them to log in first (router.ex:237-238, :277; user_auth.ex:282-291)
+    - auth-confirm-account # GET/POST /users/confirm/:token (router.ex:277-278; user_confirmation_controller.ex:30-32, :89-117)
     - projects-dashboard # where confirming lands; an account a superuser just made is on no project yet
     - auth-confirmation-required # require-email-verification only: an unconfirmed account 48 hours after creation (accounts.ex:1360-1368; confirmation_lockout.ex:43)
   reachable_when:
@@ -28,7 +28,7 @@ inherits:
   - shared-admin-space # the superuser gate on the entry hop
   - shared-flash-messages # "User created successfully" toast on the entry hop, "User confirmed successfully." on the exit
 
-url_params: [] # the token is a path segment, /users/confirm/:token (user_notifier.ex:113); the return path is held in the session (user_auth.ex:490-492)
+url_params: [] # the token is a path segment, /users/confirm/:token (user_notifier.ex:113); the return path is held in the session (user_auth.ex:464-466)
 
 config_variants:
   default: {} # S01 and S04 read under this one; the controller never checks the flag
@@ -126,8 +126,8 @@ break the link.
 ## 3. Who can do what
 
 No policy module beyond the entry gate (shared-admin-space,
-`policies/users.ex:19-21`). The link routes sit behind
-`:require_authenticated_user` (`router.ex:189-190`, `:229-230`) and accept only
+`policies/users.ex:30-32`). The link routes sit behind
+`:require_authenticated_user` (`router.ex:237-238`, `:277-278`) and accept only
 a token belonging to the signed-in account
 (`user_confirmation_controller.ex:106-117`).
 
@@ -177,11 +177,11 @@ a token belonging to the signed-in account
 **Hop 3: auth-login (link opened signed out)**
 
 - Writes: session `user_return_to` = /users/confirm/<token>
-  (`user_auth.ex:296-298`, `:490-492`); on login a `user_tokens` row, context
+  (`user_auth.ex:288-290`, `:464-466`); on login a `user_tokens` row, context
   `session`, with the return path kept across the session renew
-  (`user_auth.ex:28-31`, `:96-103`)
+  (`user_auth.ex:29-32`, `:97-104`)
 - Immediate: redirect back to the confirm page, or to /users/two-factor first
-  for an MFA account (`user_session_controller.ex:40-51`; `user_auth.ex:63-70`);
+  for an MFA account (`user_session_controller.ex:40-51`; `user_auth.ex:64-71`);
   owned by flow-login-return-to
 
 **Hop 4: auth-confirm-account**
@@ -202,7 +202,7 @@ a token belonging to the signed-in account
 
 - require-email-verification: 48 hours after the insert, every authenticated
   HTML request but the allow-list redirects to /users/confirm-required
-  (`user_auth.ex:305-306`, `:327-351`; `confirmation_lockout.ex:18-33`)
+  (`user_auth.ex:297-298`, `:319-343`; `confirmation_lockout.ex:18-33`)
 - No PubSub broadcast on confirm; the superuser's admin pages learn nothing
   (`accounts.ex:1236-1255`)
 
@@ -251,7 +251,7 @@ Feature: A user created by a superuser confirms their account
     And she sees "No projects found." (projects-dashboard S04)
     And "amara@example.org" is confirmed
     # form_component.ex:75-99; accounts.ex:1177-1190; user_notifier.ex:107-119
-    # router.ex:189-190, :229-230; user_auth.ex:290-299, :490-492, :63-70, :96-103; user_session_controller.ex:47-51
+    # router.ex:237-238, :277-278; user_auth.ex:282-291, :464-466, :64-71, :97-104; user_session_controller.ex:47-51
     # user_confirmation_controller.ex:30-32, :89-94, :106-117; accounts.ex:1236-1255
     # the confirm step itself is flow-resend-account-confirmation S01 and S04; no test drives the enroller link end to end
 
@@ -276,7 +276,7 @@ Feature: A user created by a superuser confirms their account
     And the page offers the ways out in auth-confirmation-required S01
     When I open the link from the enroller email and click "Confirm my account"
     Then I can open "/projects"
-    # accounts.ex:1360-1368; user_auth.ex:63-70, :305-306, :327-351; confirmation_lockout.ex:18-20, :43
+    # accounts.ex:1360-1368; user_auth.ex:64-71, :297-298, :319-343; confirmation_lockout.ex:18-20, :43
     # confirmation_lockout_recovery_test.exs:46-80 (recovery on an ordinary unconfirmed account); flow-resend-account-confirmation S08
     # the clock starts at the superuser's insert, not the first login (6.2)
 
@@ -304,7 +304,7 @@ flow-login-return-to.
 
 | What                                                                                                                                                                                                            | Where                                                                                     | What a user sees                                                                                                                                                                                                               | Disposition |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| The email says "You can complete your registration by visiting the URL below", but there is no registration step: the link needs a session, and the password was typed by the superuser and is not in the email | `user_notifier.ex:107-119`; `router.ex:189-190`, `:229`; `form_component.html.heex:32-37` | a login form asking for a password they were never told                                                                                                                                                                        | fix         |
+| The email says "You can complete your registration by visiting the URL below", but there is no registration step: the link needs a session, and the password was typed by the superuser and is not in the email | `user_notifier.ex:107-119`; `router.ex:237-238`, `:277`; `form_component.html.heex:32-37` | a login form asking for a password they were never told                                                                                                                                                                        | fix         |
 | A new user who takes "Forgot your password?" to set their own password loses their confirmation link, because a reset deletes every token of every context                                                      | `accounts.ex:1318-1334`; `user_token.ex:236-238`; `accounts_test.exs:1946-1953`           | after resetting, the enroller link says "User confirmation link is invalid or it has expired."; under `default` nothing in the app offers a new one except the signed-out form at /users/confirm, which sends the welcome copy | fix         |
 | A superuser who corrects a mistyped address on admin-user-edit sends nothing to the new address, and the original link stops working because `sent_to` no longer matches                                        | `user.ex:287-305`; `accounts.ex:177-201`; `user_token.ex:179`                             | the person at the corrected address never hears about the account; under require-email-verification they are later locked out                                                                                                  | fix         |
 

@@ -92,17 +92,18 @@ something changes elsewhere.
 | --------------------------- | ------ | ------ | ----- | ----- | ------------------ | -------------------------------------- |
 | Mount a project-scoped page | yes    | yes    | yes   | yes   | no                 | yes, when project support access is on |
 
-Source: `lib/lightning/policies/project_users.ex:136` and `:193` (standing is a
-role or support access).
+Source: `lib/lightning/policies/project_users.ex:160-162` and `:193` (standing
+is a role or support access).
 
 **Preconditions beyond role**
 
 - Session token must resolve and the user must not be locked out pending email
   confirmation (`lib/lightning_web/init_assigns.ex:17-33`).
 - Project must exist and not be scheduled for deletion
-  (`lib/lightning/projects/scope.ex:112-117`).
-- If the project requires MFA, the user must be enrolled
-  (`project_users.ex:134`, `:186-188`).
+  (`lib/lightning/scope.ex:173-183`, `:363-365`; `policies/decision.ex:50-58`: a
+  scheduled project loads, and every policy then refuses it).
+- If the project requires MFA, the user must be enrolled (`decision.ex:59-66`,
+  `project_users.ex:139-141`).
 
 ## 4. What it touches
 
@@ -173,7 +174,7 @@ Feature: Project scope gate
     When I visit the project's workflows page
     Then I am on "/projects"
     And I see "Not Found"
-    # hooks.ex:127-130, scope.ex:114
+    # hooks.ex:122-130, scope.ex:173-183, :363-365
 
   @S05
   Scenario: Member without MFA on an MFA-required project is sent to enrol
@@ -182,7 +183,7 @@ Feature: Project scope gate
     And I am an editor who has not enrolled in MFA
     When I visit the project's workflows page
     Then I am on "/mfa_required"
-    # hooks.ex:100-101, project_users.ex:186-188
+    # hooks.ex:100-101, project_users.ex:139-141
 
   @S06
   Scenario: Support user reaches a project with support access on
@@ -191,7 +192,7 @@ Feature: Project scope gate
     And project "Malawi HIV" has support access enabled
     When I visit the project's workflows page
     Then I see the page for project "Malawi HIV"
-    # project_users.ex:167-169, :193-194
+    # project_users.ex:182-192, :193-194
 
   @S07
   Scenario: Removing a member ends their open session on the project
@@ -252,9 +253,9 @@ Feature: Project scope gate
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                  | Where                      | What a user sees                                                 | Disposition |
-| --------------------------------------------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------- | ----------- |
-| Superuser with no membership row is refused by this gate, though the admin projects page lets them manage the project | `project_users.ex:193-194` | "Not Found" on a project they can edit from `/settings/projects` | decide      |
+| What                                                                                                                  | Where              | What a user sees                                                 | Disposition |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------- | ----------- |
+| Superuser with no membership row is refused by this gate, though the admin projects page lets them manage the project | `scope.ex:224-226` | "Not Found" on a project they can edit from `/settings/projects` | decide      |
 
 ### 6.2 Quirks and implementation details
 

@@ -32,7 +32,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w  WorkflowLive.Index :index # exit, router.ex:288, :301
+    - live /projects/:project_id/w  WorkflowLive.Index :index # exit, router.ex:336, :349
   events:
     - ProjectLive.NewCollaboratorComponent#add_collaborators # entry, owned by project-settings-collaborators
   js_hooks: []
@@ -140,7 +140,7 @@ Landing is governed by shared-project-scope.
   (`projects.ex:836-847`)
 - Hop 2: none in the database beyond Oban's own job state
 - Hop 3: `user_return_to` in the session when the recipient is signed out
-  (`user_auth.ex:296-299`, `:490-491`)
+  (`user_auth.ex:288-291`, `:464-465`)
 
 **Immediate side effects** (in the add request)
 
@@ -195,7 +195,7 @@ Feature: Access email for an existing user added to a project
     When Amara, logged in, opens the link in the email
     Then she is on the workflows page of project "Malawi HIV"
     # new_collaborator_component.ex:38-51, :134-151; projects.ex:827-847, :623-649
-    # user_notifier.ex:28-46, :138-151; route_helpers.ex:7-11; router.ex:288, :301
+    # user_notifier.ex:28-46, :138-151; route_helpers.ex:7-11; router.ex:336, :349
     # user_notifier_test.exs:41-62 (subject, body, link equal to project_dashboard_url)
 
   @S02
@@ -207,7 +207,7 @@ Feature: Access email for an existing user added to a project
     Then she is asked to log in
     When she logs in
     Then she is on the workflows page of project "Malawi HIV"
-    # router.ex:189-190, :301; user_auth.ex:288-299, :490-491, :63-69
+    # router.ex:237-238, :349; user_auth.ex:280-291, :464-465, :64-70
 
   @S03
   Scenario: Only the people just added are emailed

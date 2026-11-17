@@ -10,7 +10,7 @@ trigger:
   surfaces:
     - credentials-index # or project-settings-credentials, or workflow-editor-inspectors
     - external:oauth-provider # second window named "oauth_authorization" (hooks/index.ts:378-384)
-    - controller:oidc-callback # GET /authenticate/callback, OidcController.new (router.ex:75); see 6.5 on the scope's /oauth/:provider/callback
+    - controller:oidc-callback # GET /authenticate/callback, OidcController.new (router.ex:102); see 6.5 on the scope's /oauth/:provider/callback
     - pubsub:oauth_credential:<socket id> # oauth_credential_helper.ex:51-53, :72-82
     - credentials-index # the originating LiveView's handle_info({:forward, ...}) and GenericOauthComponent
     - workflow-editor-inspectors
@@ -22,7 +22,7 @@ trigger:
     - the client is offered to this user:
         own or global on /credentials, shared with the project or global
         elsewhere (oauth_clients.ex:60-89;
-        credential_form_component.ex:1359-1362)
+        credential_form_component.ex:1377-1380)
 
 inherits: [] # the callback hop mounts no shared gate
 
@@ -53,7 +53,7 @@ config_variants:
 
 inventory:
   routes:
-    - get /authenticate/callback  OidcController :new # router.ex:75, pipe_through [:browser] (router.ex:67); clauses oidc_controller.ex:75-87
+    - get /authenticate/callback  OidcController :new # router.ex:102, pipe_through [:browser] (router.ex:94); clauses oidc_controller.ex:75-87
   events:
     - GenericOauthComponent#authorize_click # entry handoff, also owned by credentials-index (S27)
     - GenericOauthComponent#check_scope
@@ -67,7 +67,7 @@ inventory:
   not_reachable_here:
     - OidcController :new clauses with a provider param
       (oidc_controller.ex:46-73) and :show; these are the SSO login flow
-    - OauthController :new (router.ex:79); GitHub version-control connect, not
+    - OauthController :new (router.ex:106); GitHub version-control connect, not
       this flow
 
 related:
@@ -366,8 +366,8 @@ Feature: Authorize an OAuth credential with a provider
 | What                                                                                                                                                                                                                                                                                                        | Where                                                                                                                                    | What a user sees                                                                     | Disposition |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------- |
 | Closing the provider window, or the provider never redirecting, leaves the form on "Authenticating with <client>..." with no cancel and no retry; the error copy for this case ("This can happen if you closed the authorization window") is only shown when the provider redirects with `error`            | `generic_oauth_component.ex:302-308`; `components/oauth.ex:188-191`; `oauth_error_formatter.ex:219-229`                                  | a spinner that never ends; the user must close the modal and start over              | fix         |
-| A token that fails validation is still sent to the form's bodies and rendered in the hidden input, and "Save credential" stays enabled; saving runs the same validation in `Credentials` and hits the unmatched `{:error, %OauthValidation.Error{}}` (credentials-index 6.1)                                | `generic_oauth_component.ex:172-186`, `:446-452`; `credential_form_component.ex:648-651`, `:1072-1075`; `credentials.ex:211`, `:416-436` | after S03, S05 or a missing expiry, Save is clickable and appears to crash the modal | fix         |
-| Changing scopes after signing in does not disable Save: the form's own `scopes_changed` is initialised false and never updated; only the OAuth component's copy changes. credentials-index S28's last step ("Save credential is disabled until I do") does not hold; its cited test asserts only the banner | `credential_form_component.ex:31`, `:1073`; `generic_oauth_component.ex:367-371`; `credential_live_test.exs:3109-3151`                   | Save remains enabled with a token that lacks the newly ticked scope                  | fix         |
+| A token that fails validation is still sent to the form's bodies and rendered in the hidden input, and "Save credential" stays enabled; saving runs the same validation in `Credentials` and hits the unmatched `{:error, %OauthValidation.Error{}}` (credentials-index 6.1)                                | `generic_oauth_component.ex:172-186`, `:446-452`; `credential_form_component.ex:648-651`, `:1077-1080`; `credentials.ex:211`, `:416-436` | after S03, S05 or a missing expiry, Save is clickable and appears to crash the modal | fix         |
+| Changing scopes after signing in does not disable Save: the form's own `scopes_changed` is initialised false and never updated; only the OAuth component's copy changes. credentials-index S28's last step ("Save credential is disabled until I do") does not hold; its cited test asserts only the banner | `credential_form_component.ex:31`, `:1078`; `generic_oauth_component.ex:367-371`; `credential_live_test.exs:3109-3151`                   | Save remains enabled with a token that lacks the newly ticked scope                  | fix         |
 | Error actions all re-run sign-in regardless of their label: "Revoke and Reauthorize" revokes nothing, "Contact Support", "Continue Anyway", "Try Again Later" and "Try Again in 30 Seconds" all open the provider again                                                                                     | `components/oauth.ex:240-245`; `oauth_error_formatter.ex:87`, `:129`, `:185`, `:258`, `:270`                                             | a button that does something other than what it says                                 | fix         |
 | A token with no expiry is shown as a warning saying "your credential should still work", but the same check refuses it on save                                                                                                                                                                              | `oauth_validation.ex:440-446`; `oauth_error_formatter.ex:178-188`; `credentials.ex:432-436`                                              | told to continue, then a crash on save (row 2)                                       | fix         |
 | An undecryptable `state` returns an error page (it raises in `url_decode64!`, `Vault.decrypt!`, or a match on `{:error, _}`)                                                                                                                                                                                | `oidc_controller.ex:269-272`; `oauth_credential_helper.ex:32-34`; `safety_string.ex:19-25`                                               | a 500 error page in the second window, which stays open                              | fix         |
@@ -375,18 +375,18 @@ Feature: Authorize an OAuth credential with a provider
 
 ### 6.2 Quirks and implementation details
 
-| What                                                                                                                                                                                   | Where                                                                   | Disposition |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------- |
-| The redirect URI is the SSO login callback `/authenticate/callback`; credential callbacks are told apart from login callbacks only by having no `provider` param                       | `route_helpers.ex:15-17`; `router.ex:75-77`; `oidc_controller.ex:46-87` | decide      |
-| Every authorize URL carries Google's `access_type=offline` and `prompt=consent`, whatever the provider                                                                                 | `oauth_http_client.ex:182-196`                                          | decide      |
-| The PubSub topic is the LiveView socket id; reloading or navigating the originating page orphans an in-flight sign-in (noted in the helper)                                            | `oauth_credential_helper.ex:44-53`                                      | decide      |
-| A second code arriving while one is held is ignored until the user clicks sign-in again                                                                                                | `generic_oauth_component.ex:123-125`, `:305`                            | preserve    |
-| A callback with neither `code` nor `error`, or with `error` but no `state`, redirects the second window to the login page instead of closing it                                        | `oidc_controller.ex:85-87`                                              | decide      |
-| An introspection endpoint, when configured, overwrites `expires_at` from its `exp`; an introspection failure is logged and ignored                                                     | `oauth_http_client.ex:229-245`                                          | preserve    |
-| `expires_in` is turned into an absolute `expires_at` when the token arrives                                                                                                            | `credentials.ex:1383-1405`; `generic_oauth_component.ex:170`            | preserve    |
-| Scope matching is case-insensitive and a superset grant is accepted                                                                                                                    | `oauth_validation.ex:560-588`                                           | preserve    |
-| The provider window is always named `oauth_authorization`, so a second sign-in reuses the same window                                                                                  | `hooks/index.ts:381`                                                    | preserve    |
-| /credentials offers the user's own and global clients; project contexts offer project-shared and global clients, so a user's own unshared client cannot start this flow from a project | `oauth_clients.ex:60-89`; `credential_form_component.ex:1359-1362`      | decide      |
+| What                                                                                                                                                                                   | Where                                                                     | Disposition |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------- |
+| The redirect URI is the SSO login callback `/authenticate/callback`, shared with credential authorisation                                                                              | `route_helpers.ex:15-17`; `router.ex:102-104`; `oidc_controller.ex:46-87` | decide      |
+| Every authorize URL carries Google's `access_type=offline` and `prompt=consent`, whatever the provider                                                                                 | `oauth_http_client.ex:182-196`                                            | decide      |
+| The PubSub topic is the LiveView socket id; reloading or navigating the originating page orphans an in-flight sign-in (noted in the helper)                                            | `oauth_credential_helper.ex:44-53`                                        | decide      |
+| A second code arriving while one is held is ignored until the user clicks sign-in again                                                                                                | `generic_oauth_component.ex:123-125`, `:305`                              | preserve    |
+| A callback with neither `code` nor `error`, or with `error` but no `state`, redirects the second window to the login page instead of closing it                                        | `oidc_controller.ex:85-87`                                                | decide      |
+| An introspection endpoint, when configured, overwrites `expires_at` from its `exp`; an introspection failure is logged and ignored                                                     | `oauth_http_client.ex:229-245`                                            | preserve    |
+| `expires_in` is turned into an absolute `expires_at` when the token arrives                                                                                                            | `credentials.ex:1383-1405`; `generic_oauth_component.ex:170`              | preserve    |
+| Scope matching is case-insensitive and a superset grant is accepted                                                                                                                    | `oauth_validation.ex:560-588`                                             | preserve    |
+| The provider window is always named `oauth_authorization`, so a second sign-in reuses the same window                                                                                  | `hooks/index.ts:381`                                                      | preserve    |
+| /credentials offers the user's own and global clients; project contexts offer project-shared and global clients, so a user's own unshared client cannot start this flow from a project | `oauth_clients.ex:60-89`; `credential_form_component.ex:1377-1380`        | decide      |
 
 ### 6.3 Unreachable or dead code
 
@@ -405,7 +405,7 @@ Feature: Authorize an OAuth credential with a provider
 ### 6.5 Things seen but not understood
 
 - The credentials-index proposal names `/oauth/:provider/callback`
-  (`router.ex:79`) as the callback. That route is `OauthController.new`, which
+  (`router.ex:106`) as the callback. That route is `OauthController.new`, which
   only matches `provider: "github"` and handles the GitHub version-control
   connect (`oauth_controller.ex:7-29`). The credential flow's redirect URI is
   `/authenticate/callback` (`route_helpers.ex:15-17`, `oauth_http_client.ex:79`,

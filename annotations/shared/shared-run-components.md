@@ -145,7 +145,7 @@ itself checks no policy; each host evaluates it and passes booleans in.
 **Preconditions beyond role**
 
 - Cancel needs the run to belong to the current project
-  (`cancel_helper.ex:12-16`, `runs.ex:74-84`).
+  (`cancel_helper.ex:12-16`, `runs.ex:76-88`).
 - Cancel needs the run to be in state `available` at the moment of the update
   (`runs.ex:466-492`).
 - The step rerun icon renders only for a step that has finished
@@ -160,7 +160,7 @@ itself checks no policy; each host evaluates it and passes booleans in.
 ## 4. What it touches
 
 **Reads**: `runs` joined through `work_orders` and `workflows` to scope by
-project (`runs.ex:74-84`); everything else is preloaded by the host (steps with
+project (`runs.ex:76-88`); everything else is preloaded by the host (steps with
 `job`, `input_dataclip`, `snapshot`: `invocation.ex:688-703`,
 `index.ex:280-291`, `streaming.ex:19-22`)
 
@@ -318,7 +318,7 @@ Feature: Run display components
     When I send "cancel-run" for "R" from a "Malawi HIV" page
     Then I see "Run not found."
     And "R" stays "available"
-    # cancel_helper.ex:13-14, runs.ex:74-84
+    # cancel_helper.ex:13-14, runs.ex:76-88
     # show_test.exs:602-626 and index_test.exs:1445-1459 cover only a random id, not a foreign run
 
   @S12
@@ -409,7 +409,6 @@ Feature: Run display components
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | `step_icon` has no clause for `exception` with a non-empty or nil error type, nor for any exit reason outside its list, so it raises `CaseClauseError`; the worker's step reason is a free string (`handlers.ex:419`, `:500`) | `components.ex:581-595`                                                                | the history row or run page crashes for that run                                                                             | fix         |
 | `channel_state_pill` uses `Map.fetch!`, so any channel request state added to the enum without a config entry raises                                                                                                          | `components.ex:154`; `channel_request.ex:34-35`                                        | channel logs page crashes                                                                                                    | decide      |
-| `cancel-run` with a non-UUID `run_id` raises `Ecto.Query.CastError` in `Runs.get_for_project/2`, unlike `rerun`, which validates first                                                                                        | `cancel_helper.ex:13`, `runs.ex:74-84`                                                 | the page crashes and reconnects; nothing is cancelled                                                                        | fix         |
 | On the run page, `step_item` (which contains an inspect `<a>`) is wrapped in another `<.link patch>`, giving nested anchors; the inner link is a `patch` to the workflow editor, a different LiveView                         | `show.ex:212-224`, `components.ex:257-269`                                             | clicking the inspect icon may also select the step, or fall back to a full page load                                         | decide      |
 | The step rerun icon's DOM id is the bare step id, and a step carried into a rerun is listed under both runs                                                                                                                   | `components.ex:508`, `:527`                                                            | duplicate ids; a tooltip can attach to the wrong icon                                                                        | fix         |
 | `step_item` assigns a fresh random tooltip id on every render (`assign_new` never sees a passed value)                                                                                                                        | `components.ex:213-215`                                                                | the clone tooltip element is replaced on each update, so an open tooltip can vanish                                          | fix         |

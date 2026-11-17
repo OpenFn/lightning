@@ -25,7 +25,7 @@ trigger:
       inspector/index.tsx:42-54, :77-78)
 
 inherits:
-  - shared-authenticated-session # :default live_session (router.ex:302-303)
+  - shared-authenticated-session # :default live_session (router.ex:350-351)
   - shared-project-scope # on_mount :project_scope (collaborate.ex:25)
   - shared-usage-limits-banner # on_mount :check_limits and the :banner slot (collaborate.ex:27, :238-242)
   - shared-webhook-auth-method-form # create-only host, opened from the trigger's Authentication section (collaborate.ex:211-233, :326-352)
@@ -143,13 +143,13 @@ inventory:
       :write_webhook_auth_method, :publish_template, :create_project_credential
       (project_users.ex:28-49, :127-158; workflow_channel.ex:1915-1975,
       :2106-2121; collaborate.ex:316-323)
-    - Lightning.Policies.Users :edit_credential (users.ex:40-44;
-      collaborate.ex:156-162)
+    - Lightning.Policies.Credentials :edit_credential
+      (policies/credentials.ex:76-147; collaborate.ex:153-165)
     - Lightning.Policies.Credentials :create_keychain_credential
-      (policies/credentials.ex:32-63, :87-98; credentials.ex:1956-1971)
+      (policies/credentials.ex:119-146, :203-206; credentials.ex:1956-1971)
   workers: []
   api_endpoints:
-    - get /adaptors/catalogue  AdaptorController :index (router.ex:155-160;
+    - get /adaptors/catalogue  AdaptorController :index (router.ex:199-204;
       adaptor_controller.ex:21-45) # also read by workflow-editor-canvas and workflow-editor-ide
   emails: []
   config: []
@@ -161,7 +161,7 @@ inventory:
       (collaborate.ex:335-351); owned by shared-webhook-auth-method-form
     - KeychainCredentialFormComponent; the editor builds keychains through
       CredentialFormComponent's own keychain page
-      (credential_form_component.ex:1181-1204); the standalone form's home is
+      (credential_form_component.ex:1186-1209); the standalone form's home is
       project-settings-credentials
     - Code editor, run panel and manual run; reached from the step inspector but
       owned by workflow-editor-ide and workflow-editor-manual-run
@@ -288,8 +288,8 @@ Sources: `lib/lightning/policies/project_users.ex:28-49`
 unsatisfied denies all; admin actions need owner or admin; editor actions allow
 owner, admin, editor, and support with no row when support access is on;
 `:publish_template` needs a support user who has a role or support access).
-Credentials: `lib/lightning/policies/users.ex:40-44` (edit only by the
-credential's owner), `lib/lightning/policies/credentials.ex:32-63`, `:87-98`
+Credentials: `lib/lightning/policies/credentials.ex:76-147` (edit only by the
+credential's owner), `lib/lightning/policies/credentials.ex:119-146, :203-206`
 (keychain create: owner, admin, or support access). Channel gates:
 `workflow_channel.ex:1915-1975`, `:2106-2121`. Client gates:
 `useWorkflow.tsx:1036-1113`, `:1153-1185`; `useJobDeleteValidation.ts:221-247`;
@@ -311,7 +311,7 @@ credential's owner), `lib/lightning/policies/credentials.ex:32-63`, `:87-98`
 **Preconditions beyond role**
 
 - A member who has not met the project's MFA requirement is denied every action
-  (`project_users.ex:134`; `policies/credentials.ex:89-93`).
+  (`decision.ex:59-66`; `policies/credentials.ex:119-146, :203-206`).
 - Editing is off while the workflow is deleted, a pinned version or as-run view
   is shown, or the page is an unsaved new workflow
   (`useWorkflow.tsx:1068-1110`); these states belong to shared-editor-session.
@@ -326,7 +326,7 @@ credential's owner), `lib/lightning/policies/credentials.ex:32-63`, `:87-98`
   `useWorkflow.tsx:905-913`).
 - The publish button is shown on `user.support_user` alone
   (`useWorkflow.tsx:1159`); the server adds the role or support-access check
-  (`project_users.ex:136-141`).
+  (`project_users.ex:160-165`).
 
 ## 4. What it touches
 
@@ -354,7 +354,7 @@ table (`workflow_channel.ex:653-684`, `:1358`); `triggers`
 - Database, immediately: trigger to webhook auth method associations
   (`webhook_auth_methods.ex:334-390`); `workflow_templates` insert or update
   (`workflow_templates.ex:26-38`); `credentials` and `project_credentials` via
-  CredentialFormComponent (`credential_form_component.ex:1255-1300`,
+  CredentialFormComponent (`credential_form_component.ex:1260-1318`,
   `:520-535`); `keychain_credentials` insert (`credentials.ex:1956-1971`);
   `webhook_auth_methods` insert via shared-webhook-auth-method-form.
 - Shared document reset from the database row (`session.ex:387-397`).
@@ -549,7 +549,7 @@ Feature: Workflow editor inspector panels
     Then the edit button on "DHIS2 prod" is disabled with a tooltip naming its owner
     When "open_credential_modal" is sent with the id of "DHIS2 prod"
     Then no credential form opens and "credential_modal_closed" is pushed back
-    # ConfigureAdaptorModal.tsx:108-143, :458-470; collaborate.ex:151-177; users.ex:40-44
+    # ConfigureAdaptorModal.tsx:108-143, :458-470; collaborate.ex:151-177; policies/credentials.ex:76-147
     # collaborate_test.exs:998-1057; ConfigureAdaptorModal.test.tsx:1319-1440
 
   @S14
@@ -559,7 +559,7 @@ Feature: Workflow editor inspector panels
     When I open a new credential from "Fetch", click "Advanced", choose keychain and save a keychain "Per facility" with path "$.facility_id"
     Then the keychain credential exists on the project
     And "Fetch" has "Per facility" as its keychain credential
-    # credential_form_component.ex:312-366, :460-470, :1087-1170, :1181-1204; collaborate.ex:393-430, :486-517
+    # credential_form_component.ex:312-366, :460-470, :1092-1175, :1186-1209; collaborate.ex:393-430, :486-517
     # collaborate_test.exs:1756-1828
 
   @S15
@@ -568,7 +568,7 @@ Feature: Workflow editor inspector panels
     Given I am an editor on "Malawi HIV"
     When I submit a keychain credential "Planted" from the step's advanced credential setup
     Then no keychain credential "Planted" exists
-    # credentials.ex:1956-1971; policies/credentials.ex:87-98; collaborate_test.exs:1829-1873 (viewer)
+    # credentials.ex:1956-1971; policies/credentials.ex:119-146, :203-206; collaborate_test.exs:1829-1873 (viewer)
 
   @S16
   Scenario: Deleting a step removes it with its incoming paths and any cron input pointing at it
@@ -869,6 +869,18 @@ Feature: Workflow editor inspector panels
     # useWorkflow.tsx:78-79, :1096-1102; useJobDeleteValidation.ts:230-232; workflow_channel.ex:1507-1510, :1915-1937
     # JobInspector.test.tsx:180-230, :324-372; workflow_channel_test.exs:515-530
 
+  @S46
+  Scenario: Schedule times are shown as UTC
+    # Value: a builder reading "At 09:00 AM" knows it is UTC whatever their own timezone, so a workflow doesn't start at an hour they didn't mean.
+    Given the trigger is a schedule with expression "0 9 * * 1-5"
+    When I open the schedule panel, or edit the schedule in the wizard
+    Then the schedule reads "At 09:00 AM UTC, Monday through Friday"
+    And the builder's heading "When should this run?" has "All times in UTC" beside it
+    And the trigger node on the canvas reads "At 09:00 AM UTC, Monday through Friday" under "Cron trigger"
+    # humanizeCron.ts:12-28 ("UTC" follows the last clock time); CronConfigureStep.tsx:73-80; CronFieldBuilder.tsx:281, :781-783; CronShowPanel.tsx:39-40
+    # Trigger.tsx:65-71 (canvas node; "Not configured" with no expression, "Invalid cron expression" if it can't be read)
+    # humanizeCron.test.ts; Trigger.test.tsx; CronShowPanel.test.tsx; CronFieldBuilder.test.tsx; TriggerEditWizard.test.tsx
+
   @S43
   Scenario: Escape backs out one layer at a time
     # Value: a user can dismiss a dialog without also losing the panel beneath it.
@@ -900,7 +912,7 @@ Feature: Workflow editor inspector panels
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | After a credential save the client never receives `credential_modal_closed`: the server pushes `close_credential_modal`, which nothing listens for, so the credential modal state stays open and its Escape blocker (priority 100) stays enabled | `collaborate.ex:417-429`; `CredentialModalContext.tsx:110-118`, `:187-228`                       | after saving a credential from a step, Escape no longer closes the inspector until something else closes the modal state (not run) | fix         |
 | Editing a credential shared with several projects puts the credential's first `project_credentials` row into the payload, which may belong to another project                                                                                    | `collaborate.ex:402-409`, `:486-497`; `JobForm.tsx:131-153`                                      | the step may be pointed at another project's project credential, which then fails on save or shows "Not found" (not run)           | fix         |
-| The advanced setup offers keychain to everyone, but saving is refused for non-admins and the refusal flash stays on the component socket                                                                                                         | `credential_form_component.ex:1087-1103`, `:460-483`; `collaborate_test.exs:1866-1872`           | an editor fills in the keychain form, clicks save, and nothing happens                                                             | fix         |
+| The advanced setup offers keychain to everyone, but saving is refused for non-admins and the refusal flash stays on the component socket                                                                                                         | `credential_form_component.ex:1092-1108`, `:460-483`; `collaborate_test.exs:1866-1872`           | an editor fills in the keychain form, clicks save, and nothing happens                                                             | fix         |
 | "Adaptors in this project" lists only adaptors used by this workflow's steps                                                                                                                                                                     | `AdaptorSelectionModal.tsx:277-278`; `useAdaptors.ts:150-160`                                    | adaptors used in the project's other workflows appear under "All adaptors"                                                         | fix         |
 | Warning copy names an option that does not exist: "Switching to async will clear your response configuration." while the choices are "Immediately" and "On Complete"                                                                             | `WebhookConfigureStep.tsx:338-342`; `ResponseTypeSelect.tsx:687-703`                             | copy that does not match the control                                                                                               | fix         |
 | Webhook success and error codes accept any integer; nothing checks the range on client or server                                                                                                                                                 | `WebhookConfigureStep.tsx:412-455`; `types/trigger.ts:27-33`; `webhook_response_config.ex:24-26` | a code like 999 or -5 saves, and the reply to the partner may fail (not run)                                                       | fix         |
@@ -923,7 +935,6 @@ Feature: Workflow editor inspector panels
 | `webhook_auth_methods_updated` carries username, project id and timestamps, while `get_context` sends only id, name and auth type                                        | `collaborate.ex:538-553`; `workflow_channel.ex:1483-1491`                                                   | decide      |
 | Every client that receives `trigger_auth_methods_updated` writes `has_auth_method` into the shared Y.Doc                                                                 | `createWorkflowStore.ts:514-525`                                                                            | decide      |
 | The auth method picker is labelled "Select a credential" and "Authentication credential N"                                                                               | `WebhookAuthMethodSelect.tsx:609-620`                                                                       | decide      |
-| The publish button shows for any support user; the server accepts a support user with any role, viewer included                                                          | `useWorkflow.tsx:1159`; `project_users.ex:136-141`                                                          | decide      |
 | The form sync loop updates its reference from a stale snapshot when several fields change at once, so earlier keys are re-applied on the next pass                       | `form/index.tsx:87-102`                                                                                     | decide      |
 | Escape closes the panel even when focus is in a field                                                                                                                    | `inspector/index.tsx:69-75`; `Inspector.keyboard.test.tsx:230-320`                                          | preserve    |
 | Tab in an empty custom path field takes the suggested path derived from the workflow name                                                                                | `WebhookUrlList.tsx:216-226`; `WebhookConfigureStep.tsx:215-216`                                            | preserve    |
@@ -982,9 +993,7 @@ Feature: Workflow editor inspector panels
    `?panel=settings`) or move to path segments?
 2. Should trigger auth method changes stay an immediate database write on
    Finish, or join the workflow save like other trigger fields (6.2)?
-3. Who may publish templates: any support user with a role, including viewers,
-   or only those who can edit the workflow (6.2)?
-4. Should the adaptor and credential pickers become a shared annotation (see
+3. Should the adaptor and credential pickers become a shared annotation (see
    Proposed shared), with S04 to S15 moving there?
 
 ## Proposed flows

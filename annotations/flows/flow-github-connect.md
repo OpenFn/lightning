@@ -10,16 +10,16 @@ trigger:
   surfaces:
     - project-settings-github-sync # "Connect your GitHub Account" prompt (settings.html.heex:819-836)
     - profile-github # "GitHub Access" card (profile_live/github_component.ex:49-79)
-    - external:github-oauth-authorize # https://github.com/login/oauth/authorize in a new tab (github_components.ex:21-24)
-    - controller:oauth-github-callback # GET /oauth/:provider/callback, OauthController.new (router.ex:79; oauth_controller.ex:7-29)
+    - external:github-oauth-authorize # https://github.com/login/oauth/authorize in a new tab (github_components.ex:16-24)
+    - controller:oauth-github-callback # GET /oauth/:provider/callback, OauthController.new (router.ex:106; oauth_controller.ex:7-29)
     - pubsub:version_control_events:<user_id> # events.ex:14-32
     - project-settings-github-sync # or profile-github: handle_info reloads the page
   reachable_when:
     - the GitHub app is configured (cert, app_id, client_id, client_secret all
-      set; version_control.ex:562-568)
+      set; version_control.ex:905-915)
     - on project-settings-github-sync, the viewer can write the GitHub
       connection (admin or owner), the project has no connection, and the
-      viewer's own token is not valid (settings.html.heex:779-800, :819-836;
+      viewer's own token is not valid (settings.html.heex:762-803, :819-836;
       project_users.ex:29-31)
     - on profile-github, the viewer's own token is not valid
       (profile_live/github_component.ex:49-50, :63-67)
@@ -28,7 +28,7 @@ inherits:
   - shared-authenticated-session # both entry pages; profile is a config-injected :services route (config/config.exs:58)
   - shared-project-scope # entry and exit on project-settings-github-sync only
 
-url_params: [] # the authorize link and its callback are GitHub's OAuth handshake (github_components.ex:16-39; oauth_controller.ex:7-29)
+url_params: [] # the authorize link and its callback are GitHub's OAuth handshake (github_components.ex:11-28, :53-60; oauth_controller.ex:7-29)
 
 config_variants:
   default: {
@@ -37,18 +37,18 @@ config_variants:
   github-disabled: {
       github_app:
         { cert: nil, app_id: nil, client_id: nil, client_secret: nil },
-    } # version_control.ex:562-568; GITHUB_APP_* env, bootstrap.ex:960-1020
+    } # version_control.ex:905-915; GITHUB_APP_* env, bootstrap.ex:960-1020
 
 inventory:
   routes:
-    - get /oauth/:provider/callback  OauthController :new # router.ex:79
+    - get /oauth/:provider/callback  OauthController :new # router.ex:106
   events:
     - ProjectLive.Settings#handle_info OauthTokenAdded # settings.ex:688-696
     - ProjectLive.Settings#handle_info OauthTokenFailed # settings.ex:698-708
     - ProfileLive.Edit#handle_info OauthTokenAdded # profile_live/edit.ex:33-41
     - ProfileLive.Edit#handle_info OauthTokenFailed # profile_live/edit.ex:43-53
   js_hooks:
-    - Tooltip on the reconnect link # github_components.ex:26
+    - Tooltip on the reconnect link # github_components.ex:22-23
     - inline window.close() in the callback response # oauth_controller.ex:18-28
   policies:
     - Lightning.Policies.ProjectUsers (:write_github_connection) # project_users.ex:29-31; gates the settings entry only
@@ -56,9 +56,9 @@ inventory:
   api_endpoints: []
   emails: []
   config:
-    - :lightning, :github_app client_id, client_secret # github_components.ex:34-35; version_control.ex:360-366
-    - :lightning, :github_app cert, app_id # only through github_enabled? (version_control.ex:562-568)
-    - LightningWeb.Endpoint url # redirect_uri host (github_components.ex:37)
+    - :lightning, :github_app client_id, client_secret # github_components.ex:54-55; version_control.ex:360-366
+    - :lightning, :github_app cert, app_id # only through github_enabled? (version_control.ex:905-915)
+    - LightningWeb.Endpoint url # redirect_uri host (github_components.ex:57)
   not_reachable_here:
     - VersionControl.delete_github_oauth_grant/1 and the "Disconnect from
       GitHub" modal (version_control.ex:489-513;
@@ -94,7 +94,7 @@ version control, and a user whose token lapsed would have no way back.
 
 1. A user whose GitHub link is missing or expired clicks "Connect your GitHub
    Account" (or "Reconnect") on their profile, or an admin does so on an
-   unconnected project's Sync to GitHub tab.
+   unconnected project's Sync tab.
    - If GitHub isn't set up on the instance, the button is disabled with a
      tooltip instead
 2. GitHub's authorization page opens in a new tab and the user approves the app.
@@ -118,7 +118,7 @@ page the user has open, not just the one they started on.
   (6.1)
 - **(3)** Every profile and project settings page the user has open reacts to
   the success, so a settings page for a different project in another tab jumps
-  to its Sync to GitHub tab. (6.2)
+  to its Sync tab. (6.2)
 - **(4)** On a project over its GitHub sync limit the button looks disabled but
   still works. (6.2)
 
@@ -126,7 +126,7 @@ page the user has open, not just the one they started on.
 
 Sources: `lib/lightning/policies/project_users.ex:29-31`
 (`:write_github_connection` is an admin action), checked as `can_install_github`
-(`settings.ex:152-157`) and applied at `settings.html.heex:797-798`. The profile
+(`settings.ex:152-157`) and applied at `settings.html.heex:780-799`. The profile
 card has no role check (`profile_live/github_component.ex:49-68`).
 
 | Action                                  | Viewer | Editor | Admin | Owner | Superuser               | Support                 |
@@ -137,11 +137,11 @@ card has no role check (`profile_live/github_component.ex:49-68`).
 **Preconditions beyond role**
 
 - The GitHub app must be fully configured; otherwise neither entry offers the
-  link (`version_control.ex:562-568`; `profile_live/github_component.ex:49`,
-  `:69-78`; `settings.html.heex:779`, `:838-848`).
+  link (`version_control.ex:905-915`; `profile_live/github_component.ex:49`,
+  `:69-78`; `settings.html.heex:762`, `:838-848`).
 - The link is offered only when the user's own token is not valid: none stored,
   or a refresh token past its expiry (`version_control.ex:418-432`;
-  `settings.html.heex:800`, `:819`; `profile_live/github_component.ex:50`,
+  `settings.html.heex:803`, `:819`; `profile_live/github_component.ex:50`,
   `:63`).
 - On the settings entry, the project must have no GitHub connection
   (`settings.html.heex:780`, `:797`).
@@ -151,9 +151,9 @@ card has no role check (`profile_live/github_component.ex:49-68`).
 **Reads**
 
 - Entry: `users.github_oauth_token` for the valid check and the
-  Connect/Reconnect label (`github_components.ex:26-28`;
+  Connect/Reconnect label (`github_components.ex:22-25`;
   `version_control.ex:418-432`)
-- Callback: the session's user via `users_tokens` (`user_auth.ex:175-182`)
+- Callback: the session's user via `users_tokens` (`user_auth.ex:176-183`)
 
 **Writes**
 
@@ -165,7 +165,7 @@ card has no role check (`profile_live/github_component.ex:49-68`).
 **Immediate side effects**
 
 - Entry: the link opens GitHub's authorize page in a new tab
-  (`github_components.ex:21-24`, `:33-39`)
+  (`github_components.ex:16-24`, `:33-39`)
 - Callback: POST to `https://github.com/login/oauth/access_token` with client
   id, secret and code (`version_control.ex:359-380`; `github_client.ex:126-137`)
 - Callback, on success: PubSub `OauthTokenAdded` on
@@ -200,9 +200,9 @@ card has no role check (`profile_live/github_component.ex:49-68`).
 
 - `:lightning, :github_app` (all four keys gate the entry; `client_id` and
   `client_secret` are used in the URL and exchange)
-  (`version_control.ex:360-366`, `:562-568`; `github_components.ex:34-35`)
+  (`version_control.ex:360-366`, `:562-568`; `github_components.ex:54-55`)
 - Endpoint URL config sets the `redirect_uri` host, which must match the GitHub
-  app's registered callback (`github_components.ex:37`)
+  app's registered callback (`github_components.ex:57`)
 
 **Product limits**
 
@@ -229,19 +229,19 @@ Feature: Connect a GitHub account
     And eventually the original tab shows "GitHub account linked successfully"
     And I see "Disconnect from GitHub"
     And I do not see "Connect your GitHub Account"
-    # github_components.ex:16-31; oauth_controller.ex:7-29; version_control.ex:359-380, :516-535
+    # github_components.ex:11-28; oauth_controller.ex:7-29; version_control.ex:359-380, :516-535
     # events.ex:14-19; profile_live/edit.ex:15-17, :33-41; profile_live/github_component.ex:50-68
     # profile_live_test.exs:423-448
 
   @S02
-  Scenario: Admin connects GitHub from a project's Sync to GitHub tab and can then set up sync
+  Scenario: Admin connects GitHub from a project's Sync tab and can then set up sync
     # Value: an admin blocked on a missing GitHub link fixes it in place and goes straight on to connecting the project.
     Given I am an admin on project "Malawi HIV", which has no GitHub connection
     And I have no GitHub account connected
-    And I am on the "Sync to GitHub" tab
+    And I am on the "Sync" tab
     When I click "Connect your GitHub Account" and authorize the app on GitHub in the new tab
     Then the GitHub tab closes
-    And eventually the original tab reloads on the "Sync to GitHub" tab with "GitHub account linked successfully"
+    And eventually the original tab reloads on the "Sync" tab with "GitHub account linked successfully"
     And I see "Create/update GitHub installations or modify permissions."
     And I do not see "Connect your GitHub Account"
     # settings.html.heex:797-836; settings.ex:104-106, :688-696; oauth_controller.ex:7-11
@@ -251,7 +251,7 @@ Feature: Connect a GitHub account
   Scenario: A failed link is reported and can be retried
     # Value: the user knows the link did not take, rather than assuming they are connected, and can try again.
     Given I have no GitHub account connected
-    And I am on my profile page, or on the "Sync to GitHub" tab of a project I administer
+    And I am on my profile page, or on the "Sync" tab of a project I administer
     When I authorize the app on GitHub
     But GitHub rejects the code exchange
     Then eventually the original tab shows "Oops! GitHub account failed to link. Please try again"
@@ -270,7 +270,7 @@ Feature: Connect a GitHub account
     When I click it and authorize the app on GitHub
     Then eventually the original tab shows "GitHub account linked successfully"
     And I see "Disconnect from GitHub"
-    # github_components.ex:26-28; version_control.ex:418-432; profile_live/github_component.ex:50, :63-67
+    # github_components.ex:22-25; version_control.ex:418-432; profile_live/github_component.ex:50, :63-67
     # oauth_controller.ex:7-11 (save overwrites the column, user.ex:377-381)
     # profile_live_test.exs:478-514 (label and tooltip only; the completed reconnect is read from code)
 
@@ -281,7 +281,7 @@ Feature: Connect a GitHub account
     When I open my profile page
     Then "Connect your GitHub account" is disabled with the tooltip "GitHub OAuth has not been enabled for this instance."
     And no link to GitHub's authorization page is shown
-    # profile_live/github_component.ex:49, :69-78; version_control.ex:562-568
+    # profile_live/github_component.ex:49, :69-78; version_control.ex:905-915
     # settings tab equivalent is owned by project-settings-github-sync (settings.html.heex:838-848)
 ```
 
@@ -302,19 +302,18 @@ Feature: Connect a GitHub account
 | The broadcast goes to every page the user has open on profile or any project's settings, whichever tab; a settings page open on another project and another tab is navigated to that project's `#vcs` with the success flash | `events.ex:14-19`, `:28-32`; `settings.ex:104-106`, `:688-696`; `profile_live/edit.ex:15-17`                 | decide      |
 | Success reloads the page with `push_navigate` rather than updating the component in place                                                                                                                                    | `settings.ex:695`; `profile_live/edit.ex:40`                                                                 | preserve    |
 | The PubSub topic is `version_control_events:<user_id>`; the template's example names it `github_oauth:<user_id>`                                                                                                             | `events.ex:32`                                                                                               | preserve    |
-| The controller route is generic (`/oauth/:provider/callback`) but only GitHub is handled                                                                                                                                     | `router.ex:79`; `oauth_controller.ex:7`                                                                      | decide      |
+| The controller route is generic (`/oauth/:provider/callback`) but only GitHub is handled                                                                                                                                     | `router.ex:106`; `oauth_controller.ex:7`                                                                     | decide      |
 | A token with a refresh token still counts as valid after its access token expires; the entry hides the link and the refresh happens on the next GitHub call                                                                  | `version_control.ex:418-432`, `:470-484`                                                                     | preserve    |
-| Label reads "Reconnect" whenever any token is stored, but the link is only rendered when the token is invalid, so in practice "Reconnect" means expired                                                                      | `github_components.ex:26-28`; `settings.html.heex:800`, `:819`; `profile_live/github_component.ex:50`, `:63` | preserve    |
+| Label reads "Reconnect" whenever any token is stored, but the link is only rendered when the token is invalid, so in practice "Reconnect" means expired                                                                      | `github_components.ex:22-25`; `settings.html.heex:803`, `:819`; `profile_live/github_component.ex:50`, `:63` | preserve    |
 | Copy differs between the disabled profile button ("Connect your GitHub account") and the link ("Connect your GitHub Account")                                                                                                | `profile_live/github_component.ex:77`; `github_components.ex:28`                                             | decide      |
-| The profile card checks `github_enabled?` (needs cert and app_id too) although its tooltip says "GitHub OAuth has not been enabled", which only needs client id and secret                                                   | `profile_live/github_component.ex:75`, `:86-88`; `version_control.ex:562-568`                                | decide      |
-| The settings link is visually disabled under a GitHub sync limit but still opens GitHub (owned by project-settings-github-sync 6.1)                                                                                          | `github_components.ex:21-25`; `settings.html.heex:833`                                                       | decide      |
+| The profile card checks `github_enabled?` (needs cert and app_id too) although its tooltip says "GitHub OAuth has not been enabled", which only needs client id and secret                                                   | `profile_live/github_component.ex:75`, `:86-88`; `version_control.ex:905-915`                                | decide      |
 
 ### 6.3 Unreachable or dead code
 
-| What                                                        | Where                               | Why unreachable                                                                                     |
-| ----------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `User.github_token_changeset/2` `validate_required` failing | `user.ex:377-381`                   | the exchange only returns `{:ok, body}` when the body has `access_token`, so the map is never empty |
-| `github_query_params` attr override                         | `github_components.ex:13`, `:17-18` | neither caller passes it (`settings.html.heex:830-834`; `profile_live/github_component.ex:64-67`)   |
+| What                                                        | Where                              | Why unreachable                                                                                     |
+| ----------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `User.github_token_changeset/2` `validate_required` failing | `user.ex:377-381`                  | the exchange only returns `{:ok, body}` when the body has `access_token`, so the map is never empty |
+| `github_query_params` attr override                         | `github_components.ex:8`, `:12-13` | neither caller passes it (`settings.html.heex:830-834`; `profile_live/github_component.ex:64-67`)   |
 
 ### 6.4 Performance and operational limits
 
@@ -325,7 +324,7 @@ Feature: Connect a GitHub account
 ### 6.5 Things seen but not understood
 
 - Whether `window.close()` succeeds in every browser for a tab opened by a plain
-  `target="_blank"` link was not checked (`github_components.ex:24`;
+  `target="_blank"` link was not checked (`github_components.ex:20`;
   `oauth_controller.ex:22-24`). If it fails, the user is left on a blank tab
   while the original page has already updated.
 - No controller test exists for `OauthController`; the callback is exercised

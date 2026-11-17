@@ -9,13 +9,13 @@ trigger:
   exit: history-work-orders
   surfaces:
     - workflow-health                             # live /projects/:project_id/w/:id/health, WorkflowLive.Health + React WorkflowHealth (health.ex:10-11, :50-60)
-    - controller:workflow-health-api              # API.WorkflowHealthController, GET .../health/outcomes, .../health/failures and .../health/runs (router.ex:142-152)
+    - controller:workflow-health-api              # API.WorkflowHealthController, GET .../health/outcomes, .../health/failures and .../health/runs (router.ex:179-189)
     - capability:workflow-stats                   # Lightning.Workflows.Stats, cached in Cachex :workflow_stats (stats.ex:45-67, :80-93, :154-170)
     - history-work-orders                         # opened in a new tab with the drill-down filters
     - oban:RetryManyWorkOrdersJob                 # bulk retry from that tab (work_orders.ex:454-486)
   reachable_when:
     - the viewer passes shared-project-scope on the health page and the workflow belongs to the project (hooks.ex:139-158)
-    - the stats endpoints admit the viewer: signed in and `:access_project` on the workflow's project (workflow_health_controller.ex:110-133)
+    - the stats endpoints admit the viewer: signed in and `:access_project` on the workflow's project (workflow_health_controller.ex:105-111)
     - a triage row has an exit reason (TriageTable.tsx:130-137), or a runs-chart band has a bar to click (VolumeBars.tsx:182-191)
     - or the window has at least one finished work order, so the donuts draw their legend and wedges (Donut.tsx:51-56); a failure breakdown slice and the Outcomes "Cancelled" row exist only when non-zero (FailureBreakdownDonut.tsx:61; OutcomesDonut.tsx:66-79)
 
@@ -49,17 +49,17 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w/:id/health  WorkflowLive.Health :show   # entry (router.ex:304)
-    - get /api/projects/:project_id/workflows/:workflow_id/health/outcomes  API.WorkflowHealthController :outcomes   # router.ex:142-144
-    - get /api/projects/:project_id/workflows/:workflow_id/health/failures  API.WorkflowHealthController :error_signatures   # router.ex:146-148
-    - get /api/projects/:project_id/workflows/:workflow_id/health/runs  API.WorkflowHealthController :runs   # router.ex:150-152
+    - live /projects/:project_id/w/:id/health  WorkflowLive.Health :show   # entry (router.ex:352)
+    - get /api/projects/:project_id/workflows/:workflow_id/health/outcomes  API.WorkflowHealthController :outcomes   # router.ex:179-181
+    - get /api/projects/:project_id/workflows/:workflow_id/health/failures  API.WorkflowHealthController :error_signatures   # router.ex:183-185
+    - get /api/projects/:project_id/workflows/:workflow_id/health/runs  API.WorkflowHealthController :runs   # router.ex:187-189
     - live /projects/:project_id/history  RunLive.Index :index   # exit, owned by history-work-orders
   events:
     - RunLive.Index#bulk-rerun      # owned by history-work-orders; exercised here with drill-down filters
   js_hooks:
     - ReactComponent                # mounts WorkflowHealth (health.ex:52)
   policies:
-    - Lightning.Policies.ProjectUsers :access_project (workflow_health_controller.ex:121, project_users.ex:136)
+    - Lightning.Policies.ProjectUsers :access_project (workflow_health_controller.ex:105-111, project_users.ex:160-162)
     - Lightning.Policies.ProjectUsers :run_workflow (index.ex:694-708; project_users.ex:43)
   workers:
     - Lightning.WorkOrders.RetryManyWorkOrdersJob (queue scheduler, 5 attempts; retry_many_workorders_job.ex:5-7)
@@ -143,8 +143,8 @@ different times, which matters most when someone hits "retry all".
 
 ## 3. Who can do what
 
-Source: `workflow_health_controller.ex:110-133` (`:access_project`),
-`project_users.ex:136`, `index.ex:694-708` (`:run_workflow`),
+Source: `workflow_health_controller.ex:105-111` (`:access_project`),
+`project_users.ex:160-162`, `index.ex:694-708` (`:run_workflow`),
 `project_users.ex:29-49`. Both page loads are governed by shared-project-scope.
 
 | Action                                                     | Viewer | Editor | Admin | Owner | Superuser (no row) | Support (no row, access on) |
@@ -157,11 +157,12 @@ Source: `workflow_health_controller.ex:110-133` (`:access_project`),
 
 - The workflow must belong to the project in the URL, on the page
   (`hooks.ex:139-158`) and on each endpoint
-  (`workflow_health_controller.ex:113-120`); every refusal on the endpoints is a
-  404 (`:124-131`).
+  (`workflow_health_controller.ex:105-111`); a caller who may not open the
+  project hears 403 whichever workflow it names, and a workflow missing from a
+  project the caller may open is a 404.
 - MFA enrolment where the project requires it, and the project not scheduled for
-  deletion (`project_users.ex:136`;
-  `workflow_health_controller_test.exs:149-189`).
+  deletion, which answers 409 (`project_users.ex:160-162`;
+  `workflow_health_controller_test.exs:155-200`).
 - Retry skips work orders whose input was wiped and work orders of deleted
   workflows (`invocation.ex:596-604`, `:669-673`; `work_orders.ex:961-967`).
 - New runs pass the usage limiter (`work_orders.ex:461`).
@@ -201,7 +202,7 @@ Source: `workflow_health_controller.ex:110-133` (`:access_project`),
   reply carries `vary: x-timezone` (`workflow_health_controller.ex:43-53`)
 - Hop 2: the link opens in a new tab and the health page stays where it was
   (`TriageTable.tsx:158-167`, `VolumeBars.tsx:190`; donut legend rows
-  `Donut.tsx:131-134`, wedges `Donut.tsx:89-90`); History subscribes to project
+  `Donut.tsx:114-134`, wedges `Donut.tsx:72-76`); History subscribes to project
   work order events (history-work-orders)
 - Hop 3: flash "New runs enqueued for N workorders", then a full navigate back
   to History with the same filters (`index.ex:410-430`)
@@ -333,8 +334,8 @@ Feature: Drill down from workflow health to history
     # Value: someone who can't open a project can't see its failure counts or whether its workflow exists.
     Given workflow "Kenya sync" belongs to project "Kenya TB", which I am not on
     When my browser requests its outcomes, failures or runs with a project id from the URL
-    Then the response is 404
-    # workflow_health_controller.ex:110-133; workflow_health_controller_test.exs:77-121, :218-230
+    Then the response is 403, the same answer as for a workflow that does not exist
+    # workflow_health_controller.ex:105-111; target.ex:50-62; workflow_health_controller_test.exs:67-125
 
   @S10
   Scenario Outline: An Outcomes legend row opens exactly the work orders it counts
@@ -352,7 +353,7 @@ Feature: Drill down from workflow health to history
       | Success 9   | Status is Success                                              | 9     |
       | Failed 4    | Status in Failed, Crashed, Killed, Exception, Lost, Rejected   | 4     |
       | Cancelled 2 | Status is Cancelled                                            | 2     |
-    # OutcomesDonut.tsx:50-80; types.ts:14-21, :35-36; historyUrl.ts:13-56; Donut.tsx:128-152
+    # OutcomesDonut.tsx:50-80; types.ts:14-21, :35-36; historyUrl.ts:13-56; Donut.tsx:112-134
     # stats.ex:45-67; workorder.ex:48-58; search_params.ex:35, :134-136, :153-155; invocation.ex:641-655, :719-723, :741-747
     # index.ex:104-115; index.html.heex:116-135, :205-224
     # OutcomesDonut.test.tsx:154-195; stats_test.exs:94-133; invocation_test.exs:1380-1411
@@ -407,7 +408,7 @@ and the usage limiter on bulk retry (S33, S34).
 | The newest bar's link has no upper bound, so it also reaches runs created after the chart was drawn                                                                                                           | `VolumeBars.tsx:244-247`, `:262`; `VolumeBars.test.tsx:200-205`                            | preserve    |
 | Health counts work orders with last activity strictly after the window start; the link's `date_after` is inclusive                                                                                            | `stats.ex:57-60`, `:410`; `invocation.ex:743-747`                                          | preserve    |
 | "Failed" means all six failure states on the health page and one state in History's status chip; the link spells out the six so the chip reads "Status in Failed, Crashed, Killed, Exception, Lost, Rejected" | `OutcomesDonut.tsx:59-65`; `types.ts:14-21`; `index.ex:104-115`; `index.html.heex:116-135` | decide      |
-| A wedge and its legend row open the same link; the legend row is a real link with `rel="noopener noreferrer"`, the wedge calls `window.open` with neither (same origin) and is mouse-only                     | `Donut.tsx:87-91`, `:128-152`; workflow-health 6.2 owns the keyboard point                 | preserve    |
+| A wedge and its legend row open the same link; the legend row is a real link with `rel="noopener noreferrer"`, the wedge calls `window.open` with neither (same origin) and is mouse-only                     | `Donut.tsx:72-76`, `:128-152`; workflow-health 6.2 owns the keyboard point                 | preserve    |
 | A "Success" or "Cancelled" drill-down offers History's bulk retry like any other filter, so work that succeeded or was cancelled can be rerun from it                                                         | `OutcomesDonut.tsx:57`, `:76`; `index.ex:751-760`                                          | preserve    |
 | "Success 0" and "Failed 0" stay in the Outcomes legend as live links, while zero failure breakdown slices and a zero "Cancelled" row are dropped                                                              | `OutcomesDonut.tsx:51-79`; `FailureBreakdownDonut.tsx:61`                                  | preserve    |
 | Bars are cut on the reader's timezone; the run created chip shows the same instants in UTC                                                                                                                    | `stats.ex:213-236`; `index.ex:850-863`                                                     | preserve    |

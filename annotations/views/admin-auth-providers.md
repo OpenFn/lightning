@@ -6,7 +6,7 @@ owner:
 
 trigger:
   old_route: /settings/authentication (live_action :edit) and
-    /settings/authentication/new (live_action :new) # router.ex:282-283
+    /settings/authentication/new (live_action :new) # router.ex:330-331
   new_route:
   old_route_disposition: unchanged
   reachable_when:
@@ -31,8 +31,8 @@ config_variants:
 
 inventory:
   routes:
-    - live /settings/authentication  AuthProvidersLive.Index :edit # router.ex:282
-    - live /settings/authentication/new  AuthProvidersLive.Index :new # router.ex:283
+    - live /settings/authentication  AuthProvidersLive.Index :edit # router.ex:330
+    - live /settings/authentication/new  AuthProvidersLive.Index :new # router.ex:331
   events:
     - AuthProvidersLive.FormComponent#validate # form_component.ex:47-62
     - AuthProvidersLive.FormComponent#save # form_component.ex:65-101
@@ -113,7 +113,7 @@ effect depends on caching you have to think hard about.
 
 ## 3. Who can do what
 
-Sources: gate from shared-admin-space (`policies/users.ex:19-21`,
+Sources: gate from shared-admin-space (`policies/users.ex:30-32`,
 `hooks.ex:40-53`); actions from `form_component.ex:47-132`, `:196-208`,
 `:272-290`. No project role applies.
 
@@ -172,7 +172,7 @@ endpoint URL for the default redirect host (`index.ex:42-48`).
   `email_verified` is accepted for sign-in (`oidc_controller.ex:156-157`,
   `:212`; flow-sso-login S11)
 - The name is part of the callback path `/authenticate/<name>/callback` that the
-  provider must have registered (`form_component.ex:28-30`; `router.ex:77`)
+  provider must have registered (`form_component.ex:28-30`; `router.ex:104`)
 - Existing sessions of SSO users are not touched by any action here
 
 **Deferred side effects** (later, elsewhere)
@@ -240,7 +240,7 @@ Feature: SSO provider configuration
     Then the "Redirect URI" box shows the redirect host followed by "…" and is greyed out
     When I fill in every required field with name "acme-idp" and redirect host "https://lightning.example.org"
     Then the "Redirect URI" box shows "https://lightning.example.org/authenticate/acme-idp/callback"
-    # form_component.ex:240-270, :28-30; auth_config_form.ex:47-66; router.ex:77
+    # form_component.ex:240-270, :28-30; auth_config_form.ex:47-66; router.ex:104
     # auth_providers_live_test.exs:185-193 (asserts the preview after an edit)
 
   @S04

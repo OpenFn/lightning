@@ -121,7 +121,7 @@ inheriting views' gates.
 | Purge now (project already scheduled) | no     | no     | no    | no               | yes (admin)        | no      |
 
 Sources: `settings.ex:119-121`, `:262-267`, `settings.html.heex:289`
-(`:delete_project` is owner only, `policies/project_users.ex:138`);
+(`:delete_project` is owner only, `policies/project_users.ex:164`);
 `index.ex:7`, `hooks.ex:40-53` (`:access_admin_space`).
 
 **Preconditions beyond role**

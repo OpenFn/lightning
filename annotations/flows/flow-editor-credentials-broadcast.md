@@ -46,7 +46,7 @@ inventory:
     - createCredentialStore requestCredentials on channel connect # createCredentialStore.ts:306-308, :323-345; StoreProvider.tsx:233-246
   policies:
     - Lightning.Policies.ProjectUsers :create_project_credential # project_users.ex:44; collaborate.ex:316-323
-    - Lightning.Policies.Users :edit_credential # users.ex:40-44; collaborate.ex:156-162
+    - Lightning.Policies.Credentials :edit_credential # policies/credentials.ex:76-147; collaborate.ex:153-165
     - Lightning.Policies.Credentials :create_keychain_credential # owned by workflow-editor-inspectors
   workers: []
   api_endpoints: []
@@ -56,7 +56,7 @@ inventory:
     - ? CredentialFormComponent save without `on_save` (credentials-index,
         project-settings-credentials)
       : flash and `push_navigate`, no broadcast (helpers.ex:160-169;
-        credential_form_component.ex:1269-1276)
+        credential_form_component.ex:1274-1281)
     - Credential scheduled deletion and keychain deletion from the credential
       list; owned by flow-credential-scheduled-deletion and
       shared-credential-index-component, no broadcast (credentials.ex:1036-1052,
@@ -122,7 +122,7 @@ reconnect or reload.
 
 Sending side: `project_users.ex:44` (`:create_project_credential`, checked at
 `collaborate.ex:316-323`), `users.ex:40-44` (edit only by the credential's
-owner, `collaborate.ex:156-162`), keychain creation per
+owner, `collaborate.ex:153-165`), keychain creation per
 workflow-editor-inspectors section 3. Receiving side: every joined channel on
 the topic is pushed the list (`workflow_channel.ex:950-954`).
 
@@ -236,7 +236,7 @@ Feature: A credential created elsewhere appears in an open editor
 
 | What                                                                                                                                                                                                                                                                                          | Where                                                                                                   | What a user sees                                                                                                                         | Disposition |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| Creating or sharing a credential on credentials-index or project-settings-credentials broadcasts nothing, so open editors do not offer it. The lead's scope names these as entries; the code only reaches editors through S03's reconnect                                                     | `helpers.ex:160-169`; `credential_form_component.ex:1269-1276`; only publisher `collaborate.ex:527-531` | a credential just created in another tab is missing from "Configure connection" until reload or reconnect                                | fix         |
+| Creating or sharing a credential on credentials-index or project-settings-credentials broadcasts nothing, so open editors do not offer it. The lead's scope names these as entries; the code only reaches editors through S03's reconnect                                                     | `helpers.ex:160-169`; `credential_form_component.ex:1274-1281`; only publisher `collaborate.ex:527-531` | a credential just created in another tab is missing from "Configure connection" until reload or reconnect                                | fix         |
 | Removing a credential elsewhere (scheduled deletion, keychain delete, unsharing) broadcasts nothing; deletion nulls `jobs.project_credential_id` in the database but the open Y.Doc keeps the old id, so the next save from that editor likely fails the foreign key. Read from code, not run | `credentials.ex:1036-1052`, `:2018-2030`; `job.ex:122-126`; `scoping.ex:116-117`                        | the removed credential is still pickable and attached; saving likely shows "credential doesn't exist or isn't available in this project" | fix         |
 
 ### 6.2 Quirks and implementation details

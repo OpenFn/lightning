@@ -9,20 +9,20 @@ trigger:
   exit: profile-backup-codes # /profile/auth/backup_codes, or its print page in a new tab
   surfaces:
     - profile-mfa
-    - controller:reauth-sudo-mode # UserAuth.reauth_sudo_mode/2 (user_auth.ex:211-231)
-    - controller:require-sudo-user # UserAuth.require_sudo_user/2 (user_auth.ex:397-410, :496-512)
+    - controller:reauth-sudo-mode # UserAuth.reauth_sudo_mode/2 (user_auth.ex:212-232)
+    - controller:require-sudo-user # UserAuth.require_sudo_user/2 (user_auth.ex:383-396, :470-486)
     - auth-confirm-access # ReAuthenticateLive.New (re_authenticate_live/new.ex)
-    - profile-backup-codes # BackupCodesLive.Index behind on_mount :ensure_sudo (user_auth.ex:443-475)
+    - profile-backup-codes # BackupCodesLive.Index behind on_mount :ensure_sudo (user_auth.ex:417-449)
     - controller:backup-codes-print # BackupCodesController.print/2, opened in a new tab (backup_codes_controller.ex:5-12)
   reachable_when:
     - the user is signed in and passes shared-authenticated-session; every hop
       sits in the `:browser, :require_authenticated_user` scope
-      (router.ex:189-190, :242-265)
+      (router.ex:237-238, :290-313)
     - the "View" link renders only when the user has MFA enabled
       (mfa_component.html.heex:256-273, as profile-mfa S06); the routes
-      themselves do not check MFA (router.ex:252-265)
+      themselves do not check MFA (router.ex:300-313)
     - the session holds no `sudo_token` that is valid for this user and younger
-      than five minutes (user_auth.ex:211-224; user_token.ex:35, :119-127)
+      than five minutes (user_auth.ex:212-225; user_token.ex:35, :119-127)
 
 inherits:
   - shared-authenticated-session # every hop: login redirect S01, disabled account S02, two-factor pending S03, lockout S04 to S06
@@ -33,7 +33,7 @@ url_params:
     effect:
       Base64 of a `sudo_session` token; `reauth_sudo_mode` copies it into the
       session and, if it belongs to the current user and is under five minutes
-      old, opens the backup codes routes (user_auth.ex:211-231;
+      old, opens the backup codes routes (user_auth.ex:212-232;
       re_authenticate_live/new.ex:39-42, :71-78)
 
 config_variants:
@@ -41,17 +41,17 @@ config_variants:
 
 inventory:
   routes:
-    - live /auth/confirm_access  ReAuthenticateLive.New :new # router.ex:242-244, live_session :auth
-    - live /profile/auth/backup_codes  BackupCodesLive.Index :index # router.ex:252-263, live_session :sudo_auth; owned by profile-backup-codes
-    - get /profile/auth/backup_codes/print  BackupCodesController :print # router.ex:264; owned by profile-backup-codes
+    - live /auth/confirm_access  ReAuthenticateLive.New :new # router.ex:290-292, live_session :auth
+    - live /profile/auth/backup_codes  BackupCodesLive.Index :index # router.ex:300-311, live_session :sudo_auth; owned by profile-backup-codes
+    - get /profile/auth/backup_codes/print  BackupCodesController :print # router.ex:312; owned by profile-backup-codes
   events:
     - ReAuthenticateLive.New#toggle-option # new.ex:29-32
     - ReAuthenticateLive.New#reauthenticate-user # new.ex:34-46
   js_hooks: [] # "Print Codes" is an inline onclick window.open (backup_codes_live/index.html.heex:113)
   policies:
-    - LightningWeb.UserAuth.reauth_sudo_mode/2 # user_auth.ex:211-224
-    - LightningWeb.UserAuth.require_sudo_user/2 # user_auth.ex:397-410
-    - LightningWeb.UserAuth.on_mount(:ensure_sudo) # user_auth.ex:443-475
+    - LightningWeb.UserAuth.reauth_sudo_mode/2 # user_auth.ex:212-225
+    - LightningWeb.UserAuth.require_sudo_user/2 # user_auth.ex:383-396
+    - LightningWeb.UserAuth.on_mount(:ensure_sudo) # user_auth.ex:417-449
     - Lightning.Accounts.sudo_session_token_valid?/2 # accounts.ex:1030-1035
   workers: []
   api_endpoints: []
@@ -112,8 +112,8 @@ situations.
   unused ones, so someone relying on paper may try a code that no longer works.
   (6.1)
 - **(3)** After confirming, the codes page is remembered as a destination, so
-  the next sign-in on that browser, possibly by someone else, lands on "Confirm
-  access" instead of the projects list. (6.1)
+  the next sign-in on that browser lands on "Confirm access" instead of the
+  projects list. (6.1)
 - **(3)** Opening "Confirm access" directly, or having the codes page reconnect
   after the window expired, can show an error page instead. Even when it works,
   the page doesn't say why you were sent there. (6.1)
@@ -121,7 +121,7 @@ situations.
 
 ## 3. Who can do what
 
-Sources: `user_auth.ex:211-231`, `:397-410`, `:443-475`;
+Sources: `user_auth.ex:212-232`, `:383-396`, `:417-449`;
 `accounts.ex:1030-1035`; `re_authenticate_live/new.ex:34-59`. No policy module:
 every hop acts on the session's own user, and a sudo token only counts for the
 user it was minted for.
@@ -142,7 +142,7 @@ user it was minted for.
   ago (`user_token.ex:35`, `:119-127`; `accounts.ex:1030-1035`). Fixed from the
   moment of re-authentication, not extended by use.
 - The window is checked by the plug on every HTTP request and by `:ensure_sudo`
-  on every LiveView mount (`router.ex:252-262`; `user_auth.ex:443-458`).
+  on every LiveView mount (`router.ex:300-310`; `user_auth.ex:417-432`).
 
 ## 4. What it touches
 
@@ -150,7 +150,7 @@ user it was minted for.
 
 - Hop 1, GET `/profile/auth/backup_codes` (or `/print`): `user_tokens`
   (session), and `user_tokens` with context `sudo_session` when the query or
-  session carries a sudo token (`user_auth.ex:211-224`; `accounts.ex:1030-1035`)
+  session carries a sudo token (`user_auth.ex:212-225`; `accounts.ex:1030-1035`)
 - Hop 2, `/auth/confirm_access`: session `user_return_to` (`new.ex:9`); `users`,
   `user_preferences` via InitAssigns (`init_assigns.ex:17-45`); on submit,
   `users.hashed_password` (`user.ex:394-405`) or `user_totps`
@@ -163,19 +163,19 @@ user it was minted for.
 **Writes**
 
 - Hop 1, refused: session `user_return_to` = requested path and query, minus any
-  `sudo_token` (GET only); flash error (`user_auth.ex:397-410`, `:490-512`)
+  `sudo_token` (GET only); flash error (`user_auth.ex:383-396`, `:464-486`)
 - Hop 2, success: `user_tokens` insert, context `sudo_session` (`new.ex:39`;
   `accounts.ex:1021-1025`); with a code, `user_totps.last_totp_at`
   (`user_totp.ex:45-56`)
-- Hop 3: session `sudo_token` copied from the query (`user_auth.ex:226-231`)
+- Hop 3: session `sudo_token` copied from the query (`user_auth.ex:227-232`)
 
 **Immediate side effects**
 
 - Hop 2 to hop 3 is a `push_navigate` across live_sessions (`:auth` to
   `:sudo_auth`), so the browser does a full page load and the plugs see the
-  token (`new.ex:42`; `router.ex:242-244`, `:258-263`)
+  token (`new.ex:42`; `router.ex:290-292`, `:306-311`)
 - No audit event, email, PubSub broadcast or Oban job at any hop
-  (`new.ex:34-46`; `user_auth.ex:211-231`, `:397-410`)
+  (`new.ex:34-46`; `user_auth.ex:212-232`, `:383-396`)
 
 **Deferred side effects**
 
@@ -216,9 +216,9 @@ Feature: Re-authenticate to view recovery codes
     When I enter my password and click "Confirm"
     Then I am on "/profile/auth/backup_codes"
     And I see "Two-factor backup codes" and each of my recovery codes
-    # mfa_component.html.heex:268-272; user_auth.ex:211-224, :397-410, :490-512
+    # mfa_component.html.heex:268-272; user_auth.ex:212-225, :383-396, :464-486
     # re_authenticate_live/new.ex:9-16, :34-46, :57-59, :71-78; new.html.heex:11, :23-26
-    # user_auth.ex:443-458; backup_codes_live/index.ex:37-44
+    # user_auth.ex:417-432; backup_codes_live/index.ex:37-44
     # backup_codes_live_test.exs:24-37 (redirect to /auth/confirm_access); reauthenticate_live_test.exs:74-104 (password, token appended to return path)
     # backup_codes_live_test.exs:39-49 (codes shown with a sudo token in the session); the end-to-end chain is untested
 
@@ -265,7 +265,7 @@ Feature: Re-authenticate to view recovery codes
     When I click "View" under "Recovery codes"
     Then I am on "/profile/auth/backup_codes" without passing "/auth/confirm_access"
     And I see each of my recovery codes
-    # user_auth.ex:211-224, :397-399; user_token.ex:35, :119-127
+    # user_auth.ex:212-225, :383-385; user_token.ex:35, :119-127
     # user_auth_test.exs:725-735 (session token sets sudo mode), :816-829 (no redirect when set)
 
   @S06
@@ -275,7 +275,7 @@ Feature: Re-authenticate to view recovery codes
     And I am on "/profile"
     When I click "View" under "Recovery codes"
     Then I am on "/auth/confirm_access"
-    # user_token.ex:35, :119-127; accounts.ex:1030-1035; user_auth.ex:397-410
+    # user_token.ex:35, :119-127; accounts.ex:1030-1035; user_auth.ex:383-396
     # accounts_test.exs:2050-2065 (token older than five minutes is refused)
 
   @S07
@@ -286,7 +286,7 @@ Feature: Re-authenticate to view recovery codes
     When I click "Print Codes"
     Then a new tab opens on "/profile/auth/backup_codes/print"
     And it shows "Backup Codes", "Account:" with my email, "You can only use each backup code once" and each of my recovery codes
-    # backup_codes_live/index.html.heex:113; router.ex:264; backup_codes_controller.ex:5-12; print.html.heex:10-38
+    # backup_codes_live/index.html.heex:113; router.ex:312; backup_codes_controller.ex:5-12; print.html.heex:10-38
     # untested
 
   @S08
@@ -299,7 +299,7 @@ Feature: Re-authenticate to view recovery codes
     When I enter my password and click "Confirm"
     Then I am on "/profile/auth/backup_codes/print"
     And I see each of my recovery codes
-    # router.ex:252-264 (the controller route sits behind the same pipe_through); user_auth.ex:397-410; new.ex:40-42
+    # router.ex:300-312 (the controller route sits behind the same pipe_through); user_auth.ex:383-396; new.ex:40-42
     # untested
 
   @S09
@@ -310,7 +310,7 @@ Feature: Re-authenticate to view recovery codes
     When I open that URL
     Then I am on "/auth/confirm_access"
     And I do not see any of "amara@example.org"'s recovery codes
-    # user_auth.ex:211-231; accounts.ex:1030-1035
+    # user_auth.ex:212-232; accounts.ex:1030-1035
     # accounts_test.exs:2050-2055 (token refused for another user)
 ```
 
@@ -318,23 +318,23 @@ Feature: Re-authenticate to view recovery codes
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                                                                                                                                                                                                                    | Where                                                                                                              | What a user sees                                                                                           | Disposition |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ----------- |
-| `ReAuthenticateLive.New.mount/3` matches only a session holding `user_return_to`. Opening `/auth/confirm_access` directly, or being redirected there by `:ensure_sudo` (which stores no return path) when the codes page remounts after the window expired, with no earlier plug bounce in the session (e.g. first enrolment via profile-mfa S03 then a socket reconnect), raises `FunctionClauseError` | `re_authenticate_live/new.ex:9`; `user_auth.ex:443-458`; `reauthenticate_live_test.exs:10-12` always seeds the key | an error page instead of "Confirm access"                                                                  | fix         |
-| The plug and the hook set the flash "You must verify yourself again in order to access this page.", but `/auth/confirm_access` renders in the `:app` layout, which has no flash, and the re-auth page does not render it either                                                                                                                                                                         | `user_auth.ex:401-404`, `:450-454`; `new.ex:16`; `layouts/app.html.heex:1-5`                                       | no explanation of why they were taken to "Confirm access"                                                  | fix         |
-| `user_return_to` is never deleted after re-authenticating, and `renew_session` carries it across logout and the next login; that login then redirects to the stale backup codes path, which bounces to "Confirm access"                                                                                                                                                                                 | `new.ex:34-46`; `user_auth.ex:63-70`, `:96-103`, `:128`; flow-login-return-to                                      | after the next sign-in on that browser (possibly by someone else), "Confirm access" instead of `/projects` | fix         |
-| A `sudo_token` query param or session value that is not valid Base64 makes `Base.decode64!` raise                                                                                                                                                                                                                                                                                                       | `user_auth.ex:217-221`, `:465`                                                                                     | an error page instead of "Confirm access"; reachable only by editing the URL                               | fix         |
-| The print page lists used recovery codes exactly like unused ones; the codes page strikes them through with a "Code used on" tooltip                                                                                                                                                                                                                                                                    | `print.html.heex:33-38`; `backup_codes_live/index.html.heex:93-106`                                                | a printed sheet in which spent codes look usable                                                           | fix         |
+| What                                                                                                                                                                                                                                                                                                                                                                                                    | Where                                                                                                              | What a user sees                                                                | Disposition |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ----------- |
+| `ReAuthenticateLive.New.mount/3` matches only a session holding `user_return_to`. Opening `/auth/confirm_access` directly, or being redirected there by `:ensure_sudo` (which stores no return path) when the codes page remounts after the window expired, with no earlier plug bounce in the session (e.g. first enrolment via profile-mfa S03 then a socket reconnect), raises `FunctionClauseError` | `re_authenticate_live/new.ex:9`; `user_auth.ex:417-432`; `reauthenticate_live_test.exs:10-12` always seeds the key | an error page instead of "Confirm access"                                       | fix         |
+| The plug and the hook set the flash "You must verify yourself again in order to access this page.", but `/auth/confirm_access` renders in the `:app` layout, which has no flash, and the re-auth page does not render it either                                                                                                                                                                         | `user_auth.ex:387-390`, `:424-428`; `new.ex:16`; `layouts/app.html.heex:1-5`                                       | no explanation of why they were taken to "Confirm access"                       | fix         |
+| `user_return_to` is never deleted after re-authenticating, and `renew_session` carries it across logout and the next login; that login then redirects to the stale backup codes path, which bounces to "Confirm access"                                                                                                                                                                                 | `new.ex:34-46`; `user_auth.ex:64-71`, `:97-104`, `:129`; flow-login-return-to                                      | after the next sign-in on that browser, "Confirm access" instead of `/projects` | fix         |
+| A `sudo_token` query param or session value that is not valid Base64 makes `Base.decode64!` raise                                                                                                                                                                                                                                                                                                       | `user_auth.ex:218-222`, `:439`                                                                                     | an error page instead of "Confirm access"; reachable only by editing the URL    | fix         |
+| The print page lists used recovery codes exactly like unused ones; the codes page strikes them through with a "Code used on" tooltip                                                                                                                                                                                                                                                                    | `print.html.heex:33-38`; `backup_codes_live/index.html.heex:93-106`                                                | a printed sheet in which spent codes look usable                                | fix         |
 
 ### 6.2 Quirks and implementation details
 
 | What                                                                                                                                                                                                               | Where                                                                                                                                          | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| A user without MFA has no "View" link but can reach the codes by URL, re-authenticate with a password, and sees "MFA Disabled" above a codes block                                                                 | `router.ex:252-265`; `backup_codes_live/index.html.heex:14-52`, `:54-89`                                                                       | decide      |
+| A user without MFA has no "View" link but can reach the codes by URL, re-authenticate with a password, and sees "MFA Disabled" above a codes block                                                                 | `router.ex:300-313`; `backup_codes_live/index.html.heex:14-52`, `:54-89`                                                                       | decide      |
 | Recovery codes are not accepted on "Confirm access"; only password or authenticator code                                                                                                                           | `new.ex:12`, `:53-59`                                                                                                                          | decide      |
 | Password is the default method even for MFA users                                                                                                                                                                  | `new.ex:13`                                                                                                                                    | preserve    |
-| A `sudo_token` in the URL replaces whatever the session held, so opening an old link with an expired token during a valid window sends the user to "Confirm access"                                                | `user_auth.ex:226-231`                                                                                                                         | preserve    |
-| `require_sudo_user` strips `sudo_token` from the stored return path; `append_token` would overwrite it anyway                                                                                                      | `user_auth.ex:496-512`; `new.ex:71-78`                                                                                                         | preserve    |
+| A `sudo_token` in the URL replaces whatever the session held, so opening an old link with an expired token during a valid window sends the user to "Confirm access"                                                | `user_auth.ex:227-232`                                                                                                                         | preserve    |
+| `require_sudo_user` strips `sudo_token` from the stored return path; `append_token` would overwrite it anyway                                                                                                      | `user_auth.ex:470-486`; `new.ex:71-78`                                                                                                         | preserve    |
 | Re-authenticating with a code advances `last_totp_at`, so that code cannot be reused to sign in elsewhere in the same time step                                                                                    | `user_totp.ex:45-56`, `:63`                                                                                                                    | preserve    |
 | `toggle-option` converts client input with `String.to_existing_atom`; any existing atom other than `:password` shows the code form                                                                                 | `new.ex:29-32`; `new.html.heex:34-38`, `:55-73`                                                                                                | preserve    |
 | "Print Codes" opens a plain page through an inline `onclick` `window.open`; the page does not open the print dialog                                                                                                | `backup_codes_live/index.html.heex:113`; `print.html.heex:1-43`                                                                                | decide      |
@@ -345,7 +345,7 @@ Feature: Re-authenticate to view recovery codes
 
 | What                                   | Where                            | Why unreachable                                                                                                                |
 | -------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `append_token(nil, _)` returning `"/"` | `re_authenticate_live/new.ex:69` | `mount/3` requires `user_return_to` in the session and `maybe_store_return_to` always stores a string (`user_auth.ex:490-492`) |
+| `append_token(nil, _)` returning `"/"` | `re_authenticate_live/new.ex:69` | `mount/3` requires `user_return_to` in the session and `maybe_store_return_to` always stores a string (`user_auth.ex:464-466`) |
 
 ### 6.4 Performance and operational limits
 
@@ -387,5 +387,5 @@ Feature: Re-authenticate to view recovery codes
 
 - none. Referenced: shared-authenticated-session (every hop). The
   `:reauth_sudo_mode` / `:require_sudo_user` / `:ensure_sudo` trio guards only
-  the two backup codes routes today (`router.ex:252-265`); if a second
+  the two backup codes routes today (`router.ex:300-313`); if a second
   sudo-gated route appears it would merit a `shared-sudo-mode` annotation.

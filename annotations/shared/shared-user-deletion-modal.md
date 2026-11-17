@@ -15,11 +15,11 @@ trigger:
       (user_deletion_modal.ex:1-211)
     - profile-delete-account renders it for the signed-in user's own account,
       with logout true and return_to /profile (profile_live/components.ex:41-48;
-      edit.ex:61-85; policies/users.ex:23-30)
+      edit.ex:61-85; policies/users.ex:35-41)
     - admin-users renders it for a superuser on any user, with is_current_user
       false, logout false and return_to /settings/users
       (user_live/components.ex:17-27; user_live/index.ex:7, :28-32;
-      hooks.ex:40-53; router.ex:271)
+      hooks.ex:40-53; router.ex:319)
     - the profile host takes the module from the /profile route's delete_modal
       metadata, so another module can be configured there (edit.ex:73-76;
       config/config.exs:50-59); admin-users hard-codes it
@@ -122,7 +122,7 @@ fully shown up front.
 
 The component checks no policy. Who reaches it is the host's decision, so this
 matrix is the union of the inheriting views' gates. Sources:
-`policies/users.ex:19-30`, `edit.ex:61-85`, `hooks.ex:40-53`,
+`policies/users.ex:30-41`, `edit.ex:61-85`, `hooks.ex:40-53`,
 `user_live/components.ex:172-204`, `user.ex:338-343`, `:418-440`.
 
 | Action                                | Signed-in user, own account (profile) | Superuser, own account (profile) | Superuser, another user (admin list)                  | Anyone, another user's account (profile) |

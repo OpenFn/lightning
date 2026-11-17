@@ -15,7 +15,7 @@ trigger:
     - admin-live-dashboard # the subscribed tab appends each line (pld:pages/request_logger_page.ex:58-59)
   reachable_when:
     - entry and exit need a superuser on /dashboard (shared-admin-space S04,
-      S05; router.ex:358-369)
+      S05; router.ex:406-417)
     - the request hop needs only a token signed with the endpoint's
       secret_key_base under salt "request_logger" and less than 3600 seconds old
       (pld:request_logger.ex:9, :48-56) (endpoint.ex:65-67 runs before
@@ -75,7 +75,7 @@ inventory:
     - 'endpoint pubsub_server Lightning.PubSub (config/config.exs:38;
       application.ex:176)'
     - 'live_dashboard options request_logger and request_logger_cookie_domain
-      not passed, so enabled and scoped to the current host (router.ex:363-369;
+      not passed, so enabled and scoped to the current host (router.ex:411-417;
       pld:router.ex:51-59, :218-248)'
   not_reachable_here:
     - 'pld:pages/request_logger_page.ex:49-51 disabled menu link; the plug is
@@ -142,7 +142,7 @@ requests are streamed to the tab.
 | Subscribe to an existing stream by its id                | no         | no           | no           | yes                          |
 | See streamed lines                                       | no         | no           | no           | yes, in a tab on that stream |
 
-Sources: `router.ex:358-369`; shared-admin-space S04, S05; `endpoint.ex:65-67`,
+Sources: `router.ex:406-417`; shared-admin-space S04, S05; `endpoint.ex:65-67`,
 `:99`, `:109`; `pld:request_logger.ex:25-56`;
 `pld:pages/request_logger_page.ex:8-41`.
 
@@ -259,7 +259,7 @@ Feature: Request logger
 | What                                                                                                                                                                                                                            | Where                                                                           | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ----------- |
 | The plug runs on every request before session, auth and routing, including `/i/*` webhooks, `/channels/*`, the APIs and login; the token decides what is captured                                                               | `endpoint.ex:65-67`, `:76`, `:91`, `:99`, `:109`; `pld:request_logger.ex:25-56` | preserve    |
-| Enabled by library default; Lightning never passes `request_logger:`                                                                                                                                                            | `router.ex:363-369`; `pld:router.ex:235-248`                                    | decide      |
+| Enabled by library default; Lightning never passes `request_logger:`                                                                                                                                                            | `router.ex:411-417`; `pld:router.ex:235-248`                                    | decide      |
 | Socket traffic is never captured: `/live`, `/socket` and `/worker` are dispatched before endpoint plugs, so only a LiveView's first HTTP render is streamed, not its events, and worker and editor channel traffic is invisible | `endpoint.ex:18-36`; `phx:endpoint.ex:493`, `:683`                              | preserve    |
 | Work handed to another process (Oban jobs, Tasks, GenServer calls) is not captured; Logger metadata is per process and Task does not copy it                                                                                    | `pld:request_logger.ex:54`; `pld:logger_pubsub_backend.ex:6`                    | preserve    |
 | Param and cookie tokens use the same salt `"request_logger"`, so either value works in either place                                                                                                                             | `endpoint.ex:66-67`; `pld:request_logger.ex:50`, `:69-71`                       | preserve    |
@@ -273,7 +273,7 @@ Feature: Request logger
 | What                                | Where                                                            | Why unreachable                                                                                                              |
 | ----------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Disabled "Request Logger" menu link | `pld:pages/request_logger_page.ex:49-51`                         | the plug is installed (`endpoint.ex:65-67`), so `param_key(conn)` is never nil (`pld:router.ex:426-432`)                     |
-| `:parent` cookie domain branch      | `pld:pages/request_logger_page.ex:203-205`                       | `request_logger_cookie_domain` not passed (`router.ex:363-369`)                                                              |
+| `:parent` cookie domain branch      | `pld:pages/request_logger_page.ex:203-205`                       | `request_logger_cookie_domain` not passed (`router.ex:411-417`)                                                              |
 | `Logger.add_backend` gen_event path | `pld:application.ex:28-30`; `pld:logger_pubsub_backend.ex:13-63` | Elixir 1.18 (`.tool-versions`) exports `Logger.default_formatter/0`, so the `:logger` handler branch at `:18-26` is compiled |
 
 ### 6.4 Performance and operational limits

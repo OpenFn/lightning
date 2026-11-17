@@ -9,11 +9,11 @@ trigger:
   exit: projects-dashboard # or the stored return path (flow-login-return-to); auth-login on every refusal
   surfaces:
     - auth-login
-    - controller:oidc-authorize # GET /authenticate/:provider, OidcController.show (router.ex:76; oidc_controller.ex:17-40)
+    - controller:oidc-authorize # GET /authenticate/:provider, OidcController.show (router.ex:103; oidc_controller.ex:17-40)
     - external:oidc-provider # the provider's authorization endpoint (handler.ex:120-126)
-    - controller:oidc-callback # GET /authenticate/:provider/callback, OidcController.new (router.ex:77; oidc_controller.ex:46-73, :89-263)
+    - controller:oidc-callback # GET /authenticate/:provider/callback, OidcController.new (router.ex:104; oidc_controller.ex:46-73, :89-263)
     - auth-two-factor # only for accounts with MFA enabled (oidc_controller.ex:250-256)
-    - projects-dashboard # default exit (user_auth.ex:63-70, :514)
+    - projects-dashboard # default exit (user_auth.ex:64-71, :488)
     - admin-auth-providers
   reachable_when:
     - an auth provider is configured and its handler is in the node's handler
@@ -23,9 +23,9 @@ trigger:
       row (auth_providers.ex:49-51, :91-94; store.ex:23-34)
     - the visitor is not signed in; a signed-in visitor to
       /authenticate/:provider is sent to /projects (oidc_controller.ex:20-21;
-      user_auth.ex:271-279)
+      user_auth.ex:263-271)
     - every hop is in the `:browser` scope with no authentication plug
-      (router.ex:66-67, :75-77)
+      (router.ex:93-94, :102-104)
 
 inherits:
   - shared-authenticated-session # the :browser pipeline (fetch_current_user) on both controller hops, and its S03 gate that holds a TOTP-pending session at two-factor
@@ -56,8 +56,8 @@ config_variants:
 
 inventory:
   routes:
-    - get /authenticate/:provider  OidcController :show # router.ex:76
-    - get /authenticate/:provider/callback  OidcController :new # router.ex:77; clauses oidc_controller.ex:46-73
+    - get /authenticate/:provider  OidcController :show # router.ex:103
+    - get /authenticate/:provider/callback  OidcController :new # router.ex:104; clauses oidc_controller.ex:46-73
   events:
     - OidcController#show
     - OidcController#new
@@ -66,7 +66,7 @@ inventory:
     - Lightning.Accounts.login_blocked?/1 (accounts.ex:328-332)
     - Lightning.Accounts.login_blocked_reason/1 (accounts.ex:340-345)
     - LightningWeb.UserAuth.redirect_if_user_is_authenticated/2
-      (user_auth.ex:271-279), called inline by show
+      (user_auth.ex:263-271), called inline by show
   workers: []
   api_endpoints: []
   emails: []
@@ -77,7 +77,7 @@ inventory:
     - Cachex :auth_provider_jwks (handler.ex:13-14; application.ex:59-61)
     - :auth_providers_allow_insecure_loopback (tls.ex:24-36), test suite only
   not_reachable_here:
-    - get /authenticate/callback  OidcController :new (router.ex:75); the
+    - get /authenticate/callback  OidcController :new (router.ex:102); the
       redirect URI the admin form builds is always /authenticate/<name>/callback
       (auth_config_form.ex:47-59; form_component.ex:28-30), so this route
       belongs to flow-oauth-credential-authorize (oidc_controller.ex:75-87)
@@ -93,7 +93,7 @@ related:
   - lib/lightning_web/controllers/user_session_html/new.html.heex
   - lib/lightning_web/controllers/user_auth.ex
   - lib/lightning_web/controllers/user_totp_controller.ex
-  - lib/lightning_web/controllers/fallback_controller.ex
+  - lib/lightning_web/controllers/browser_fallback_controller.ex
   - lib/lightning_web/views/error_view.ex
   - lib/lightning/auth_providers.ex
   - lib/lightning/auth_providers/handler.ex
@@ -157,9 +157,6 @@ different failures show.
   the user is never asked, even on a shared computer. (S01, 6.2)
 - **(3)** Most failures share one generic message, but unknown, disabled and
   scheduled-for-deletion accounts each get a specific one. (6.2)
-- **(3)** If the provider rejects Lightning's own credentials, the user seems to
-  get a dead-end error page showing the provider's technical error instead of
-  the login page. (6.1)
 - **(3)** Provider settings changes can take up to 30 minutes to be picked up.
   (6.4)
 
@@ -173,7 +170,7 @@ provider's assertion.
 | ----------------------------------------- | ------------------ | -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- | -------------------------------------------------- |
 | See "via external provider"               | yes (sso-provider) | yes                              | yes                                                                                   | yes                                                                      | yes                                                              | n/a, login page redirects (auth-login)             |
 | Start the flow at /authenticate/:provider | yes                | yes                              | yes                                                                                   | yes                                                                      | yes                                                              | no, sent to /projects (`oidc_controller.ex:20-21`) |
-| Be signed in by the callback              | yes                | after a valid code at two-factor | no, "This user account is disabled" (`oidc_controller.ex:242-248`; `user_auth.ex:42`) | no, "This user account is scheduled for deletion" (`user_auth.ex:44-45`) | no, "Could not find user account" (`oidc_controller.ex:228-232`) | n/a                                                |
+| Be signed in by the callback              | yes                | after a valid code at two-factor | no, "This user account is disabled" (`oidc_controller.ex:242-248`; `user_auth.ex:43`) | no, "This user account is scheduled for deletion" (`user_auth.ex:45-46`) | no, "Could not find user account" (`oidc_controller.ex:228-232`) | n/a                                                |
 
 **Preconditions beyond role**
 
@@ -204,12 +201,12 @@ provider's assertion.
 - controller:oidc-authorize: handler cache, else the `auth_providers` row and
   the provider's discovery document (`auth_providers.ex:49-51`, `:91-94`;
   `store.ex:23-41`; `handler.ex:94-113`; `well_known.ex:31-37`); `users` and
-  `user_tokens` for a current session (`user_auth.ex:175-206`)
+  `user_tokens` for a current session (`user_auth.ex:176-207`)
 - controller:oidc-callback: session `oidc_pending`
   (`oidc_controller.ex:137-141`); the provider's token endpoint, JWKS (cached 10
   minutes) and, when needed, userinfo (`handler.ex:128-163`, `:207-233`);
   `users` by email (`accounts.ex:318-320`); session `user_return_to`
-  (`user_auth.ex:64`, `:97`)
+  (`user_auth.ex:65`, `:98`)
 
 **Writes**
 
@@ -219,13 +216,13 @@ provider's assertion.
 - controller:oidc-callback, every outcome: the used `state` is removed from
   `oidc_pending` before anything else runs (`oidc_controller.ex:50`, `:71`)
 - controller:oidc-callback, on success: `user_tokens` insert, a "session" token
-  (`user_auth.ex:28-31`; `accounts.ex:985-989`); session renewed and cleared
-  except `user_return_to`, then `user_token` set (`user_auth.ex:54-58`,
+  (`user_auth.ex:29-32`; `accounts.ex:985-989`); session renewed and cleared
+  except `user_return_to`, then `user_token` set (`user_auth.ex:55-59`,
   `:96-103`)
 - no MFA: remember-me cookie, signed, 60 days, always
-  (`oidc_controller.ex:258-260`; `user_auth.ex:19-21`, `:72-75`);
-  `user_return_to` deleted (`user_auth.ex:68`)
-- MFA: session `user_totp_pending` (`user_auth.ex:478-480`); remember-me is
+  (`oidc_controller.ex:258-260`; `user_auth.ex:20-22`, `:73-76`);
+  `user_return_to` deleted (`user_auth.ex:69`)
+- MFA: session `user_totp_pending` (`user_auth.ex:452-454`); remember-me is
   passed on as `user[remember_me]=true` and written by auth-two-factor after the
   code (`oidc_controller.ex:254-256`; `user_totp_controller.ex:9-14`, `:17-24`)
 
@@ -282,7 +279,7 @@ Feature: Sign in through an SSO provider
     Then I am on "/projects" as "amara@example.org"
     And the flow ends on projects-dashboard
     And a remember-me cookie valid for 60 days is set
-    # user_session_controller.ex:75-86; oidc_controller.ex:17-29, :89-94, :227-235, :257-261; user_auth.ex:63-75
+    # user_session_controller.ex:75-86; oidc_controller.ex:17-29, :89-94, :227-235, :257-261; user_auth.ex:64-76
     # oidc_controller_test.exs:46-59 (redirect to authorize url with stored state and nonce), :93-104 (lands on /projects with a session token)
 
   @S02 @variant:sso-provider
@@ -291,7 +288,7 @@ Feature: Sign in through an SSO provider
     Given the flow "flow-login-return-to" stored the run page I opened while signed out
     When I complete this flow as a user without MFA
     Then the flow "flow-login-return-to" continues to that run page
-    # oidc_controller.ex:258-260; user_auth.ex:63-70, :96-103; flow-login-return-to S06 owns the journey
+    # oidc_controller.ex:258-260; user_auth.ex:64-71, :97-104; flow-login-return-to S06 owns the journey
 
   @S03 @variant:sso-provider
   Scenario: An MFA account must pass two-factor after the provider
@@ -303,7 +300,7 @@ Feature: Sign in through an SSO provider
     Then I am sent back to "/users/two-factor"
     When I enter a valid authentication code
     Then I am on "/projects"
-    # oidc_controller.ex:250-256; user_auth.ex:478-480; user_totp_controller.ex:17-24
+    # oidc_controller.ex:250-256; user_auth.ex:452-454; user_totp_controller.ex:17-24
     # oidc_controller_test.exs:106-124; auth-two-factor S13 asserts the arrival; shared-authenticated-session S03 owns the hold
 
   @S04 @variant:sso-provider
@@ -331,7 +328,7 @@ Feature: Sign in through an SSO provider
       | disabled                  | does not | This user account is disabled               |
       | disabled                  | does     | This user account is disabled               |
       | scheduled for deletion    | does not | This user account is scheduled for deletion |
-    # oidc_controller.ex:241-248; accounts.ex:328-345; user_auth.ex:41-45
+    # oidc_controller.ex:241-248; accounts.ex:328-345; user_auth.ex:42-46
     # oidc_controller_test.exs:224-236, :238-253 (asserts redirect and no session only), :255-270
 
   @S06 @variant:sso-provider
@@ -356,7 +353,7 @@ Feature: Sign in through an SSO provider
     When I open the same callback URL again
     Then I am on the login page
     And I see "We couldn't sign you in. Please try again."
-    # oidc_controller.ex:47-50, :137-141 (state popped before verification); user_auth.ex:96-103 (logout clears the session)
+    # oidc_controller.ex:47-50, :137-141 (state popped before verification); user_auth.ex:97-104 (logout clears the session)
     # no test replays a used callback
 
   @S08 @variant:sso-provider
@@ -469,21 +466,20 @@ Feature: Sign in through an SSO provider
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                                                                                               | Where                                                                                                                               | What a user sees                                                                                       | Disposition |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------- |
-| A provider error body from the token endpoint is not sent back to login: a map body renders the "Authorization Error" page with the provider's error fields, a string body returns raw JSON `{"error": ...}`. The comment above says failures shouldn't reveal which check tripped | `oidc_controller.ex:100-103`; `fallback_controller.ex:65-76`; `error_view.ex:27-39`; asserted by `oidc_controller_test.exs:312-328` | a dead-end page showing e.g. "invalid_client / No client credentials found." instead of the login page | decide      |
+| What | Where | What a user sees | Disposition |
+| ---- | ----- | ---------------- | ----------- |
 
 ### 6.2 Quirks and implementation details
 
 | What                                                                                                                                                                                                                                                                            | Where                                                                                                                             | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| "Keep me logged in for 60 days" is always on for SSO logins; the visitor never sees the choice                                                                                                                                                                                  | `oidc_controller.ex:255`, `:260`; `user_auth.ex:19-21`                                                                            | decide      |
+| "Keep me logged in for 60 days" is always on for SSO logins; the visitor never sees the choice                                                                                                                                                                                  | `oidc_controller.ex:255`, `:260`; `user_auth.ex:20-22`                                                                            | decide      |
 | Refusal copy differs by account state ("Could not find user account", "disabled", "scheduled for deletion") while every other failure shares one generic message, only reached after the provider has verified the email                                                        | `oidc_controller.ex:96-99`, `:228-248`                                                                                            | decide      |
 | A provider name with no `auth_providers` row renders the 404 page on both hops                                                                                                                                                                                                  | `oidc_controller.ex:34-35`, `:59-60`; `store.ex:36-37`, `:64-66`; `oidc_controller_test.exs:72-77`, `:287-294`                    | preserve    |
 | A signed-in visitor to `/authenticate/:provider` is sent to `/projects`; the callback has no such check                                                                                                                                                                         | `oidc_controller.ex:20-21`; `oidc_controller_test.exs:61-70`                                                                      | preserve    |
 | A verified email from the provider does not change the confirmed state of the Lightning account; under require-email-verification the confirmation lockout still applies                                                                                                        | `oidc_controller.ex:227-263`; shared-authenticated-session S04                                                                    | decide      |
 | When `oidc_pending` holds five entries the oldest are not necessarily evicted: eviction drops in map order                                                                                                                                                                      | `oidc_controller.ex:126-135`                                                                                                      | preserve    |
-| Signing in (or a password login in another tab) renews the session, which discards every other in-flight SSO state                                                                                                                                                              | `user_auth.ex:96-103`                                                                                                             | preserve    |
+| Signing in (or a password login in another tab) renews the session, which discards every other in-flight SSO state                                                                                                                                                              | `user_auth.ex:97-104`                                                                                                             | preserve    |
 | A request to the provider-less `/authenticate/callback` carrying `code` and an SSO-style random `state` is treated as a credential callback and fails decrypting the state; only reachable by editing a URL, since the admin form always builds `/authenticate/<name>/callback` | `oidc_controller.ex:75-78`, `:269-271`; `oauth_credential_helper.ex:32-42`; `safety_string.ex:19-23`; `auth_config_form.ex:47-59` | decide      |
 | The provider's scope is fixed at "openid email profile"                                                                                                                                                                                                                         | `handler.ex:11`                                                                                                                   | preserve    |
 

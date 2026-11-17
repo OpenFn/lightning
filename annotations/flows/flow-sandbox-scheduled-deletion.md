@@ -45,7 +45,7 @@ inventory:
   policies:
     - Lightning.Policies.Sandboxes (:delete_sandbox, :cancel_scheduled_deletion)
     - Lightning.Policies.ProjectUsers (:delete_project, the settings UI gate)
-    - Lightning.Projects.Scope (still_operable/1)
+    - Lightning.Scope (still_operable/1)
   workers:
     - Lightning.Projects (Oban, queue :background, args type purge_deleted; nightly sweep and per-project job)
   api_endpoints:
@@ -63,7 +63,7 @@ related:
   - flow-sandbox-merge               # a merge ends by calling the same schedule_sandbox_deletion (index.ex:1196)
   - lib/lightning/projects/sandboxes.ex
   - lib/lightning/policies/sandboxes.ex
-  - lib/lightning/projects/scope.ex
+  - lib/lightning/scope.ex
   - lib/lightning/projects/events.ex
   - lib/lightning/projects.ex
   - lib/lightning/extensions/project_hook.ex
@@ -148,8 +148,8 @@ reaches every socket on the topic).
 - The typed name must match the sandbox name (`index.ex:156-176`,
   `settings.ex:283-296`, `:476-482`).
 - Scheduling goes through `Scope`, so it is refused on a sandbox already
-  scheduled or whose MFA requirement the actor hasn't met (`scope.ex:112-116`,
-  `:149-152`); restore skips `Scope` on purpose
+  scheduled or whose MFA requirement the actor hasn't met (`scope.ex:173-183`,
+  `:363-365`); restore skips `Scope` on purpose
   (`policies/sandboxes.ex:121-130`).
 - Restore is also refused when the sandbox limit is reached
   (`sandboxes.ex:923-931`; sandboxes-index S31).
@@ -200,7 +200,7 @@ reaches every socket on the topic).
 
 **Deferred side effects** (later, elsewhere)
 
-- Hop 3: webhooks to subtree triggers get 403 `trigger_disabled`
+- Hop 3: webhooks to subtree triggers get 403 with code `trigger_disabled`
   (`webhooks_controller.ex:40`, `:109-115`); cron triggers stop being picked up
   (`workflows.ex:1290`)
 - Hop 5: nightly at 02:45 the sweep enqueues one purge job for every project
@@ -251,7 +251,7 @@ Feature: Delete a sandbox
     When an admin of "sb-1" confirms its deletion on the sandboxes list
     Then "sb-1", "child" and "grandchild" are scheduled for deletion with the same date, 7 days from now
     And every trigger in the three sandboxes is disabled
-    And a request to any of their webhook URLs gets 403 with error "trigger_disabled"
+    And a request to any of their webhook URLs gets 403 with code "trigger_disabled"
     # index.ex:148-177, sandboxes.ex:942-964, :997-1006, webhooks_controller.ex:40, :109-115, workflows.ex:1290
     # sandboxes_test.exs:2813-2826, :2867-2910 (dates, triggers); webhook response read from code
 

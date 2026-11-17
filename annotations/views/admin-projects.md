@@ -13,7 +13,7 @@ trigger:
   reachable_when:
     - the session is admitted by shared-authenticated-session; the four routes
       sit in the `:settings` live_session, which mounts `InitAssigns`
-      (`lib/lightning_web/router.ex:268`, `:273-276`)
+      (`lib/lightning_web/router.ex:316`, `:321-324`)
     - the viewer is a superuser (`project_live/index.ex:7`; gate owned by
       shared-admin-space S02, S03)
     - '/settings/projects/:id needs an existing project id (`index.ex:61`,
@@ -49,10 +49,10 @@ config_variants:
 
 inventory:
   routes:
-    - live /settings/projects  ProjectLive.Index :index # router.ex:273
-    - live /settings/projects/new  ProjectLive.Index :new # router.ex:274
-    - live /settings/projects/:id  ProjectLive.Index :edit # router.ex:275
-    - live /settings/projects/:id/delete  ProjectLive.Index :delete # router.ex:276
+    - live /settings/projects  ProjectLive.Index :index # router.ex:321
+    - live /settings/projects/new  ProjectLive.Index :new # router.ex:322
+    - live /settings/projects/:id  ProjectLive.Index :edit # router.ex:323
+    - live /settings/projects/:id/delete  ProjectLive.Index :delete # router.ex:324
   events:
     - ProjectLive.Index#cancel_deletion # index.ex:95-107
     - ProjectLive.Index#sort # index.ex:109-125
@@ -73,7 +73,7 @@ inventory:
     - TableHelpers.filter_input phx-keyup with phx-debounce 300
       (table_helpers.ex:33-43), list and form
   policies:
-    - Lightning.Policies.Users :access_admin_space (policies/users.ex:19-21),
+    - Lightning.Policies.Users :access_admin_space (policies/users.ex:30-32),
       through LightningWeb.Hooks :ensure_admin (hooks.ex:31-53); no
       project-level policy is checked anywhere in this view
   workers:
@@ -102,10 +102,10 @@ related:
   - lib/lightning_web/live/project_live/form_component.ex
   - lib/lightning_web/live/project_live/form_component.html.heex
   - lib/lightning_web/live/helpers/table_helpers.ex
-  - lib/lightning/projects.ex # create_project/2 (:562-577), update_project_with_users/4 (:629-660), membership helpers (:662-776), schedule_project_addition_emails/2 (:836-847), cancel_scheduled_deletion/1 (:1728-1732)
-  - lib/lightning/projects/project.ex # form_with_users_changeset/2 (:165-187), project_with_users_changeset/2 (:282-302), validate_project_owner/1 (:304-325)
+  - lib/lightning/projects.ex # create_project/3 (:571-586), update_project_with_users/4 (:629-660), membership helpers (:662-776), schedule_project_addition_emails/2 (:836-847), cancel_scheduled_deletion/1 (:1728-1732)
+  - lib/lightning/projects/project.ex # form_with_users_changeset/2 (:165-187), project_with_users_changeset/2 (:282-302), validate_project_owner/1 (:330-352)
   - lib/lightning/projects/project_user.ex
-  - lib/lightning/projects/audit.ex # derive_membership_events/4 (:47-85)
+  - lib/lightning/projects/audit.ex # derive_membership_events/4 (:73-120)
   - lib/lightning/projects/events.ex
   - lib/lightning/extensions/project_hook.ex
   - test/lightning_web/live/project_live_test.exs # :33-49, :52-746 (superuser describe block)
@@ -151,8 +151,6 @@ beyond this page.
   people from what gets saved: on edit the page may crash, and on a new project
   an owner picked before filtering can silently vanish. Read from the code, not
   run. (6.1)
-- **(2)** Handing a project to a new owner in one save may fail with no visible
-  message, so "Save" appears to do nothing. Read from the code, not run. (6.1)
 - **(3)** Removing a member also takes their own credentials off the project,
   with no confirmation or warning, so workflows using those credentials may stop
   working. Project settings warns about this; this page doesn't. (S09, 6.2)
@@ -177,13 +175,13 @@ superuser acts on every project whether or not they are a member (`index.ex:7`,
 | Cancel a scheduled deletion          | no         | no           | no           | yes       |
 | Purge a scheduled project now        | no         | no           | no           | yes       |
 
-Sources: `policies/users.ex:19-21`, `hooks.ex:40-53` (via shared-admin-space
+Sources: `policies/users.ex:30-32`, `hooks.ex:40-53` (via shared-admin-space
 S02); tests `project_live_test.exs:33-49`.
 
 **Preconditions beyond role**
 
 - Exactly one member must be owner for a create or an edit to save
-  (`project.ex:304-325`).
+  (`project.ex:330-352`).
 - "Cancel deletion" and "Delete now" are offered only on a project already
   scheduled for deletion; "Delete" only on one that is not (`index.ex:153-180`).
 - The delete-now branch of the modal runs only when the project, as loaded by
@@ -204,7 +202,7 @@ S02); tests `project_live_test.exs:33-49`.
 **Writes**
 
 - Create: `projects` insert and `project_users` inserts in one transaction
-  (`projects.ex:562-577`, `project_hook.ex:14-18`); `oban_jobs` insert per
+  (`projects.ex:571-586`, `project_hook.ex:14-18`); `oban_jobs` insert per
   member (`projects.ex:836-847`)
 - Edit: `projects` update (name), `project_users` insert, update role, delete;
   `project_credentials` delete for each removed member's own credentials;
@@ -218,7 +216,7 @@ S02); tests `project_live_test.exs:33-49`.
 **Immediate side effects** (in the same request)
 
 - Create: PubSub `ProjectCreated` on `projects_events:all`
-  (`projects.ex:574-576`, `events.ex:81-86`); nothing subscribes (6.3)
+  (`projects.ex:582-584`, `events.ex:81-86`); nothing subscribes (6.3)
 - Edit: PubSub `ProjectUserAdded`, `ProjectUserRoleChanged`,
   `ProjectUserRemoved` on the project topic, one per change (`projects.ex:644`,
   `:757-773`, `events.ex:95-114`); consumed by every open project page
@@ -227,8 +225,10 @@ S02); tests `project_live_test.exs:33-49`.
   (`ai_assistant_channel.ex:480-482`, `:520-522`) and the run channel on removal
   (`run_channel.ex:336`)
 - Audit: `collaborator_added`, `collaborator_role_changed`,
-  `collaborator_removed` with the superuser as actor (`audit.ex:57-85`); create
-  writes none (6.2)
+  `collaborator_removed` with the superuser as actor (`audit.ex:73-120`); create
+  also writes "created" and one `collaborator_added` per initial member
+  (`audit.ex:51-66`), and an edit that renames the project writes `name_updated`
+  (`projects.ex:665`, `audit.ex:24-44`)
 - Flash "Project created successfully", "Project updated successfully" or
   "Project deletion canceled" and a patch back to `/settings/projects`
   (`form_component.ex:171-175`, `:186-189`; `index.ex:103-106`)
@@ -325,22 +325,23 @@ Feature: Admin projects
     And I see "Project created successfully"
     And project "some-name" has exactly those two members and not me
     And the flow "flow-collaborator-added-email" has started for "1st user" and for "another person"
-    # form_component.ex:135-163, :183-195; projects.ex:562-577, :836-847; project_hook.ex:14-18
+    And an audit event "created" and a "collaborator_added" event for each of the two members are recorded with the superuser as actor
+    # form_component.ex:135-163, :183-195; projects.ex:571-586, :836-847; projects/audit.ex:51-66; project_hook.ex:14-18
     # project_live_test.exs:97-166 (asserts flash and both "You now have access to" emails; membership asserted by :357-396 for edit)
 
   @S06
   Scenario: A project cannot be saved without exactly one owner
     # Value: no project leaves this form with nobody, or two people, answering for it.
     Given I am on "/settings/projects/new"
-    Then I do not see "Every project must have exactly one owner. Please specify one below."
+    Then I do not see "Every project must have exactly one owner."
     And "Save" is disabled
     When I change the form without choosing an owner
-    Then I see "Every project must have exactly one owner. Please specify one below."
+    Then I see "Every project must have exactly one owner."
     When I set two users to owner
     Then I see "A project can have only one owner."
     When I submit with no owner
     Then no project is created
-    # project.ex:304-325; form_component.html.heex:33-47, :191-193; form_component.ex:76-80, :92-104
+    # project.ex:330-352; form_component.html.heex:33-47, :191-193; form_component.ex:76-80, :92-104
     # project_live_test.exs:79-95, :97-125
 
   @S07
@@ -434,26 +435,43 @@ Feature: Admin projects
     Then I am on "/settings/projects/<beta-project id>/delete"
     And the flow "flow-schedule-project-deletion" has started (its S12, through shared-project-deletion-modal S04)
     # index.ex:165-170; project_live_test.exs:322-355
+
+  @S16
+  Scenario: Superuser hands a project to a new owner in one save
+    # Value: ownership can move to someone else in a single save, so a project is never stuck without an owner while the form is fixed up.
+    Given project "malawi-hiv" has owner "Alice Smith" and admin "Bob Jones"
+    When I open "Edit" for "malawi-hiv"
+    And I set "Bob Jones" to owner and "Alice Smith" to admin
+    And I click "Save"
+    Then I see "Project updated successfully"
+    And "malawi-hiv" has owner "Bob Jones" and admin "Alice Smith"
+    # project.ex:311-328 (owner rows are written last), form_component.ex:166-181; project_live_test.exs
+
+  @S17
+  Scenario: Renaming a project here is audited against the superuser
+    # Value: a project's owners can see that an instance admin renamed it, and which one.
+    Given project "malawi-hiv"
+    When I open "Edit" for "malawi-hiv", change the name to "malawi-hiv-2" and save
+    Then an audit event "name_updated" is recorded for it with actor "root@example.org", before "malawi-hiv" and after "malawi-hiv-2"
+    # projects.ex:665, projects/audit.ex:24-44
 ```
 
 ## 6. Unclear value
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                                                                                                                                      | Where                                                                                                                                                                               | What a user sees                                                                                                                                                           | Disposition |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| The member table's "No access", "Owner", "Admin", "Editor" and "Viewer" headers are sortable, but `user_sort_map` has no such keys, so `sort_items` falls back to the key string and sorts by a constant                                                                                                                  | `form_component.html.heex:79-127`; `form_component.ex:48-54`; `table_helpers.ex:155`, `:209-211`                                                                                    | the header shows an active sort arrow and the rows do not move                                                                                                             | fix         |
-| Filtering the member table removes the hidden rows from the form, so the next change or save submits only visible rows. On edit, an existing member missing from the params meets `cast_assoc` with the default `on_replace: :raise`; on new, roles set on filtered-out users are dropped. Read from code, not run        | `form_component.html.heex:49-53` (filter input inside the form), `:132`; `form_component.ex:93-97`, `:135-163`, `:205-228`; `project.ex:44`, `:184`, `:299`                         | edit: the page crashes after filtering then clicking a role or "Save"; new: an owner picked before filtering silently vanishes and the save fails with "exactly one owner" | fix         |
-| Moving ownership in one save can hit the non-deferrable `project_owner_unique_index`, depending on whether the new owner's row is updated before the old owner's (`users_sort` is `Map.keys` order). The resulting error sits on a nested `project_user` changeset, which the form never renders. Read from code, not run | `priv/repo/migrations/20240502053312_add_unique_index_on_project_users.exs:5-8`; `project_user.ex:59-62`; `form_component.ex:152-156`, `:177-179`; `form_component.html.heex:33-47` | "Save" appears to do nothing when handing a project to a new owner                                                                                                         | fix         |
-| `/settings/projects/:id/delete` with an unknown id assigns `project: nil` and the template reads `@project.id` (already flow-schedule-project-deletion 6.1)                                                                                                                                                               | `index.ex:88`; `index.html.heex:19`                                                                                                                                                 | a crash page for a stale or mistyped link                                                                                                                                  | fix         |
-| A project scheduled for deletion can still be edited here; a member added to it gets "You now have access to ..." while shared-project-scope S04 refuses them                                                                                                                                                             | `index.ex:56-67` (no scheduled check); `projects.ex:648`; shared-project-scope S04                                                                                                  | an access email whose link shows "Not Found"                                                                                                                               | decide      |
-| Adding a disabled account or one scheduled for deletion is allowed: the form lists every user row, and the access email is sent to them                                                                                                                                                                                   | `index.ex:62`, `:75`; `accounts.ex:290-292`; `projects.ex:836-847`                                                                                                                  | an access email to someone who can't log in                                                                                                                                | decide      |
+| What                                                                                                                                                                                                                                                                                                               | Where                                                                                                                                                       | What a user sees                                                                                                                                                           | Disposition |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| The member table's "No access", "Owner", "Admin", "Editor" and "Viewer" headers are sortable, but `user_sort_map` has no such keys, so `sort_items` falls back to the key string and sorts by a constant                                                                                                           | `form_component.html.heex:79-127`; `form_component.ex:48-54`; `table_helpers.ex:155`, `:209-211`                                                            | the header shows an active sort arrow and the rows do not move                                                                                                             | fix         |
+| Filtering the member table removes the hidden rows from the form, so the next change or save submits only visible rows. On edit, an existing member missing from the params meets `cast_assoc` with the default `on_replace: :raise`; on new, roles set on filtered-out users are dropped. Read from code, not run | `form_component.html.heex:49-53` (filter input inside the form), `:132`; `form_component.ex:93-97`, `:135-163`, `:205-228`; `project.ex:44`, `:184`, `:299` | edit: the page crashes after filtering then clicking a role or "Save"; new: an owner picked before filtering silently vanishes and the save fails with "exactly one owner" | fix         |
+| `/settings/projects/:id/delete` with an unknown id assigns `project: nil` and the template reads `@project.id` (already flow-schedule-project-deletion 6.1)                                                                                                                                                        | `index.ex:88`; `index.html.heex:19`                                                                                                                         | a crash page for a stale or mistyped link                                                                                                                                  | fix         |
+| A project scheduled for deletion can still be edited here; a member added to it gets "You now have access to ..." while shared-project-scope S04 refuses them                                                                                                                                                      | `index.ex:56-67` (no scheduled check); `projects.ex:648`; shared-project-scope S04                                                                          | an access email whose link shows "Not Found"                                                                                                                               | decide      |
+| Adding a disabled account or one scheduled for deletion is allowed: the form lists every user row, and the access email is sent to them                                                                                                                                                                            | `index.ex:62`, `:75`; `accounts.ex:290-292`; `projects.ex:836-847`                                                                                          | an access email to someone who can't log in                                                                                                                                | decide      |
 
 ### 6.2 Quirks and implementation details
 
 | What                                                                                                                                                                 | Where                                                                                            | Disposition |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------- |
-| Creating a project writes no audit event for the project or its initial members, while editing members does                                                          | `projects.ex:562-577`, `project_hook.ex:14-18`; compare `projects.ex:695-708`                    | decide      |
 | Description is listed, filtered and sorted on, but the form has no description field                                                                                 | `index.html.heex:94-96`; `form_component.html.heex:1-197`                                        | decide      |
 | Removing a member here has no confirmation and no warning that their credentials leave the project, unlike project-settings-collaborators                            | `form_component.html.heex:153-160`; project-settings-collaborators S15                           | decide      |
 | Sandboxes are listed with root projects, under their bare name, with no parent shown; "Delete" on a sandbox takes the root path (flow-schedule-project-deletion 6.2) | `index.ex:195-201`; `index.html.heex:92`                                                         | decide      |
@@ -492,8 +510,8 @@ Feature: Admin projects
 
 - A superuser who is not a member can manage a project here but is refused by
   shared-project-scope on the project's own pages (its 6.x row on
-  `project_users.ex:193-194`). Whether that split is intended was not
-  established. (decide)
+  `scope.ex:224-226`). Whether that split is intended was not established.
+  (decide)
 - Whether `put_flash` in the form component followed by `push_patch` always
   shows as a settings-layout toast was read from the test's rendered HTML only
   (`project_live_test.exs:160`, `:387`). (preserve)

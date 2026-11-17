@@ -40,7 +40,7 @@ config_variants:
 
 inventory:
   routes:
-    - get /credentials/transfer/:token  CredentialTransferController :confirm # router.ex:189-190, :238-240
+    - get /credentials/transfer/:token  CredentialTransferController :confirm # router.ex:237-238, :286-288
     - live /credentials  CredentialLive.Index :index # exit; owned by credentials-index
   events:
     - TransferCredentialModal#transfer-credential # entry handoff, owned by credentials-index (S20)
@@ -52,7 +52,7 @@ inventory:
     - Credentials.confirm_transfer/2 token-owner and credential-owner checks
       (credentials.ex:1664, :1666)
     - require_authenticated_user plug on the confirm route
-      (user_auth.ex:288-310)
+      (user_auth.ex:280-302)
   workers: []
   api_endpoints: []
   emails:
@@ -125,7 +125,7 @@ to.
 ## 3. Who can do what
 
 Ownership, not project role, decides every step (`credentials.ex:1577-1581`,
-`:1664-1666`; `policies/users.ex:40-44` for the menu item).
+`:1664-1666`; `policies/credentials.ex:76-147` for the menu item).
 
 | Action                                        | Credential owner | Recipient       | Any other signed-in user | Signed out           |
 | --------------------------------------------- | ---------------- | --------------- | ------------------------ | -------------------- |
@@ -146,7 +146,7 @@ Ownership, not project role, decides every step (`credentials.ex:1577-1581`,
   (`credentials.ex:1668`, `:1697`).
 - The confirm route sits behind `require_authenticated_user`, so MFA-pending and
   locked-out sessions are refused before the controller runs
-  (`router.ex:189-190`, `user_auth.ex:302-306`).
+  (`router.ex:237-238`, `user_auth.ex:294-298`).
 
 ## 4. What it touches
 
@@ -169,7 +169,7 @@ Ownership, not project role, decides every step (`credentials.ex:1577-1581`,
   `before.user_id` and `after.user_id`, actor the previous owner
   (`credentials.ex:1669-1682`; `audit.ex:14`, `:30-36`)
 - Hop 3 when signed out: `user_return_to` in the session
-  (`user_auth.ex:296-299`, `:490-491`)
+  (`user_auth.ex:288-291`, `:464-465`)
 - Not written: `project_credentials`, `credential_bodies` and job assignments
   are untouched, so the credential stays shared exactly as before
   (`credentials.ex:1670-1675`; `credential.ex:64-69`)
@@ -270,7 +270,7 @@ Feature: Credential transfer
     When I log in
     Then I see "Credential transfer confirmed successfully."
     And Amara owns "DHIS2 prod"
-    # router.ex:189-190, :238-240; user_auth.ex:288-299, :490-491, :63-69
+    # router.ex:237-238, :286-288; user_auth.ex:280-291, :464-465, :64-70
     # credential_transfer_controller_test.exs:36-40 asserts only the login redirect
 
   @S05
@@ -330,7 +330,6 @@ shared-credential-index-component S01 and S02, and is not repeated here.
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------- |
 | The audit event is spelled "transfered"                                                                                                                                                                                                                  | `audit.ex:14`; `credentials.ex:1677`                                                        | decide      |
 | After confirming, the owner lands on `/projects`, not `/credentials`, for success and every error                                                                                                                                                        | `credential_transfer_controller.ex:12`, `:17`, `:22`                                        | decide      |
-| The confirm is a state-changing GET with no confirmation page                                                                                                                                                                                            | `router.ex:238-240`; `credential_transfer_controller.ex:6-25`                               | decide      |
 | `:not_found`, `:token_error`, `:not_pending` and changeset errors all show "Credential transfer couldn't be confirmed."                                                                                                                                  | `credential_transfer_controller.ex:19-22`; `credentials.ex:1696-1701`                       | preserve    |
 | The link carries a signed token naming owner, credential and recipient; its `sub` prefix keeps it from authenticating as an API bearer                                                                                                                   | `credentials.ex:1760-1773`; `tokens.ex:49-51`; `config.ex:11-27`; `tokens_test.exs:139-150` | preserve    |
 | Transfers of different credentials by one owner are independent; confirming one does not invalidate another                                                                                                                                              | `credentials_test.exs:1362-1398`                                                            | preserve    |
@@ -376,7 +375,6 @@ shared-credential-index-component S01 and S02, and is not repeated here.
 - Should name uniqueness be re-checked at confirm, and reported with a specific
   message (6.1)?
 - Should the owner land on `/credentials` after confirming (6.2)?
-- Should confirming be a GET, or a page with a button (6.2)?
 
 ## Proposed flows
 

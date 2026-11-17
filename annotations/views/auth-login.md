@@ -10,14 +10,14 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the visitor has no valid session and no valid remember-me cookie;
-      otherwise both GET and POST redirect to /projects (`router.ex:176`,
-      `:181-182`; `user_auth.ex:271-279`)
+      otherwise both GET and POST redirect to /projects (`router.ex:224`,
+      `:181-182`; `user_auth.ex:263-271`)
     - first-setup-open only:
         a superuser exists; otherwise every request is redirected to
-        /first_setup (`router.ex:29`; `plugs/first_setup.ex:11-33`)
+        /first_setup (`router.ex:30`; `plugs/first_setup.ex:11-33`)
 
 inherits:
-  - shared-authenticated-session # the :browser pipeline it shares (fetch_current_user writes live_socket_id, router.ex:28; user_auth.ex:175-192) and the first-setup redirect (its S11). Its S01 to S06 gates do not run here: this scope has no :require_authenticated_user
+  - shared-authenticated-session # the :browser pipeline it shares (fetch_current_user writes live_socket_id, router.ex:29; user_auth.ex:176-193) and the first-setup redirect (its S11). Its S01 to S06 gates do not run here: this scope has no :require_authenticated_user
   - shared-flash-messages # added by lead (final pass)
 
 url_params: [] # nothing is read from the query string; the return path lives in the session (flow-login-return-to)
@@ -38,15 +38,15 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/log_in  UserSessionController :new # router.ex:181
-    - post /users/log_in  UserSessionController :create # router.ex:182
+    - get /users/log_in  UserSessionController :new # router.ex:229
+    - post /users/log_in  UserSessionController :create # router.ex:230
   events:
     - UserSessionController#new
     - UserSessionController#create
   js_hooks: [] # the password reveal eye uses an inline phx-click JS command (new_inputs.ex:685-695); see S21
   policies:
     - LightningWeb.UserAuth.redirect_if_user_is_authenticated/2
-      (user_auth.ex:271-279)
+      (user_auth.ex:263-271)
     - Lightning.Accounts.login_blocked?/1, login_blocked_reason/1
       (accounts.ex:329-345)
     - LightningWeb.Plugs.FirstSetup (plugs/first_setup.ex:11-33)
@@ -72,7 +72,7 @@ inventory:
       on this page (S16)
     - OidcController.show/2 and new/2 (oidc_controller.ex:17-73, :227-263); the
       SSO hop, proposed as flow-sso-login
-    - LightningWeb.Plugs.BlockRoutes (router.ex:31-42); never matches
+    - LightningWeb.Plugs.BlockRoutes (router.ex:32-43); never matches
       /users/log_in
 
 related:
@@ -143,7 +143,7 @@ explaining.
 
 ## 3. Who can do what
 
-Sources: `router.ex:176-182`; `user_auth.ex:271-279`;
+Sources: `router.ex:224-230`; `user_auth.ex:263-271`;
 `user_session_controller.ex:15-53`; `accounts.ex:329-345`, `:359-363`;
 `plugs/first_setup.ex:11-33`. There is no policy module; the gates are account
 state, not roles.
@@ -166,14 +166,14 @@ state, not roles.
   (`plugs/first_setup.ex:27-33`).
 - require-email-verification: an unconfirmed account past its deadline can still
   log in; the gate on the next page sends it to confirm
-  (`user_auth.ex:305-306`). Not checked here.
+  (`user_auth.ex:297-298`). Not checked here.
 
 ## 4. What it touches
 
 **Reads**: `users` by email (citext, case-insensitive:
 `priv/repo/migrations/20220405135153_create_users.exs:12`;
 `accounts.ex:359-363`); `user_tokens` and `users` for the current session or
-remember-me cookie (`user_auth.ex:175-206`); auth provider handlers from the
+remember-me cookie (`user_auth.ex:176-207`); auth provider handlers from the
 Cachex store (`user_session_controller.ex:75-86`;
 `auth_providers/store.ex:14-19`); `users` superuser count under first-setup-open
 (`plugs/first_setup.ex:28`)
@@ -181,15 +181,15 @@ Cachex store (`user_session_controller.ex:75-86`;
 **Writes**
 
 - `user_tokens` insert, context "session", on every successful password match
-  that is not blocked, MFA included (`user_auth.ex:28-31`;
+  that is not blocked, MFA included (`user_auth.ex:29-32`;
   `accounts.ex:985-989`)
 - Session renewed and cleared, keeping only `user_return_to`; then `user_token`
-  set (`user_auth.ex:54-58`, `:96-103`)
-- Session key `user_totp_pending` for MFA accounts (`user_auth.ex:478-480`)
-- Session key `user_return_to` deleted on redirect (`user_auth.ex:68`)
+  set (`user_auth.ex:55-59`, `:97-104`)
+- Session key `user_totp_pending` for MFA accounts (`user_auth.ex:452-454`)
+- Session key `user_return_to` deleted on redirect (`user_auth.ex:69`)
 - Signed cookie `_lightning_web_user_remember_me`, max age 60 days, SameSite
   Lax, when "remember_me" is "true" and the account has no MFA
-  (`user_auth.ex:16-21`, `:72-79`)
+  (`user_auth.ex:17-22`, `:73-80`)
 
 **Immediate side effects**
 
@@ -214,7 +214,7 @@ Cachex store (`user_session_controller.ex:75-86`;
 **Product limits**
 
 - A session token is valid for 60 days and the remember-me cookie lasts 60 days
-  (`user_token.ex:34`; `user_auth.ex:16-19`); the checkbox copy promises this
+  (`user_token.ex:34`; `user_auth.ex:17-20`); the checkbox copy promises this
   ("Keep me logged in for 60 days", `new.html.heex:50`)
 
 ## 5. Scenarios
@@ -236,7 +236,7 @@ Feature: Log in
     And I click "Log in"
     Then I am logged in as "amara@example.org"
     And the flow "flow-login-return-to" continues from here
-    # user_session_controller.ex:15-20, :47-50; user_auth.ex:28-31, :54-58, :63-70, :514
+    # user_session_controller.ex:15-20, :47-50; user_auth.ex:29-32, :55-59, :64-71, :488
     # user_session_controller_test.exs:151-164 (session token set, redirect to /projects, "User Profile" on the next page)
 
   @S02
@@ -279,7 +279,7 @@ Feature: Log in
       | email               | state                       | message                                      |
       | ruth@example.org    | disabled                    | This user account is disabled                |
       | kofi@example.org    | scheduled for deletion      | This user account is scheduled for deletion  |
-    # user_session_controller.ex:31-38; user_auth.ex:41-45; accounts.ex:329-345
+    # user_session_controller.ex:31-38; user_auth.ex:42-46; accounts.ex:329-345
     # user_session_controller_test.exs:184-214
 
   @S05
@@ -289,7 +289,7 @@ Feature: Log in
     When I log in with "amara@example.org" and the right password
     Then I am on "/users/two-factor"
     And when I visit "/projects" I am sent back to "/users/two-factor"
-    # user_session_controller.ex:40-46; user_auth.ex:302-303, :478-480
+    # user_session_controller.ex:40-46; user_auth.ex:294-295, :452-454
     # user_session_controller_test.exs:166-182; the second factor itself is auth-two-factor; the gate is shared-authenticated-session S03
 
   @S06
@@ -300,7 +300,7 @@ Feature: Log in
     And I had ticked "Keep me logged in for 60 days"
     Then a signed remember-me cookie valid for 60 days is set
     And after the browser session ends I am still logged in
-    # user_auth.ex:16-21, :72-75, :194-206; new.html.heex:47-52
+    # user_auth.ex:17-22, :73-76, :195-207; new.html.heex:47-52
     # user_session_controller_test.exs:216-228 (cookie set, redirect to /projects)
 
   @S07
@@ -309,7 +309,7 @@ Feature: Log in
     Given "amara@example.org" is a registered user without MFA
     When I log in without ticking "Keep me logged in for 60 days"
     Then no remember-me cookie is set
-    # user_auth.ex:77-79; endpoint.ex:12-16 (session cookie has no max_age)
+    # user_auth.ex:78-80; endpoint.ex:12-16 (session cookie has no max_age)
     # no test asserts the absence on this path
 
   @S08
@@ -328,7 +328,7 @@ Feature: Log in
     When I log in successfully
     Then the session id is renewed
     And nothing from the old session remains except the page I was going to
-    # user_auth.ex:54-58, :96-103; user_auth_test.exs:163-189
+    # user_auth.ex:55-59, :97-104; user_auth_test.exs:163-189
 
   @S10
   Scenario: A signed-in visitor is sent to their projects
@@ -336,7 +336,7 @@ Feature: Log in
     Given I am logged in
     When I open "/users/log_in"
     Then I am on "/projects"
-    # router.ex:176, :181-182; user_auth.ex:271-279, :514
+    # router.ex:224, :229-230; user_auth.ex:263-271, :488
     # user_session_controller_test.exs:70-75; user_auth_test.exs:461-475
 
   @S11
@@ -353,7 +353,7 @@ Feature: Log in
     Given the flow "flow-login-return-to" brought me here from a page that needs login
     When I log in successfully
     Then the flow "flow-login-return-to" continues to the page I asked for
-    # user_auth.ex:63-70, :96-103; user_session_controller_test.exs:250-262 (redirect to the stored "/foo/bar")
+    # user_auth.ex:64-71, :97-104; user_session_controller_test.exs:250-262 (redirect to the stored "/foo/bar")
     # flow-login-return-to S01 to S07 own the end-to-end journey
 
   @S13 @variant:signup-allowed
@@ -367,7 +367,7 @@ Feature: Log in
       | setting  | see        |
       | allowed  | see        |
       | disabled | do not see |
-    # new.html.heex:83-88; router.ex:31-36 (the route itself is blocked when disabled)
+    # new.html.heex:83-88; router.ex:32-37 (the route itself is blocked when disabled)
     # user_session_controller_test.exs:41-68 (stubs every flag true or false, so both rows are covered)
 
   @S14
@@ -387,7 +387,7 @@ Feature: Log in
     Then this browser is on "/users/log_in"
     When I log in with my old password
     Then I see "Invalid email or password"
-    # user_auth.ex:131; user_session_controller.ex:22-25; flow-account-revocation-teardown owns the revocation
+    # user_auth.ex:132; user_session_controller.ex:22-25; flow-account-revocation-teardown owns the revocation
     # a disabled account then hits S04
 
   @S16
@@ -397,7 +397,7 @@ Feature: Log in
     When I log out
     Then I am on "/users/log_in"
     And I see "Logged out successfully."
-    # user_session_controller.ex:69-73; user_auth.ex:114-132; new.html.heex:23-27
+    # user_session_controller.ex:69-73; user_auth.ex:115-133; new.html.heex:23-27
     # user_session_controller_test.exs:278-297
 
   @S17 @variant:sso-provider
@@ -430,7 +430,7 @@ Feature: Log in
     And there is no superuser
     When I open "/users/log_in"
     Then I am on "/first_setup"
-    # router.ex:29; plugs/first_setup.ex:11-33; first_setup_test.exs:5-10 (asserts on "/", not on this route)
+    # router.ex:30; plugs/first_setup.ex:11-33; first_setup_test.exs:5-10 (asserts on "/", not on this route)
     # shared-authenticated-session S11 owns the gate
 
   @S20 @variant:require-email-verification
@@ -440,7 +440,7 @@ Feature: Log in
     When I log in with the right password
     Then I am logged in
     And the gate in shared-authenticated-session S04 sends me to "/users/confirm-required"
-    # user_session_controller.ex:31-53 does not check confirmation; user_auth.ex:305-306, :327-343
+    # user_session_controller.ex:31-53 does not check confirmation; user_auth.ex:297-298, :319-335
     # no test covers login under this variant
 
   @S21
@@ -476,7 +476,7 @@ Feature: Log in
 | "Forgot your password?" is shown even when no mail provider is configured (MAIL_PROVIDER unset), so the reset email may never be delivered       | `new.html.heex:92-96`; `bootstrap.ex:398-400`                                                        | decide      |
 | Page title is the root layout fallback, "Lightning · OpenFn Lightning", since no `page_title` is assigned                                        | `root.html.heex:16-18`; `user_session_controller.ex:9-12`                                            | decide      |
 | The nav bar is a logo only; no link back to a public site or docs                                                                                | `layout_components.ex:315-333`                                                                       | preserve    |
-| An MFA account's "session" token is inserted at the password step, before the second factor; the pending flag, not the token, keeps it out       | `user_session_controller.ex:43-46`; `user_auth.ex:302-303`, `:381-384`                               | preserve    |
+| An MFA account's "session" token is inserted at the password step, before the second factor; the pending flag, not the token, keeps it out       | `user_session_controller.ex:43-46`; `user_auth.ex:294-295`, `:367-370`                               | preserve    |
 | Flash on error is a `div role="alert"`, on info a `p role="alert"`; both are rendered by the template rather than the layout                     | `new.html.heex:18-27`                                                                                | preserve    |
 
 ### 6.3 Unreachable or dead code

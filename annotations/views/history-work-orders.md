@@ -190,7 +190,7 @@ the `require_run_workflow/2` gate (`index.ex:694-708`).
 **Preconditions beyond role**
 
 - The project's MFA requirement must be met; otherwise every action above is
-  denied (`project_users.ex:134`).
+  denied (`decision.ex:59-66`).
 - Retry and select need the work order's input dataclip not to be wiped
   (`workorder_component.ex:120`, `:270`, `:481-483`; `work_orders.ex:969-975`).
 - Rerun from a step needs the step's input dataclip not to be wiped and its job
@@ -198,7 +198,7 @@ the `require_run_workflow/2` gate (`index.ex:694-708`).
 - Retries need the workflow not to be deleted (`work_orders.ex:339-345`,
   `:961-967`).
 - Rerun and run cancel need the run to belong to this project
-  (`index.ex:383-386`, `cancel_helper.ex:310-315`, `runs.ex:74-84`).
+  (`index.ex:383-386`, `cancel_helper.ex:310-315`, `runs.ex:76-88`).
 - Cancel only reaches runs in state `available` (`runs.ex:466-492`, `:506-527`).
 - Bulk cancel needs every selected work order to be pending; bulk retry needs
   every selected work order to be finished (`index.ex:789-817`).
@@ -721,7 +721,7 @@ Feature: Work order history
 | Bulk retry modal summary puts dates the wrong way round ("received between <before> and <after>") and calls last activity "last run"                                                                                             | `components.ex:920-921`, `:936-937`                                                                                                            | a summary that contradicts the chips                                | fix         |
 | When any work order on the page has a wiped input, select all can never count as "all selected", so the "Rerun all N matching" and "Cancel up to N matching" options never appear                                                | `index.ex:488-498` vs `:819-821`; `components.ex:687`, `:820`                                                                                  | the all-matching options disappear for no visible reason            | fix         |
 | A malformed filter in the URL (bad date, unknown sort) raises during render, because the template calls `SearchParams.new/1` for the modals; the code comment says failing loud is deliberate                                    | `index.html.heex:688`, `:699`; `search_params.ex:110-119`                                                                                      | a crashed page instead of an error message                          | decide      |
-| A `cancel` or `cancel-run` event with a non-UUID id, or `bulk-rerun` type `single` for a work order not on the page, crashes the LiveView, unlike `rerun`, which validates                                                       | `index.ex:593-598`, `:733-740`; `cancel_helper.ex:311`; `runs.ex:74-84`                                                                        | the page reconnects; nothing is cancelled                           | fix         |
+| A `bulk-rerun` of type `single` for a work order not on the page, crashes the LiveView, unlike `rerun`, which validates                                                                                                          | `index.ex:733-740`                                                                                                                             | the page reconnects; nothing is cancelled                           | fix         |
 | Step rerun icons use the step id as the DOM id, and a step carried into a retry appears under both runs once "show previous" is on                                                                                               | `components.ex:508`, `:527`, `workorder_component.ex:334-335`                                                                                  | duplicate ids; tooltips can attach to the wrong element             | fix         |
 
 ### 6.2 Quirks and implementation details

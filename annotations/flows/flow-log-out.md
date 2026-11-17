@@ -10,15 +10,15 @@ trigger:
   surfaces:
     - shared-project-header               # account menu "Log out" (layout_components.ex:173-181), rendered by live.html.heex:29-31 and settings.html.heex:29
     - auth-confirmation-required          # "Log out" link on the lockout page (user_confirmation_required_live.html.heex:125-129)
-    - controller:user-log-out      # GET /users/log_out, UserSessionController.delete/2 (router.ex:66-71; user_session_controller.ex:69-73)
-    - pubsub:users_live:<user_id>         # the session's live_socket_id; disconnects that account's /live transports (user_auth.ex:120-126)
+    - controller:user-log-out      # GET /users/log_out, UserSessionController.delete/2 (router.ex:93-98; user_session_controller.ex:69-73)
+    - pubsub:users_live:<user_id>         # the session's live_socket_id; disconnects that account's /live transports (user_auth.ex:121-127)
     - auth-login                          # /users/log_in with "Logged out successfully."
   reachable_when:
-    - none for the route itself: /users/log_out sits in the plain `:browser` scope, outside both `require_authenticated_user` and `redirect_if_user_is_authenticated` (router.ex:66-71), so a locked-out, TOTP-pending or signed-out browser reaches it (confirmation_lockout.ex:16-17)
+    - none for the route itself: /users/log_out sits in the plain `:browser` scope, outside both `require_authenticated_user` and `redirect_if_user_is_authenticated` (router.ex:93-98), so a locked-out, TOTP-pending or signed-out browser reaches it (confirmation_lockout.ex:16-17)
     - the account menu renders only when `current_user` is assigned (live.html.heex:29-31)
 
 inherits:
-  - shared-authenticated-session    # writes live_socket_id on every request (user_auth.ex:175-192) and refuses the deleted token on the next request or LiveView mount (its S02 gate; init_assigns.ex:17-24)
+  - shared-authenticated-session    # writes live_socket_id on every request (user_auth.ex:176-193) and refuses the deleted token on the next request or LiveView mount (its S02 gate; init_assigns.ex:17-24)
 
 url_params: []
 
@@ -29,17 +29,17 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/log_out  UserSessionController :delete      # router.ex:71
+    - get /users/log_out  UserSessionController :delete      # router.ex:98
   events: []                                                 # both entries are plain links, not handle_event
   js_hooks: []
-  policies: []                                               # no policy; the route is unauthenticated (router.ex:66-71)
+  policies: []                                               # no policy; the route is unauthenticated (router.ex:93-98)
   workers: []
   api_endpoints: []
   emails: []
   config:
     - :lightning, :user_menu_items                           # layout_components.ex:54-58
   not_reachable_here:
-    - UserAuth.disconnect_user_sockets/1 (user_auth.ex:163-166); account-wide revocation, owned by flow-account-revocation-teardown; logout does not call it (user_auth.ex:161)
+    - UserAuth.disconnect_user_sockets/1 (user_auth.ex:164-167); account-wide revocation, owned by flow-account-revocation-teardown; logout does not call it (user_auth.ex:162)
     - UserSessionController.exchange_token/2 (user_session_controller.ex:55-67); owned by flow-account-revocation-teardown
 
 related:
@@ -77,18 +77,15 @@ mainly on shared computers.
 
 ### Most surprising behaviours
 
-- **(3)** A page the previous user was being sent to can carry over, so the next
-  person to sign in on that browser may land on the previous user's page,
-  usually as an access error. (6.1)
-- **(3)** Logging out is a plain link with no confirmation page, so following it
-  signs you out and loses unsaved work on the page. (6.1)
+- **(3)** A stored page can carry over, so the next login on that browser lands
+  on a stale stored path, usually as an access error. (6.1)
 - **(4)** Logging out briefly disconnects and reloads the account's pages on
   every other browser, even though they stay signed in. There's no "log out
   everywhere" option; only a password change does that. (S05, 6.2, 8)
 
 ## 3. Who can do what
 
-Sources: `router.ex:66-71` (no auth pipeline), `live.html.heex:29-31`,
+Sources: `router.ex:93-98` (no auth pipeline), `live.html.heex:29-31`,
 `settings.html.heex:29`, `user_confirmation_required_live.html.heex:125-129`,
 `user_session_controller.ex:69-73`.
 
@@ -100,7 +97,7 @@ Sources: `router.ex:66-71` (no auth pipeline), `live.html.heex:29-31`,
 
 **Preconditions beyond role**
 
-- none. There is no policy or confirmation step on this route (`router.ex:71`;
+- none. There is no policy or confirmation step on this route (`router.ex:98`;
   6.1).
 - Under `custom-menus` the account menu entry is whatever the configured
   component renders (`layout_components.ex:135-140`).
@@ -118,22 +115,22 @@ Sources: `router.ex:66-71` (no auth pipeline), `live.html.heex:29-31`,
 - Puts the info flash "Logged out successfully."
   (`user_session_controller.ex:69-73`).
 - Deletes the `user_tokens` row for this session's token in context `session`
-  (`user_auth.ex:115-116`; `accounts.ex:1011-1014`; `user_token.ex:229-231`).
+  (`user_auth.ex:116-117`; `accounts.ex:1011-1014`; `user_token.ex:229-231`).
   Other `session` rows for the account are kept (`user_auth_test.exs:296-318`).
 - Broadcasts `disconnect` on the session's `live_socket_id`, read from the
   session rather than derived from the user, so a session still carrying the
-  retired token-keyed id is reached too (`user_auth.ex:120-126`;
+  retired token-keyed id is reached too (`user_auth.ex:121-127`;
   `user_auth_test.exs:249-263`, `:265-294`).
 - Renews the session id and clears the session, keeping only `user_return_to`
-  (`user_auth.ex:96-103`, `:128-129`).
+  (`user_auth.ex:97-104`, `:129-130`).
 - Expires the `_lightning_web_user_remember_me` cookie (max age 0)
-  (`user_auth.ex:20`, `:130`; `user_auth_test.exs:230-245`).
-- Redirects to `/users/log_in` (`user_auth.ex:131`).
+  (`user_auth.ex:21`, `:131`; `user_auth_test.exs:230-245`).
+- Redirects to `/users/log_in` (`user_auth.ex:132`).
 - No audit event, email, Oban job or telemetry.
 
 **Hop 3: pubsub:users_live:<user_id>**
 
-- Since `live_socket_id` is per user (`user_auth.ex:140-151`, `:186-192`), every
+- Since `live_socket_id` is per user (`user_auth.ex:141-152`, `:187-193`), every
   `/live` transport the account has open on every browser closes and the client
   reconnects. Pages in a browser whose session was just cleared fail the mount
   gate and redirect to `/users/log_in` (`endpoint.ex:18-20`;
@@ -145,7 +142,7 @@ Sources: `router.ex:66-71` (no auth pipeline), `live.html.heex:29-31`,
 
 - Renders the flash (auth-login S16). `fetch_current_user/2` finds no token and
   no cookie, so the login form renders rather than redirecting to /projects
-  (`user_auth.ex:175-206`, `:271-279`).
+  (`user_auth.ex:176-207`, `:263-271`).
 
 **Deferred side effects**
 
@@ -184,7 +181,7 @@ Feature: Log out
     And I see "Logged out successfully."
     When I visit "/projects"
     Then I am on "/users/log_in"
-    # layout_components.ex:173-181; user_session_controller.ex:69-73; user_auth.ex:114-131; accounts.ex:1011-1014
+    # layout_components.ex:173-181; user_session_controller.ex:69-73; user_auth.ex:115-132; accounts.ex:1011-1014
     # user_session_controller_test.exs:279-288; user_auth_test.exs:230-245
 
   @S02 @variant:require-email-verification
@@ -196,7 +193,7 @@ Feature: Log out
     Then I am on "/users/log_in"
     And I see "Logged out successfully."
     And my session no longer opens "/users/confirm-required"
-    # user_confirmation_required_live.html.heex:125-129; router.ex:66-71; confirmation_lockout.ex:16-17
+    # user_confirmation_required_live.html.heex:125-129; router.ex:93-98; confirmation_lockout.ex:16-17
     # confirmation_lockout_recovery_test.exs:46-80 (token stops resolving); user_confirmation_required_live_test.exs:48 (link present)
 
   @S03
@@ -207,7 +204,7 @@ Feature: Log out
     And the browser session cookie is discarded
     And I visit "/projects"
     Then I am on "/users/log_in"
-    # user_auth.ex:16-21, :130, :195-206; user_auth_test.exs:230-245 (cookie max_age 0, token deleted)
+    # user_auth.ex:17-22, :131, :196-207; user_auth_test.exs:230-245 (cookie max_age 0, token deleted)
 
   @S04
   Scenario: Other open tabs in the same browser are signed out too
@@ -215,7 +212,7 @@ Feature: Log out
     Given I am signed in and have "/projects" open in two tabs of the same browser
     When I log out in the first tab
     Then the second tab eventually is on "/users/log_in"
-    # user_auth.ex:120-126; endpoint.ex:18-20; init_assigns.ex:17-24
+    # user_auth.ex:121-127; endpoint.ex:18-20; init_assigns.ex:17-24
     # user_auth_test.exs:296-318 asserts the broadcast only; the transport reconnect is read from code (6.5)
 
   @S05
@@ -226,7 +223,7 @@ Feature: Log out
     When Amara logs out on browser A
     Then browser B is still on "/projects"
     And reloading "/projects" on browser B shows the projects page
-    # user_auth.ex:105-113, :115-116; accounts.ex:1011-1014
+    # user_auth.ex:106-114, :116-117; accounts.ex:1011-1014
     # user_auth_test.exs:296-318 (other device's token still resolves)
 ```
 
@@ -239,22 +236,20 @@ beyond the steps above.
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                               | Where                                                                                               | What a user sees                                                                                      | Disposition |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------- |
-| Logout is a plain GET with no confirmation page                                                                                                                                                                    | `router.ex:71`; `user_session_controller.ex:69-73`; `user_confirmation_required_live.html.heex:126` | being signed out unexpectedly after following a link, losing unsaved LiveView form state              | decide      |
-| `renew_session/1` carries `user_return_to` across logout, so a path stored before logging out (for example by the re-auth redirect) sends the next person who signs in on that browser to the previous user's page | `user_auth.ex:96-103`, `:128-129`, `:396-407`, `:496-512`                                           | after signing in, landing on another account's page, typically an access error instead of "/projects" | decide      |
+| What                                                                                                                                                                                            | Where                                                     | What a user sees                                                                                      | Disposition |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------- |
+| `renew_session/1` carries `user_return_to` across logout, so a path stored before logging out (for example by the re-auth redirect) sends the next login on that browser to a stale stored path | `user_auth.ex:97-104`, `:129-130`, `:382-393`, `:470-486` | after signing in, landing on another account's page, typically an access error instead of "/projects" | decide      |
 
 ### 6.2 Quirks and implementation details
 
 | What                                                                                                                                                                           | Where                                                                                                  | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ----------- |
-| Logging out briefly disconnects and remounts the account's LiveView pages on every other browser, though they stay signed in; same row as flow-account-revocation-teardown 6.2 | `user_auth.ex:105-113`, `:120-126`; `user_auth_test.exs:296-318`                                       | preserve    |
+| Logging out briefly disconnects and remounts the account's LiveView pages on every other browser, though they stay signed in; same row as flow-account-revocation-teardown 6.2 | `user_auth.ex:106-114`, `:121-127`; `user_auth_test.exs:296-318`                                       | preserve    |
 | The account menu uses `navigate` (live navigation) to a controller route, so the client falls back to a full page load; the lockout page uses `href`                           | `layout_components.ex:174-180`; `user_confirmation_required_live.html.heex:126`                        | preserve    |
-| The action is `delete/2` and the test block says "DELETE /users/log_out", but the route is GET                                                                                 | `router.ex:71`; `user_session_controller_test.exs:278`                                                 | decide      |
+| The action is `delete/2` and the test block says "DELETE /users/log_out", but the route is GET                                                                                 | `router.ex:98`; `user_session_controller_test.exs:278`                                                 | decide      |
 | A signed-out visitor to /users/log_out still sees "Logged out successfully."                                                                                                   | `user_session_controller_test.exs:290-297`; `user_auth_test.exs:322-327`                               | preserve    |
-| The flash is put before the session is cleared and still arrives, because Phoenix writes the flash to the session when the response is sent                                    | `user_session_controller.ex:69-73`; `user_auth.ex:128-129`; `user_session_controller_test.exs:285-287` | preserve    |
-| The broadcast topic is read from the session, not derived from the user, so sessions still holding the retired token-keyed id are reached                                      | `user_auth.ex:120-126`; `user_auth_test.exs:249-263`                                                   | preserve    |
-| No audit event is written for logout                                                                                                                                           | `user_auth.ex:114-132`                                                                                 | decide      |
+| The flash is put before the session is cleared and still arrives, because Phoenix writes the flash to the session when the response is sent                                    | `user_session_controller.ex:69-73`; `user_auth.ex:129-130`; `user_session_controller_test.exs:285-287` | preserve    |
+| The broadcast topic is read from the session, not derived from the user, so sessions still holding the retired token-keyed id are reached                                      | `user_auth.ex:121-127`; `user_auth_test.exs:249-263`                                                   | preserve    |
 
 ### 6.3 Unreachable or dead code
 
@@ -291,7 +286,7 @@ beyond the steps above.
 ## 8. Open questions
 
 - Should logout be a POST or DELETE, as the action name and test describe
-  suggest (6.1, 6.2)?
+  suggest (6.2)?
 - Should `user_return_to` be cleared on logout so it can't carry over to the
   next account (6.1)?
 - Should logging out be audited (6.2)?

@@ -6,13 +6,13 @@ owner:
 
 trigger:
   entry: auth-login # "Forgot your password?" (user_session_html/new.html.heex:92-96)
-  exit: projects-dashboard # /projects, the signed-in landing (user_auth.ex:514)
+  exit: projects-dashboard # /projects, the signed-in landing (user_auth.ex:488)
   surfaces:
     - auth-login # "Forgot your password?" link to /users/reset_password
-    - auth-reset-password # request: GET/POST /users/reset_password (router.ex:183-184; user_reset_password_controller.ex:8-26)
+    - auth-reset-password # request: GET/POST /users/reset_password (router.ex:231-232; user_reset_password_controller.ex:8-26)
     - email:password-reset # "Finish resetting your password" (user_notifier.ex:251-265)
-    - auth-reset-password # set password: GET/PUT /users/reset_password/:token (router.ex:185-186; user_reset_password_controller.ex:28-46)
-    - pubsub:user_socket:<user_id> # disconnect broadcast after a reset (accounts.ex:1328; user_auth.ex:163-166); the revocation is flow-account-revocation-teardown
+    - auth-reset-password # set password: GET/PUT /users/reset_password/:token (router.ex:233-234; user_reset_password_controller.ex:28-46)
+    - pubsub:user_socket:<user_id> # disconnect broadcast after a reset (accounts.ex:1328; user_auth.ex:164-167); the revocation is flow-account-revocation-teardown
     - pubsub:users_live:<user_id>
     - auth-login # "Password reset successfully." and the new password (user_reset_password_controller.ex:38-41)
     - auth-two-factor # MFA accounts only (user_session_controller.ex:40-46)
@@ -20,7 +20,7 @@ trigger:
   reachable_when:
     - the browser has no valid session or remember-me cookie; every hop up to
       and including log in sits behind redirect_if_user_is_authenticated
-      (`router.ex:175-186`; `user_auth.ex:271-279`)
+      (`router.ex:223-234`; `user_auth.ex:263-271`)
     - the email reaches the person only when a mail provider is configured
       (variant `mail-provider`)
 
@@ -50,7 +50,7 @@ inventory:
   js_hooks: []
   policies:
     - LightningWeb.UserAuth.redirect_if_user_is_authenticated/2
-      (user_auth.ex:271-279)
+      (user_auth.ex:263-271)
     - LightningWeb.UserResetPasswordController.get_user_by_reset_password_token/2
       plug (user_reset_password_controller.ex:6, :48-58)
     - Lightning.Accounts.login_blocked?/1 (accounts.ex:329-345)
@@ -118,7 +118,7 @@ edge is emails that silently don't arrive.
 
 ## 3. Who can do what
 
-Sources: `router.ex:175-193`; `user_auth.ex:271-279`, `:288-303`;
+Sources: `router.ex:223-241`; `user_auth.ex:263-271`, `:280-295`;
 `user_reset_password_controller.ex:6`, `:48-58`;
 `user_session_controller.ex:31-52`; `user_totp_controller.ex:7`, `:33-41`. No
 policy module; access is route scope, the token plug and the login gate.
@@ -154,7 +154,7 @@ policy module; access is route scope, the token plug and the login gate.
 - Set password hop: `users.hashed_password` update and delete of every
   `user_tokens` row for the user, in one transaction (`accounts.ex:1318-1325`;
   `user_token.ex:236-238`).
-- Log in hop: `user_tokens` insert, context `session` (`user_auth.ex:28-31`).
+- Log in hop: `user_tokens` insert, context `session` (`user_auth.ex:29-32`).
 - Two-factor hop: `user_totps.last_totp_at`, or the used backup code's `used_at`
   (auth-two-factor; `accounts.ex:472-483`).
 
@@ -165,17 +165,17 @@ policy module; access is route scope, the token plug and the login gate.
   in our system, you will receive instructions to reset your password shortly."
   and redirect to /projects, which a signed-out browser bounces to /users/log_in
   after storing /projects as the return path
-  (`user_reset_password_controller.ex:20-25`; `router.ex:349`;
-  `user_auth.ex:296-298`, `:490-492`).
+  (`user_reset_password_controller.ex:20-25`; `router.ex:397`;
+  `user_auth.ex:288-290`, `:464-466`).
 - Set password hop: `disconnect` broadcast on `user_socket:<id>` and
-  `users_live:<id>` after commit (`accounts.ex:1328`; `user_auth.ex:163-166`);
+  `users_live:<id>` after commit (`accounts.ex:1328`; `user_auth.ex:164-167`);
   flash "Password reset successfully." and redirect to /users/log_in without a
   session (`user_reset_password_controller.ex:34-41`).
 - Log in hop: session renewed; MFA accounts get `user_totp_pending` and go to
   /users/two-factor, others go to the stored return path or /projects
-  (`user_session_controller.ex:40-51`; `user_auth.ex:54-70`, `:96-103`).
+  (`user_session_controller.ex:40-51`; `user_auth.ex:55-71`, `:97-104`).
 - Two-factor hop: pending flag cleared, redirect to the return path or /projects
-  (`user_totp_controller.ex:20-23`; `user_auth.ex:486-488`).
+  (`user_totp_controller.ex:20-23`; `user_auth.ex:460-462`).
 
 **Deferred side effects** (later, elsewhere)
 
@@ -227,7 +227,7 @@ Feature: Forgot password
     When I log in with "amara@example.org" and "a long new password"
     Then I am on "/projects"
     # user_session_html/new.html.heex:92-96; user_reset_password_controller.ex:12-46; accounts.ex:1268-1334
-    # user_notifier.ex:251-265; user_session_controller.ex:15-51; user_auth.ex:63-70, :514
+    # user_notifier.ex:251-265; user_session_controller.ex:15-51; user_auth.ex:64-71, :488
     # user_reset_password_controller_test.exs:20-35 (request), :86-105 (reset, no session); no test walks the whole journey
 
   @S02
@@ -292,7 +292,7 @@ browsers is flow-account-revocation-teardown.
 
 | What                                                                                                                                                                                                                                                                    | Where                                                                                                                        | Disposition |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| The request hop redirects to /projects, which a signed-out browser bounces to /users/log_in after overwriting any stored return path with "/projects"; a deep link that brought the visitor to log in is lost once they use "Forgot your password?" in the same browser | `user_reset_password_controller.ex:25`; `router.ex:349`; `user_auth.ex:296-298`, `:490-492`, `:96-103`; flow-login-return-to | decide      |
+| The request hop redirects to /projects, which a signed-out browser bounces to /users/log_in after overwriting any stored return path with "/projects"; a deep link that brought the visitor to log in is lost once they use "Forgot your password?" in the same browser | `user_reset_password_controller.ex:25`; `router.ex:397`; `user_auth.ex:288-290`, `:464-466`, `:97-104`; flow-login-return-to | decide      |
 | A successful reset lands on log in rather than signing in, so the journey needs the password typed twice more (deliberate: a token that reaches the wrong person doesn't sign them in)                                                                                  | `user_reset_password_controller.ex:34-41`; `user_reset_password_controller_test.exs:95-96`                                   | preserve    |
 | A disabled or scheduled-for-deletion account receives the email and completes the reset before being told at log in that it is blocked                                                                                                                                  | `accounts.ex:318-320`; `user_notifier_test.exs:573-585`; `user_session_controller.ex:31-38`                                  | decide      |
 | The link can be opened in a different browser from the one that requested it; nothing ties the token to the requesting session                                                                                                                                          | `user_token.ex:142-153`, `:168-188`                                                                                          | preserve    |

@@ -9,13 +9,13 @@ trigger:
   new_route:
   old_route_disposition: unchanged
   reachable_when:
-    - first-setup-open only: `allow_first_setup` is true, which bootstrap sets whenever `SERVICE_ACCOUNT_PUBLIC_KEY` is unset (`lib/lightning/config/bootstrap.ex:230-234`). Otherwise an HTTP request gets a plain-text 404 from BlockRoutes (`router.ex:31-42`; `plugs/block_routes.ex:12-33`) and a live navigation is redirected to /projects by mount (`first_setup_live/superuser.ex:15-21`)
+    - first-setup-open only: `allow_first_setup` is true, which bootstrap sets whenever `SERVICE_ACCOUNT_PUBLIC_KEY` is unset (`lib/lightning/config/bootstrap.ex:230-234`). Otherwise an HTTP request gets a plain-text 404 from BlockRoutes (`router.ex:32-43`; `plugs/block_routes.ex:12-33`) and a live navigation is redirected to /projects by mount (`first_setup_live/superuser.ex:15-21`)
     - no user has role superuser (`accounts.ex:1341-1344`). Otherwise an HTTP request is redirected to /projects by the FirstSetup plug (`plugs/first_setup.ex:19-21`) and a live navigation is push-navigated to /projects (`superuser.ex:69-73`)
-    - no session needed: the route is piped through `:browser` only, with no `:require_authenticated_user` and no `on_mount` (`router.ex:66-69`)
-    - forced: while first-setup-open and no superuser exists, the FirstSetup plug in the `:browser` pipeline redirects every other browser request to /first_setup (`router.ex:29`; `plugs/first_setup.ex:11-33`, `:27-32`); that gate is shared-authenticated-session S11
+    - no session needed: the route is piped through `:browser` only, with no `:require_authenticated_user` and no `on_mount` (`router.ex:93-96`)
+    - forced: while first-setup-open and no superuser exists, the FirstSetup plug in the `:browser` pipeline redirects every other browser request to /first_setup (`router.ex:30`; `plugs/first_setup.ex:11-33`, `:27-32`); that gate is shared-authenticated-session S11
 
 inherits:
-  - shared-authenticated-session     # the :browser pipeline only (fetch_current_user, router.ex:28) and its S11 first-setup redirect, which is how visitors arrive here. Its S01 to S06 gates and InitAssigns do not run: no :require_authenticated_user and no on_mount on this route (router.ex:66-69)
+  - shared-authenticated-session     # the :browser pipeline only (fetch_current_user, router.ex:29) and its S11 first-setup redirect, which is how visitors arrive here. Its S01 to S06 gates and InitAssigns do not run: no :require_authenticated_user and no on_mount on this route (router.ex:93-96)
   - shared-flash-messages   # added by lead (final pass)
 
 url_params: []                        # mount and handle_params ignore params (superuser.ex:14, :25-27, :69)
@@ -27,21 +27,21 @@ config_variants:
 
 inventory:
   routes:
-    - live /first_setup  FirstSetupLive.Superuser :show      # router.ex:69, outside any explicit live_session
+    - live /first_setup  FirstSetupLive.Superuser :show      # router.ex:96, outside any explicit live_session
   events:
     - FirstSetupLive.Superuser#validate                       # superuser.ex:29-42
     - FirstSetupLive.Superuser#save                           # superuser.ex:44-67
   js_hooks: []                                                # the layout's ToggleSidebarViaCtrlM and SidebarHoverDelay belong to shared-authenticated-session
   policies:
     - LightningWeb.Plugs.FirstSetup (plugs/first_setup.ex:11-33)
-    - LightningWeb.Plugs.BlockRoutes with {"/first_setup", :allow_first_setup, ...} (router.ex:37-41; plugs/block_routes.ex:12-33)
+    - LightningWeb.Plugs.BlockRoutes with {"/first_setup", :allow_first_setup, ...} (router.ex:38-42; plugs/block_routes.ex:12-33)
     - FirstSetupLive.Superuser.mount/3 flag check (superuser.ex:17-21)
     - FirstSetupLive.Superuser.apply_action/3 superuser check (superuser.ex:69-73)
   workers: []
   api_endpoints: []
   emails: []                                                  # register_superuser sends nothing (accounts.ex:543-547)
   config:
-    - :lightning, :allow_first_setup                          # bootstrap.ex:234; plugs/first_setup.ex:12; router.ex:39; superuser.ex:17
+    - :lightning, :allow_first_setup                          # bootstrap.ex:234; plugs/first_setup.ex:12; router.ex:40; superuser.ex:17
     - SERVICE_ACCOUNT_PUBLIC_KEY                              # bootstrap.ex:230-233, sets the flag above
     - :lightning, :require_email_verification                 # accounts.ex:1362-1368, see 6.1
     - Lightning.Extensions account_hook adapter               # Services.AccountHook.handle_register_superuser/1 (services/account_hook.ex:19-21)
@@ -112,7 +112,7 @@ how firmly it shuts afterwards, needs explaining.
 
 ## 3. Who can do what
 
-Sources: `router.ex:21-43`, `:66-69`; `plugs/first_setup.ex:11-33`;
+Sources: `router.ex:22-44`, `:93-96`; `plugs/first_setup.ex:11-33`;
 `plugs/block_routes.ex:12-33`; `superuser.ex:14-22`, `:44-81`. There is no
 policy module: the page has no role check, only the instance flag and the "no
 superuser yet" state.
@@ -125,7 +125,7 @@ superuser yet" state.
 
 **Preconditions beyond role**
 
-- No session is required (`router.ex:66-69`).
+- No session is required (`router.ex:93-96`).
 - The flag is not an independent setting: it is true exactly when
   `SERVICE_ACCOUNT_PUBLIC_KEY` is unset (`bootstrap.ex:230-234`).
 
@@ -278,7 +278,7 @@ Feature: First setup
     When a live navigation takes me to "/first_setup"
     Then I land on "/projects"
     And no registration form is shown
-    # superuser.ex:69-73; router.ex:69 and :288; not covered by a test
+    # superuser.ex:69-73; router.ex:96 and :288; not covered by a test
 
   @S09 @variant:first-setup-closed
   Scenario: Instances administered by a service account refuse the page
@@ -287,7 +287,7 @@ Feature: First setup
     And there is no superuser
     When I visit "/first_setup"
     Then I get a 404 with "First setup is disabled for this instance."
-    # router.ex:37-41; plugs/block_routes.ex:12-19, :26-33; first_setup_live_test.exs:129-133, :144-147
+    # router.ex:38-42; plugs/block_routes.ex:12-19, :26-33; first_setup_live_test.exs:129-133, :144-147
 
   @S10 @variant:first-setup-closed
   Scenario: Instances administered by a service account refuse live navigation to the page
@@ -329,7 +329,7 @@ auth-reset-password S14 assert it on their own routes.
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------- |
 | No `on_mount`: no `current_user`, sidebar preference or banners are assigned; the layout survives only because `is_first_setup` hides the side menu items, Admin menu and project picker that read `@current_user`         | `superuser.ex:18`; `layouts/live.html.heex:29`, `:42-108`, `:109-113`   | preserve    |
 | HTTP visits after setup are redirected by the plug to "/projects"; live navigations are push-navigated by the view to `dashboard_index_path`, the same path but a different code path and a full load across live_sessions | `plugs/first_setup.ex:19-21`; `superuser.ex:73`; `config/config.exs:53` | preserve    |
-| The token exchange route is behind `redirect_if_user_is_authenticated`. A browser already signed in as another (non-superuser) account keeps that session; the new superuser's auth token is never used and expires        | `router.ex:175-180`; `user_auth.ex:271-279`                             | decide      |
+| The token exchange route is behind `redirect_if_user_is_authenticated`. A browser already signed in as another (non-superuser) account keeps that session; the new superuser's auth token is never used and expires        | `router.ex:223-228`; `user_auth.ex:263-271`                             | decide      |
 | The flag is not its own setting: it is the absence of `SERVICE_ACCOUNT_PUBLIC_KEY`, so an operator can't turn first setup off without configuring a service account                                                        | `bootstrap.ex:230-234`; `bootstrap_test.exs:1445`, `:1463`              | decide      |
 | Errors show only for fields the user has touched; "Save" starts disabled because the empty changeset is invalid                                                                                                            | `new_inputs.ex:432-433`; `superuser.html.heex:59-65`; `superuser.ex:79` | preserve    |
 | "Save" shows "Saving" while the submit is in flight                                                                                                                                                                        | `superuser.html.heex:62`                                                | preserve    |
@@ -357,7 +357,8 @@ auth-reset-password S14 assert it on their own routes.
   the request through.
 - With first-setup-closed and no superuser, the instance has no administrator
   until the service account creates one through `/api/users`
-  (`router.ex:96-101`). That path was not followed here.
+  (`router.ex:149-150`; only a service account's access token is accepted there,
+  `policies/users.ex:26-28`). That path was not followed here.
 
 ## 7. Not migrating
 
@@ -380,7 +381,7 @@ auth-reset-password S14 assert it on their own routes.
   deletes the token, starts a session and redirects to /projects, where
   "Superuser account created." shows (`superuser.ex:51-62`;
   `accounts.ex:1051-1071`; `user_session_controller.ex:55-67`;
-  `user_auth.ex:54-70`, `:514`; asserted end to end in
+  `user_auth.ex:55-71`, `:488`; asserted end to end in
   `first_setup_live_test.exs:31-52`). Edge cases it owns: a stalled redirect
   past 30 seconds ("Invalid token" on log in) and a browser already signed in
   (6.2). Surfaces: first-setup, controller:token-exchange, projects-dashboard.

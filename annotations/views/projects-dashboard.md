@@ -10,7 +10,7 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the user has a valid, active session (see shared-authenticated-session)
-    - the deployment's `Lightning.Extensions.Routing` config still maps `/projects` to `DashboardLive.Index` (config/config.exs:50-53, router.ex:340-356)
+    - the deployment's `Lightning.Extensions.Routing` config still maps `/projects` to `DashboardLive.Index` (config/config.exs:50-53, router.ex:388-404)
 
 inherits:
   - shared-authenticated-session    # login redirect, lockout, sidebar toggle, book-a-demo banner in the :banner slot (index.ex:22-27, init_assigns.ex:46-54)
@@ -30,8 +30,8 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects  DashboardLive.Index :index          # config-injected, live_session :services (config/config.exs:50-53, router.ex:340-356)
-    - get /  Plugs.Redirect to: /projects                 # router.ex:329
+    - live /projects  DashboardLive.Index :index          # config-injected, live_session :services (config/config.exs:50-53, router.ex:388-404)
+    - get /  Plugs.Redirect to: /projects                 # router.ex:377
   events:
     - DashboardLive.UserProjectsSection#sort
     - DashboardLive.ProjectCreationModal#validate
@@ -165,15 +165,17 @@ picker tree via shared-project-header; `projects` again for the unused
 `:assign_projects` assign (`hooks.ex:197`)
 
 **Writes**: `projects` (insert), `project_users` (insert, the creator as owner)
-(`projects.ex:562-575`, `extensions/project_hook.ex:14-18`)
+(`projects.ex:571-586`, `extensions/project_hook.ex:14-18`)
 
 **Immediate side effects** (in the same request)
 
 - PubSub `ProjectCreated` on `projects_events:all` after commit
-  (`projects.ex:571-574`, `projects/events.ex:81-86`, `:163`)
+  (`projects.ex:582-584`, `projects/events.ex:81-86`, `:163`)
 - No email: `schedule_email?` is false (`project_creation_modal.ex:55`,
-  `projects.ex:565-567`)
-- No audit event (`projects.ex:562-575`)
+  `projects.ex:576-578`)
+- Audit events "created" and one "collaborator_added" for the creator, written
+  in the same transaction with the creator as actor (`projects.ex:571-596`,
+  `projects/audit.ex:51-66`)
 
 **Deferred side effects** (later, elsewhere)
 
@@ -182,12 +184,12 @@ picker tree via shared-project-header; `projects` again for the unused
 **External, non-transactional effects**
 
 - none in the default adapter; a `project-hook` adapter runs inside the same
-  transaction (`projects.ex:563-564`)
+  transaction (`projects.ex:572-574`)
 
 **Depends on config**
 
 - `Lightning.Extensions.Routing` injects the route and its live_session options
-  (`config/config.exs:50-53`, `router.ex:340-356`)
+  (`config/config.exs:50-53`, `router.ex:388-404`)
 - `Lightning.Extensions.project_hook` (`config/config.exs:47`,
   `services/project_hook.ex:14-16`)
 
@@ -306,7 +308,7 @@ Feature: Projects
     And I click "Create project"
     Then I am on "/projects" and see "Project created successfully"
     And "my-awesome-project" is listed with role "Owner"
-    # project_creation_modal.ex:39-62; projects.ex:562-575; project.ex:282-302, :304-323
+    # project_creation_modal.ex:39-62; projects.ex:571-586; project.ex:282-302, :304-323
     # dashboard_live_test.exs:243-269 (project created and listed; role read from code)
 
   @S10
@@ -359,7 +361,7 @@ Feature: Projects
     # Value: the creator is not sent an access notice for something they just did themselves.
     When I create project "my-awesome-project"
     Then the flow "flow-collaborator-added-email" has not started for me
-    # project_creation_modal.ex:55; projects.ex:562-568, :836-847
+    # project_creation_modal.ex:55; projects.ex:571-578, :836-847
 
   @S16
   Scenario: The welcome text points to help
@@ -375,7 +377,7 @@ Feature: Projects
     Given I am logged in
     When I visit "/"
     Then I am on "/projects"
-    # router.ex:329; plugs/redirect.ex (call/2). Signed out, "/projects" then follows shared-authenticated-session S01.
+    # router.ex:377; plugs/redirect.ex (call/2). Signed out, "/projects" then follows shared-authenticated-session S01.
 
   @S18
   Scenario: The owner lands here after scheduling deletion
@@ -391,7 +393,15 @@ Feature: Projects
     Given the flow "flow-invite-new-collaborator" has added me as an editor of "Malawi HIV"
     And I have signed in
     Then I am on "/projects" and see "Malawi HIV" with role "Editor"
-    # user_auth.ex:514; flow-invite-new-collaborator S01; the row click is S08
+    # user_auth.ex:488; flow-invite-new-collaborator S01; the row click is S08
+
+  @S20
+  Scenario: Creating a project records who created it
+    # Value: the project's audit trail starts with who made it and who they made its first member.
+    When I create project "my-awesome-project"
+    Then an audit event "created" is recorded for it with me as the actor, carrying its name and description
+    And an audit event "collaborator_added" is recorded for me as its owner
+    # projects.ex:571-596, projects/audit.ex:51-66, project_creation_modal.ex:55
 ```
 
 ## 6. Unclear value
@@ -422,8 +432,7 @@ Feature: Projects
 | The modal and its form are always in the page, hidden; both create buttons only reveal it client-side                                                                                                                                  | `index.ex:49-54`; `user_projects_section.ex:69`, `:75`                                           | decide      |
 | The modal's close button has id `close-credential-modal-type-picker`, copied from the credential modal                                                                                                                                 | `project_creation_modal.ex:84`                                                                   | fix         |
 | An unknown sort column is stored in `sort_key`, so no header shows as active and the next "Name" click sorts A to Z rather than toggling                                                                                               | `user_projects_section.ex:24-37`; `table_helpers.ex:110-118`                                     | decide      |
-| The list never updates live: being added to or removed from a project elsewhere, or another user creating one, shows only after reload; `ProjectCreated` is broadcast but nothing in `lib/` subscribes                                 | `user_projects_section.ex:15-22`; `projects.ex:571-574`; `projects/events.ex:81-86`, `:140-142`  | decide      |
-| Creating a project writes no audit event                                                                                                                                                                                               | `projects.ex:562-575`; `extensions/project_hook.ex:14-18`                                        | decide      |
+| The list never updates live: being added to or removed from a project elsewhere, or another user creating one, shows only after reload; `ProjectCreated` is broadcast but nothing in `lib/` subscribes                                 | `user_projects_section.ex:15-22`; `projects.ex:582-584`; `projects/events.ex:81-86`, `:140-142`  | decide      |
 | The greeting depends on the browser's clock ("Good evening, Ama. You're up late!" from 10pm to 3am)                                                                                                                                    | `assets/js/hooks/index.ts:879-904`                                                               | decide      |
 | Without JavaScript the heading and welcome text are empty; the text exists only in a data attribute                                                                                                                                    | `components.ex:9-35`; `assets/js/hooks/index.ts:872-946`                                         | decide      |
 | The empty state shows the button text "Create a new one." above the message "No projects found."                                                                                                                                       | `table.ex:317-323`; `user_projects_section.ex:64-70`                                             | decide      |
@@ -459,8 +468,8 @@ Feature: Projects
   `form_changeset/2` apply ("main"). Whether anything reads `env` on a root
   project was not established (`project.ex:72-103`, `:138-160`, `:282-302`).
 - The route is config-injected; a deployment could map `/projects` to another
-  module (`config/config.exs:50-53`, `router.ex:340-356`). Every signed-in
-  redirect still targets `/projects` (`user_auth.ex:514`, `hooks.ex:51`,
+  module (`config/config.exs:50-53`, `router.ex:388-404`). Every signed-in
+  redirect still targets `/projects` (`user_auth.ex:488`, `hooks.ex:51`,
   `:307`).
 - Inheriting shared-project-header: that file's `reachable_when` assumes a
   project page, but its global picker, account menu and role-dependent menu
@@ -481,8 +490,7 @@ Feature: Projects
 - Should projects scheduled for deletion, and projects whose workflows are all
   deleted, be listed (see 6.1)?
 - Should a user whose only membership is a sandbox see it here (see 6.2)?
-- Should the list update live on membership changes, and should creation be
-  audited (see 6.2)?
+- Should the list update live on membership changes (see 6.2)?
 - Should creating a project take the user into it, and should "Last Updated"
   mean workflow edits, any project change or run activity (see 6.2)?
 - Should this view inherit shared-project-header, or should the global picker
@@ -493,7 +501,7 @@ Feature: Projects
 
 - `flow-login-return-to` (already proposed by the lead; referenced, not created
   here): signing in without a stored return path lands on `/projects`. Surfaces:
-  auth-login (`user_auth.ex:61-70`), projects-dashboard (`user_auth.ex:514`).
+  auth-login (`user_auth.ex:62-71`), projects-dashboard (`user_auth.ex:488`).
 
 ## Proposed shared
 

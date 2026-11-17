@@ -9,7 +9,7 @@ trigger:
   new_route:
   old_route_disposition: unchanged
   reachable_when:
-    - the session is admitted by shared-authenticated-session; the route sits in the `:settings` live_session, which mounts `InitAssigns` (`lib/lightning_web/router.ex:268`, `:285`)
+    - the session is admitted by shared-authenticated-session; the route sits in the `:settings` live_session, which mounts `InitAssigns` (`lib/lightning_web/router.ex:316`, `:333`)
     - the viewer is a superuser (`collection_live/index.ex:4`; gate owned by shared-admin-space S02, S03)
     - entered from the "Collections" item in the admin side menu (shared-admin-space S01; `settings.html.heex:70-71`, `index.ex:19`)
 
@@ -28,37 +28,37 @@ config_variants:
 
 inventory:
   routes:
-    - live /settings/collections  CollectionLive.Index :index   # router.ex:285
+    - live /settings/collections  CollectionLive.Index :index   # router.ex:333
   events:
     - CollectionLive.Index#sort                         # index.ex:27-46
     - CollectionLive.Index#delete_collection            # index.ex:48-64
     - CollectionLive.CollectionCreationModal#close_modal  # collection_creation_modal.ex:39-41
     - CollectionLive.CollectionCreationModal#validate   # collection_creation_modal.ex:43-54
-    - CollectionLive.CollectionCreationModal#save       # collection_creation_modal.ex:56-93
+    - CollectionLive.CollectionCreationModal#save       # collection_creation_modal.ex:56-102
   js_hooks:
     - ModalHook (assets/js/hooks/index.ts:522; live/components/modal.ex:37)   # every create, edit and delete modal; proposed shared-modal
   policies:
-    - Lightning.Policies.Users :access_admin_space via LightningWeb.Hooks :ensure_admin (index.ex:4; hooks.ex:40-53; policies/users.ex:19-21); owned by shared-admin-space
+    - Lightning.Policies.Users :access_admin_space via LightningWeb.Hooks :ensure_admin (index.ex:4; hooks.ex:40-53; policies/users.ex:30-32); owned by shared-admin-space
   workers: []
   api_endpoints: []
   emails: []
   config:
     - :lightning, Lightning.Extensions, :collection_hook via Lightning.Services.CollectionHook (services/collection_hook.ex:10-17); handle_create on create, handle_delete on delete
   not_reachable_here:
-    - Collections.get_collection/1 and /2, list_project_collections/2 (collections.ex:45-87); project tab and API only
-    - Collections item reads and writes (get, get_all, put, put_all, delete, delete_all) (collections.ex:181 onwards); API and project-tab preview only
+    - Collections.get_collection/2, get_collection_by_id/1, get_collection_for_project/2, resolve_collection/3, list_project_collections/2 (collections.ex:51-153); project tab and API only
+    - Collections item reads and writes (get, get_all, stream_all, put, put_all, delete, delete_all) (collections.ex:273 onwards); API and project-tab preview only
     - Lightning.Policies.Collections (every rule)
     - Table.empty_state non-interactive branch (table.ex:325-331); this view passes no `interactive` attr (index.ex:87-94), so the default `true` applies (table.ex:301)
-    - Collection `delete` virtual field (collection.ex:22); provisioner only (provisioner.ex:730-736)
+    - Collection `delete` virtual field (collection.ex:22); provisioner only (provisioner.ex:826-833)
     - Hooks :ensure_admin nil-user clause (hooks.ex:31-38); owned by shared-admin-space 6.3
 
 related:
   - project-settings-collections            # the same collections from inside one project; scenarios referenced below, differences in 6.2
-  - flow-download-collection                # a collection created or moved here is downloadable only from the project tab; this page has no download link, so it is not a surface of that flow
+  - flow-download-collection                # a collection created here is downloadable only from the project tab; this page has no download link, so it is not a surface of that flow
   - flow-sandbox-merge                      # a collection created here in a sandbox is created empty in the parent on merge (sandboxes.ex:1463-1475)
-  - flow-export-project-yaml                # exported YAML lists collection names, so a create, rename, move or delete here changes the next export (v2.ex:652-656)
-  - flow-github-sync-actions                # the provisioner writes a project's collections by id (provisioner.ex:557, :730-736); a rename or move here changes what the next sync sees
-  - admin-audit                             # lists audit events; this view writes none (6.2)
+  - flow-export-project-yaml                # exported YAML lists collection names, so a create, rename or delete here changes the next export (v2.ex:652-656)
+  - flow-github-sync-actions                # the provisioner writes a project's collections by id (provisioner.ex:647, :826-833); a rename here changes what the next sync sees
+  - admin-audit                             # lists audit events; create and rename write one (S14)
 flows:
   - flow-admin-collection-reaches-project
 ---
@@ -66,11 +66,11 @@ flows:
 ## 1. Purpose
 
 Superusers use this page to see every collection on the instance, which project
-owns it and how much storage it uses, and to create, rename, move and delete
+owns it and how much storage it uses, and to create, rename and delete
 collections in any project without being a member of it. Without it, an instance
 admin chasing storage use would have to open each project in turn, and a project
-whose admins can't or won't fix a collection (wrong name, wrong project, data
-that must be removed) would have nobody able to do it outside the API.
+whose admins can't or won't fix a collection (wrong name, data that must be
+removed) would have nobody able to do it outside the API.
 
 ## 2. What it does
 
@@ -86,10 +86,11 @@ that must be removed) would have nobody able to do it outside the API.
     different projects
   - On a plan that limits collections, creating one past the limit is refused
     with the plan's message
-- **Rename or move a collection**
-  - Superusers rename a collection, or move it to another project, keeping its
-    records
-  - A move into a project that already has that name is refused
+- **Rename a collection**
+  - Superusers rename a collection, keeping its records
+  - A collection's project is fixed once it is created: the project field is
+    shown but disabled when editing
+  - A rename to a name the project already uses is refused
 - **Delete a collection**
   - Superusers delete a collection and all its records, after confirming
   - Superusers close a form or confirmation without changing anything
@@ -98,13 +99,12 @@ that must be removed) would have nobody able to do it outside the API.
     collections tab
 
 **Straightforwardness: 3 of 5.** The page itself is a simple list with forms;
-the surprises come from what a rename or move does to the jobs using the
-collection.
+the surprises come from what a rename does to the jobs using the collection.
 
 ### Most surprising behaviours
 
-- **(2)** Renaming, moving or deleting a collection gives no warning that jobs
-  referring to it by name will stop finding it. (8, 4)
+- **(2)** Renaming or deleting a collection gives no warning that jobs referring
+  to it by name will stop finding it. (8, 4)
 - **(3)** The form says names must be unique across the whole instance, but they
   only need to be unique within a project. The project picker also starts on the
   first project alphabetically, so it's easy to create a collection in the wrong
@@ -115,68 +115,72 @@ collection.
 ## 3. Who can do what
 
 Sources: `collection_live/index.ex:4` (`:ensure_admin`); `hooks.ex:40-53`;
-`policies/users.ex:19-21` (`:access_admin_space` is role `:superuser` only). A
+`policies/users.ex:30-32` (`:access_admin_space` is role `:superuser` only). A
 role change disconnects the socket (shared-admin-space S06).
 
-| Action                               | Signed out | Regular user | Support user | Superuser                     |
-| ------------------------------------ | ---------- | ------------ | ------------ | ----------------------------- |
-| See the page and every collection    | no         | no           | no           | yes                           |
-| Sort the list                        | no         | no           | no           | yes                           |
-| Create a collection in any project   | no         | no           | no           | yes                           |
-| Rename a collection                  | no         | no           | no           | yes                           |
-| Move a collection to another project | no         | no           | no           | yes                           |
-| Delete a collection                  | no         | no           | no           | yes                           |
-| Preview or download a collection     | n/a        | n/a          | n/a          | n/a (no control on this page) |
+| Action                             | Signed out | Regular user | Support user | Superuser                     |
+| ---------------------------------- | ---------- | ------------ | ------------ | ----------------------------- |
+| See the page and every collection  | no         | no           | no           | yes                           |
+| Sort the list                      | no         | no           | no           | yes                           |
+| Create a collection in any project | no         | no           | no           | yes                           |
+| Rename a collection                | no         | no           | no           | yes                           |
+| Change a collection's project      | no         | no           | no           | no (field disabled)           |
+| Delete a collection                | no         | no           | no           | yes                           |
+| Preview or download a collection   | n/a        | n/a          | n/a          | n/a (no control on this page) |
 
 **Preconditions beyond role**
 
 - No project membership is needed: the picker lists every project
   (`collection_creation_modal.ex:26`, `:30-32`; `projects.ex:256-258`) and
-  delete takes any collection id (`index.ex:48-49`; `collections.ex:163-166`).
+  delete takes any collection id (`index.ex:48-49`; `collections.ex:255-258`).
 - Signed-out, revoked, TOTP-pending and locked-out sessions are refused first by
   shared-authenticated-session.
 
 ## 4. What it touches
 
 **Reads**: `collections` with `project` preloaded, all rows, ordered by the
-chosen column (`index.ex:20`, `:36-39`; `collections.ex:38-43`); `projects` for
+chosen column (`index.ex:20`, `:36-39`; `collections.ex:43-49`); `projects` for
 the picker, once per modal (`collection_creation_modal.ex:26`, `:30-32`); the
 session user's role for the gate (shared-admin-space)
 
 **Writes**:
 
 - `collections` insert with `project_id` and `name`
-  (`collection_creation_modal.ex:58`, `:63`; `collections.ex:113-128`;
-  `collection.ex:31-36`)
-- `collections` update of `name` and `project_id`
-  (`collection_creation_modal.ex:66-69`; `collections.ex:153-157`;
-  `collection.ex:33`)
+  (`collection_creation_modal.ex:60`, `:66-67`; `collections.ex:173-205`;
+  `collection.ex:34-40`), with an audit event "created" in the same transaction
+  (`collections.ex:188-190`; `collections/audit.ex:1-9`)
+- `collections` update of `name` only, with an audit event "updated" in the same
+  transaction unless the name is unchanged
+  (`collection_creation_modal.ex:67-72`; `collections.ex:222-249`;
+  `collection.ex:45-50`); a rename of a collection deleted since the page loaded
+  flashes the "changed or deleted" message (`collections.ex:240-241`;
+  `collection_creation_modal.ex:88-92`)
 - `collections` delete, cascading to `collections_items` (`index.ex:49`;
-  `collections.ex:163-179`; `20241022021209_create_collections.exs:19-21`)
+  `collections.ex:251-269`; `20241022021209_create_collections.exs:19-21`)
 
 **Immediate side effects** (in the same request)
 
 - Flash "Collection created successfully", "Collection updated successfully" or
   "Collection deleted", then `push_navigate` to `/settings/collections`, which
-  remounts the page (`collection_creation_modal.ex:76-77`; `index.ex:53-54`)
+  remounts the page (`collection_creation_modal.ex:79-80`; `index.ex:53-54`)
 - `CollectionHook.handle_create(attrs)` inside the create transaction
-  (`collections.ex:115-120`);
+  (`collections.ex:181-186`);
   `CollectionHook.handle_delete(project_id, byte_size_sum)` inside the delete
-  transaction (`collections.ex:169-176`). All no-ops under `default`.
+  transaction (`collections.ex:259-266`). All no-ops under `default`.
 - `Logger.error` on a failed delete (`index.ex:57`), which reaches Sentry
   (`.claude/rules/logging.md`)
-- No audit event, no PubSub broadcast, no email, no Oban job
-  (`collections.ex:113-179`)
+- Audit events for create and rename, written by the same transaction as the
+  write (`collections.ex:188-190`, `:230-233`)
+- No PubSub broadcast, no email, no Oban job
 
 **Deferred side effects** (later, elsewhere)
 
-- The owning project's collections tab lists the new, renamed or moved
-  collection, and drops a deleted or moved-away one, on its next load; there is
-  no broadcast, so an open tab is stale until it remounts
-  (project-settings-collections S01; proposed
+- The owning project's collections tab lists the new or renamed collection, and
+  drops a deleted one, on its next load; there is no broadcast, so an open tab
+  is stale until it remounts (project-settings-collections S01; proposed
   `flow-admin-collection-reaches-project`)
 - Jobs and Collections API callers that address the collection by name see the
-  change on their next request (`collections_controller.ex:131-141`)
+  change on their next request (`collections_controller.ex:99-110`)
 - The next project YAML export and GitHub sync see the changed collection set
   (flow-export-project-yaml, flow-github-sync-actions)
 - A collection created here in a sandbox is created empty in the parent on merge
@@ -185,21 +189,21 @@ session user's role for the gate (shared-admin-space)
 **External, non-transactional effects**
 
 - Under `collection-limited`, the hook adapter may record usage outside the
-  database (`collections.ex:113-127`, `:169-176`). Nothing external under
+  database (`collections.ex:173-205`, `:259-266`). Nothing external under
   `default`.
 
 **Depends on config**
 
 - `Lightning.Extensions.collection_hook`: may refuse a create with a message
-  (`collections.ex:116-118`, `:125`; `collection_creation_modal.ex:79-83`) and
-  is told the freed size on delete (`collections.ex:170-174`)
+  (`collections.ex:181-186`, `:196-197`; `collection_creation_modal.ex:82-86`)
+  and is told the freed size on delete (`collections.ex:259-263`)
 
 **Product limits**
 
 - Collection names use only lowercase letters, digits and single `-`, `_` or `.`
-  separators (`collection.ex:51-53`)
+  separators (`collection.ex:54-56`)
 - Names are unique within a project, not across the instance
-  (`collection.ex:54-57`;
+  (`collection.ex:57-60`;
   `20260410000000_scope_collection_name_uniqueness_to_project.exs:4-8`)
 - On a plan with collection limits, the number or size of collections may be
   capped (variant `collection-limited`, S07)
@@ -210,7 +214,7 @@ session user's role for the gate (shared-admin-space)
 Feature: Admin collections
   In order to see and correct collections across the whole instance
   As a superuser
-  I want to list, create, rename, move and delete any project's collections
+  I want to list, create, rename and delete any project's collections
 
   @S01
   Scenario: Superuser sees every collection on the instance with its project and storage
@@ -222,7 +226,7 @@ Feature: Admin collections
     Then I see "Collections (2)"
     And I see a row "patients" with project "Malawi HIV" and "2.5 MB"
     And I see a row "visits" with project "Kenya TB" and "100 B"
-    # index.ex:20; collections.ex:38-43 (all rows, project preloaded); components.ex:52-61, :64-115; helpers.ex:76-95
+    # index.ex:20; collections.ex:43-49 (all rows, project preloaded); components.ex:52-61, :64-115; helpers.ex:76-95
     # collection_live_test.exs:30-48 asserts both rows exist (not the project names, sizes or count); storage format as project-settings-collections S01
 
   @S02
@@ -249,8 +253,9 @@ Feature: Admin collections
     And I click "Save"
     Then I see "Collection created successfully"
     And I see a row "new-collection" with project "Malawi HIV"
+    And an audit event "created" is recorded for the collection, by me
     And the flow "flow-admin-collection-reaches-project" has started for "new-collection"
-    # index.ex:96-106; collection_creation_modal.ex:43-54, :56-77, :130-152; helpers.ex:223-240; collections.ex:113-128
+    # index.ex:96-106; collection_creation_modal.ex:43-54, :56-80, :139-162; helpers.ex:223-240; collections.ex:173-205
     # collection_live_test.exs:99-127 (the superuser is made a member at :103; the non-member case is read from code, 6.5)
 
   @S04
@@ -262,7 +267,7 @@ Feature: Admin collections
     Then I see "Collection name must be URL safe" under the name
     And the "Save" button is disabled
     # same behaviour as project-settings-collections S04
-    # collection.ex:51-53, :60-75; helpers.ex:223-228 (keeps "é"); collection_creation_modal.ex:47 (error copied to raw_name), :160
+    # collection.ex:54-56, :63-78; helpers.ex:223-228 (keeps "é"); collection_creation_modal.ex:47 (error copied to raw_name), :160
 
   @S05
   Scenario: Two collections in a project can't share a name
@@ -273,7 +278,7 @@ Feature: Admin collections
     Then I see "A collection with this name already exists" under the name
     And "Malawi HIV" still has one collection named "patients"
     # same behaviour as project-settings-collections S05
-    # collection.ex:54-57; collection_creation_modal.ex:85-91; migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:6
+    # collection.ex:57-60; collection_creation_modal.ex:94-100; migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:6
     # collection_live_test.exs:179-200 renders the submit but never asserts (6.5)
 
   @S06
@@ -295,7 +300,7 @@ Feature: Admin collections
     Then I see "Some error message"
     And no collection "some-name" exists
     # same behaviour as project-settings-collections S07, reached from here
-    # collections.ex:115-120, :125; collection_creation_modal.ex:79-83; not tested on this page
+    # collections.ex:181-186, :196-197; collection_creation_modal.ex:82-86; not tested on this page
 
   @S08
   Scenario: Superuser renames a collection and keeps its records
@@ -309,34 +314,33 @@ Feature: Admin collections
     Then I see "Collection updated successfully"
     And I see a row "updated-collection" with project "Malawi HIV"
     And "updated-collection" still has its 3 records
-    # components.ex:119-127, :138-144; collection_creation_modal.ex:14-19, :58, :66-69; collections.ex:153-157
+    And an audit event "updated" is recorded for the collection, by me
+    # components.ex:119-127, :138-144; collection_creation_modal.ex:14-19, :60, :67-72; collections.ex:222-249; collections/collection.ex:45-50
     # collection_live_test.exs:147-177 (asserts the flash, name and project name; records read from code)
 
   @S09
-  Scenario: Superuser moves a collection to another project
-    # Value: a collection created in the wrong project can be put in the right one without losing its records.
+  Scenario: A collection stays in the project it was created in
+    # Value: a collection's data and the jobs that name it can't be moved to another project by an edit, so a rename never changes whose data it is.
     Given I am a superuser
     And "Malawi HIV" has a collection "patients" with 3 records
     When I click "Edit" on "patients"
-    Then the "Project" field shows "Malawi HIV"
-    When I choose "Kenya TB" as the project
-    And I click "Save"
+    Then the "Project" field shows "Malawi HIV" and is disabled
+    When I change the name to "patients-2024" and click "Save"
     Then I see "Collection updated successfully"
-    And I see a row "patients" with project "Kenya TB"
-    And "patients" still has its 3 records
-    And the flow "flow-admin-collection-reaches-project" has started for "patients"
-    # collection_creation_modal.ex:146-152 (select rendered in edit mode too), :66-69; collection.ex:31-33 (casts project_id)
-    # not tested (collection_live_test.exs:168-170 submits the same project)
+    And I see a row "patients-2024" with project "Malawi HIV"
+    And "patients-2024" still has its 3 records
+    # collection_creation_modal.ex:155-162 (select disabled in edit mode, so no project is submitted); collection.ex:45-50 (rename_changeset casts only name)
+    # not tested on this page (collection_live_test.exs:168-170 submits the same project)
 
   @S10
-  Scenario: A move into a project that already has that name is refused
-    # Value: moving a collection can't leave a project with two collections a job can't tell apart.
+  Scenario: A rename to a name the project already uses is refused
+    # Value: a rename can't leave a project with two collections a job can't tell apart.
     Given I am a superuser
-    And "Malawi HIV" and "Kenya TB" each have a collection "patients"
-    When I move the "Malawi HIV" collection "patients" to "Kenya TB"
+    And "Malawi HIV" has collections "patients" and "patients-old"
+    When I rename "patients-old" to "patients"
     Then I see "A collection with this name already exists" under the name
-    And each project still has its own "patients"
-    # collection.ex:54-57; collection_creation_modal.ex:85-91; migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:6; read from code
+    And "Malawi HIV" still has both its collections, named as before
+    # collection.ex:45-50, :57-60; collection_creation_modal.ex:94-100; migration 20260410000000_scope_collection_name_uniqueness_to_project.exs:6; read from code
 
   @S11
   Scenario: Superuser deletes a collection after confirming
@@ -350,7 +354,7 @@ Feature: Admin collections
     And "patients" is not in the list
     And none of its records remain
     And the flow "flow-admin-collection-reaches-project" has started for "patients"
-    # components.ex:4-50, :128-136, :145-148; index.ex:48-54; collections.ex:163-179; create_collections migration :19-21 (cascade)
+    # components.ex:4-50, :128-136, :145-148; index.ex:48-54; collections.ex:251-269; create_collections migration :19-21 (cascade)
     # collection_live_test.exs:80-97 (clicks the confirm button directly; asserts the flash and the row gone)
 
   @S12
@@ -364,7 +368,7 @@ Feature: Admin collections
     Then the dialog is closed
     And collection "patients" is unchanged
     And no collection "changed" exists
-    # create and edit: collection_creation_modal.ex:39-41, :165-173 (push_navigate remounts); delete: components.ex:44 (client-side hide)
+    # create and edit: collection_creation_modal.ex:39-41, :175-183 (push_navigate remounts); delete: components.ex:44 (client-side hide)
     # collection_live_test.exs:129-145 (create, Cancel)
 
     Examples:
@@ -388,6 +392,29 @@ Feature: Admin collections
     Then the rows read "huge", "medium", "tiny"
     # index.ex:21-22, :27-46; components.ex:85-100; table.ex:234-243; common.ex:649-668
     # collection_live_test.exs:50-63 (name), :65-78 (storage)
+
+  @S14
+  Scenario: Creating or renaming a collection is recorded in the audit trail
+    # Value: an admin can later see who created or renamed a project's collection, and when.
+    Given I am a superuser
+    When I create a collection named "patients" in "Malawi HIV"
+    And I rename it to "patients-2024"
+    Then an audit event "created" and an audit event "updated" are recorded for the collection, each by me
+    When I save the edit form again without changing the name
+    Then no further audit event is recorded
+    # collections.ex:173-205 (create and its audit in one transaction), :222-249 (the "updated" event is skipped when the name is unchanged); collections/audit.ex:1-9
+    # not tested on this page; collections_test.exs covers the context
+
+  @S15
+  Scenario: Renaming a collection that was deleted meanwhile is refused with a reload message
+    # Value: a superuser acting on a stale list learns the record changed, instead of seeing a crash or a silent no-op.
+    Given I am a superuser with "/settings/collections" open, listing "patients"
+    And another request deletes "patients"
+    When I rename "patients" to "patients-2024" and click "Save"
+    Then I see "Someone else changed or deleted this record while you were editing it. Reload and try again."
+    And "patients-2024" does not exist
+    # collections.ex:228, :240-241; collection_creation_modal.ex:88-92; live_helpers.ex:217-219
+    # not tested; read from code
 ```
 
 ## 6. Unclear value
@@ -396,29 +423,28 @@ Feature: Admin collections
 
 | What                                                                                                                                                     | Where                                                                                                                           | What a user sees                                                                                                                                                   | Disposition |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| The name sublabel says names "must be unique across all projects within this instance", but uniqueness has been per project since the 20260410 migration | `collection_creation_modal.ex:135`; `collection.ex:54-57`; `20260410000000_scope_collection_name_uniqueness_to_project.exs:4-8` | copy that contradicts S06: the same name saves fine in a second project                                                                                            | fix         |
-| No length validation on `name`; the column is `varchar(255)`                                                                                             | `collection.ex:31-58`; `20241022021209_create_collections.exs:6`                                                                | a name over 255 characters raises a database error and the page crashes and reconnects instead of showing a field error (same as project-settings-collections 6.1) | fix         |
-| A limiter message that sets `function` instead of `text` matches `%Message{text: error_msg}` with `nil`                                                  | `collection_creation_modal.ex:79-83`; `extensions/message.ex:5-12`                                                              | under `collection-limited`, an empty or missing error toast after the page reloads                                                                                 | fix         |
+| The name sublabel says names "must be unique across all projects within this instance", but uniqueness has been per project since the 20260410 migration | `collection_creation_modal.ex:144`; `collection.ex:57-60`; `20260410000000_scope_collection_name_uniqueness_to_project.exs:4-8` | copy that contradicts S06: the same name saves fine in a second project                                                                                            | fix         |
+| No length validation on `name`; the column is `varchar(255)`                                                                                             | `collection.ex:34-61`; `20241022021209_create_collections.exs:6`                                                                | a name over 255 characters raises a database error and the page crashes and reconnects instead of showing a field error (same as project-settings-collections 6.1) | fix         |
+| A limiter message that sets `function` instead of `text` matches `%Message{text: error_msg}` with `nil`                                                  | `collection_creation_modal.ex:82-86`; `extensions/message.ex:5-12`                                                              | under `collection-limited`, an empty or missing error toast after the page reloads                                                                                 | fix         |
 
 ### 6.2 Quirks and implementation details
 
 | What                                                                                                                                                                                                             | Where                                                                                                | Disposition |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------- |
-| Create, rename, move and delete write no audit event                                                                                                                                                             | `collections.ex:113-179`                                                                             | decide      |
-| The project picker lists every project, including sandboxes and projects scheduled for deletion, by name only; projects with the same name can't be told apart                                                   | `collection_creation_modal.ex:30-32`, `:146-152`; `projects.ex:256-258`                              | decide      |
-| The create form has no blank project option, so the first project alphabetically is preselected                                                                                                                  | `collection_creation_modal.ex:146-152`                                                               | decide      |
-| The name field's value is bound to the derived name, so once it loses focus the typed text ("New Collection") is replaced by the slug ("new-collection"); the project tab keeps what was typed                   | `collection_creation_modal.ex:133`; `collection_live_test.exs:114`, `:164`                           | decide      |
+| The project picker lists every project, including sandboxes and projects scheduled for deletion, by name only; projects with the same name can't be told apart                                                   | `collection_creation_modal.ex:30-32`, `:155-162`; `projects.ex:256-258`                              | decide      |
+| The create form has no blank project option, so the first project alphabetically is preselected                                                                                                                  | `collection_creation_modal.ex:155-162`                                                               | decide      |
+| The name field's value is bound to the derived name, so once it loses focus the typed text ("New Collection") is replaced by the slug ("new-collection"); the project tab keeps what was typed                   | `collection_creation_modal.ex:142`; `collection_live_test.exs:114`, `:164`                           | decide      |
 | No preview and no download on this page; both exist on the project tab (project-settings-collections S13 to S15, S19)                                                                                            | `components.ex:104-148`                                                                              | decide      |
 | Edit and Delete are shown to every viewer, since only superusers reach the page; the project tab disables them for non-admins                                                                                    | `components.ex:119-136`                                                                              | preserve    |
-| Every save, limit refusal and form close (X or Cancel) ends in `push_navigate`, remounting the page and resetting sort; Escape or a click outside only hides the modal and keeps typed text for next time        | `index.ex:54`, `:62`; `collection_creation_modal.ex:39-41`, `:77`, `:82`; `modal.ex:45-49`, `:63-71` | decide      |
-| Switching sort column always starts ascending; ties have no secondary order; sort state is not in the URL; the Project column is not sortable                                                                    | `index.ex:29-34`; `collections.ex:38-43`; `components.ex:93`                                         | decide      |
-| Flash copy differs from the project tab: "Collection created successfully" and "Collection updated successfully" here, "Collection created" and "Collection updated" there                                       | `collection_creation_modal.ex:76`; `collections_component.ex:203-205`, `:224-226`                    | decide      |
-| A delete of a collection already gone shows "Couldn't delete collection!" with no reason                                                                                                                         | `index.ex:56-62`; `collections.ex:164-166`                                                           | preserve    |
+| Every save, limit refusal and form close (X or Cancel) ends in `push_navigate`, remounting the page and resetting sort; Escape or a click outside only hides the modal and keeps typed text for next time        | `index.ex:54`, `:62`; `collection_creation_modal.ex:39-41`, `:80`, `:85`; `modal.ex:45-49`, `:63-71` | decide      |
+| Switching sort column always starts ascending; ties have no secondary order; sort state is not in the URL; the Project column is not sortable                                                                    | `index.ex:29-34`; `collections.ex:43-49`; `components.ex:93`                                         | decide      |
+| Flash copy differs from the project tab: "Collection created successfully" and "Collection updated successfully" here, "Collection created" and "Collection updated" there                                       | `collection_creation_modal.ex:79`; `collections_component.ex:203-205`, `:228-230`                    | decide      |
+| A delete of a collection already gone shows "Couldn't delete collection!" with no reason                                                                                                                         | `index.ex:56-62`; `collections.ex:255-258`                                                           | preserve    |
 | That not-found race is logged with `Logger.error`, which reaches Sentry for an expected condition                                                                                                                | `index.ex:57`; `.claude/rules/logging.md`                                                            | fix         |
-| Modal titles are title case ("Create Collection", "Edit Collection") while the page uses sentence case                                                                                                           | `collection_creation_modal.ex:103-105`                                                               | decide      |
+| Modal titles are title case ("Create Collection", "Edit Collection") while the page uses sentence case                                                                                                           | `collection_creation_modal.ex:112-114`                                                               | decide      |
 | Delete copy renders "the collection patients ?" with a space before the question mark and tells the user to "click on the delete button" (same as the project tab)                                               | `components.ex:27-30`                                                                                | decide      |
 | Empty-state copy "No collection found." and "Create a new one." differs from the project tab's "No collections found."                                                                                           | `index.ex:89-90`                                                                                     | decide      |
-| Name hint reads "This collection will be named x."; the project tab reads "Your collection will be named x."                                                                                                     | `collection_creation_modal.ex:140-142`; `pills.ex:98-105`                                            | decide      |
+| Name hint reads "This collection will be named x."; the project tab reads "Your collection will be named x."                                                                                                     | `collection_creation_modal.ex:149-151`; `pills.ex:98-105`                                            | decide      |
 | Delete is a plain confirm (no typed name) that removes every record and cannot be undone                                                                                                                         | `components.ex:4-50`; `20241022021209_create_collections.exs:19-21`                                  | decide      |
 | The project cell is plain text, not a link to the project                                                                                                                                                        | `components.ex:111-113`                                                                              | decide      |
 | Markup oddities: the empty-state button id is spelled "buttton"; the delete modal's close button carries a `variant` attribute that a raw `<button>` ignores; the create button sets `role="button"` on a button | `index.ex:91`, `:98`; `components.ex:13-22`                                                          | decide      |
@@ -433,7 +459,7 @@ Feature: Admin collections
 
 | What                                                                                                                                                                                               | Where                                                                | User-visible?                           | Disposition |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------- | ----------- |
-| The list holds every collection on the instance, unpaginated                                                                                                                                       | `collections.ex:38-43`; `index.ex:20`                                | yes, on instances with many collections | decide      |
+| The list holds every collection on the instance, unpaginated                                                                                                                                       | `collections.ex:43-49`; `index.ex:20`                                | yes, on instances with many collections | decide      |
 | Every row mounts its own edit modal component, and each one runs `Projects.list_projects()`, so the page runs one projects query per collection plus one for the create modal, again on every sort | `components.ex:138-144`; `collection_creation_modal.ex:26`, `:30-32` | yes, slow loads on large instances      | fix         |
 | `list_collections` runs on both the dead render and the connected mount                                                                                                                            | `index.ex:14-24`                                                     | no                                      | preserve    |
 | Used storage is `byte_size_sum` in decimal units (1 KB = 1000 B) rounded to one decimal                                                                                                            | `components.ex:115`; `helpers.ex:76-95`                              | yes                                     | preserve    |
@@ -444,18 +470,18 @@ Feature: Admin collections
   `render_submit() =~ "A collection with this name already exists"` with no
   `assert`, so the duplicate-name test passes whatever the page shows. S05 is
   read from code.
-- No test moves a collection to another project
-  (`collection_live_test.exs:168-170` submits the same project) or creates one
-  as a non-member (`:103` makes the superuser a member). S03's non-member case,
-  S09 and S10 are read from code.
+- No test renames a collection into another project's name or creates one as a
+  non-member (`collection_live_test.exs:168-170` submits the same project;
+  `:103` makes the superuser a member). S03's non-member case, S09, S10, S14 and
+  S15 are read from code.
 - `Collection` defines a public `validate/1` and an identical private
-  `validate_changeset/1` (`collection.ex:38-58`); unclear whether they are meant
+  `validate_changeset/1` (`collection.ex:42-61`); unclear whether they are meant
   to diverge.
 - `components.ex:63` carries "TODO - replace with common table when moving to
   project scope!"; the project tab now has its own component, so it is not clear
   whether this page was meant to be retired in favour of it.
 - `CollectionHook.handle_delete/2` is matched with `:ok =` inside the
-  transaction (`collections.ex:170-174`); an adapter that returns anything else
+  transaction (`collections.ex:259-263`); an adapter that returns anything else
   raises and crashes the page. Unknown under other adapters (same note as
   project-settings-collections 6.5).
 
@@ -470,20 +496,19 @@ Feature: Admin collections
   the project's tab instead (6.2)?
 - Should the picker hide sandboxes and projects scheduled for deletion, or show
   enough to tell same-name projects apart (6.2)?
-- Rename, move and delete give no warning that jobs referring to the collection
-  by name will stop finding it; same question as project-settings-collections
+- Rename and delete give no warning that jobs referring to the collection by
+  name will stop finding it; same question as project-settings-collections
   section 8.
 
 ## Proposed flows
 
-- `flow-admin-collection-reaches-project`: a superuser creates, renames, moves
-  or deletes a collection on `/settings/collections`, and members of the owning
-  project (and, for a move, the source project) see the change on their
-  collections tab the next time it loads; with no broadcast, a tab already open
-  keeps the old list until it remounts (`collections.ex:113-179`, no PubSub;
-  `collections_component.ex:43-46`). Surfaces: admin-collections,
-  project-settings-collections. From there, the existing
-  flow-download-collection starts on the project tab.
+- `flow-admin-collection-reaches-project`: a superuser creates, renames or
+  deletes a collection on `/settings/collections`, and members of the owning
+  project see the change on their collections tab the next time it loads; with
+  no broadcast, a tab already open keeps the old list until it remounts
+  (`collections.ex:173-269`, no PubSub; `collections_component.ex:43-46`).
+  Surfaces: admin-collections, project-settings-collections. From there, the
+  existing flow-download-collection starts on the project tab.
 
 ## Proposed shared
 

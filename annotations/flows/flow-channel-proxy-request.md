@@ -269,7 +269,7 @@ Feature: A request through a channel
     # Value: a channel with client credentials is called only by systems that hold one.
     Given channel "lab-results" has client credential <method>
     When a client sends a request with <sent>
-    Then the client receives 401 with body '{"error":"Unauthorized"}'
+    Then the client receives 401 with a problem document with code "unauthenticated" (challenging with 'ApiKey header="x-api-key"' when the channel takes an API key)
     And the destination receives nothing
     And no request is recorded for "lab-results"
     # channel_proxy_plug.ex:119-120, :180-197; auth.ex:42-79
@@ -307,7 +307,7 @@ Feature: A request through a channel
     # Value: switching a channel off stops its traffic immediately, and callers can't tell a disabled channel from one that never existed.
     Given <channel>
     When a client sends a request to "/channels/<id>/test", with valid client credentials if any
-    Then the client receives 404 with body '{"error":"Not Found"}'
+    Then the client receives 404 with a problem document with code "not_found"
     And the destination receives nothing and no request is recorded
     # channel_proxy_plug.ex:84-104, :318-323; channels-index S21 (toggle)
     # channel_proxy_plug_test.exs:461-481
@@ -351,7 +351,7 @@ Feature: A request through a channel
     # Value: people fix the credential instead of chasing a destination outage, and the destination is never called with a broken secret.
     Given channel "lab-results" has a destination credential with no access token, username or password
     When an authenticated client sends 'GET /secret-path'
-    Then the client receives 502 with body '{"error":"Bad Gateway"}'
+    Then the client receives 502 with a problem document with code "bad_gateway"
     And the destination receives nothing
     And a request in state "error" with error "credential_missing_auth_fields" and the destination credential is recorded
     And the request page shows it as a credential error (channel-request-show S08)
@@ -434,7 +434,7 @@ Feature: A request through a channel
 
 | What                                                                                                 | Where                                                                                | Disposition |
 | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------- |
-| Errors are JSON `{"error": "..."}` with title-case messages                                          | `channel_proxy_plug.ex:409-411`                                                      | preserve    |
+| Errors are problem documents with a stable `code` and a fixed `detail`, as on `/i/*` and the API     | `channel_proxy_plug.ex:409-411`                                                      | preserve    |
 | Experimental features gate only the menu link and exit views; the proxy serves every enabled channel | `channel_proxy_plug.ex:72-131`; channels-index 6.2                                   | decide      |
 | Client credentials of a configured type are stripped before forwarding                               | `channel_proxy_plug.ex:282-289`, `:310-316`; `channel_proxy_plug_test.exs:1182-1196` | preserve    |
 | A `pending` request row is written before forwarding and completed afterwards                        | `handler.ex:68`, `:138-157`                                                          | preserve    |

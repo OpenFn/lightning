@@ -19,7 +19,7 @@ trigger:
       :1007-1019)
 
 inherits:
-  - shared-authenticated-session # live_session :default mounts InitAssigns (router.ex:303 sits in it)
+  - shared-authenticated-session # live_session :default mounts InitAssigns (router.ex:351 sits in it)
   - shared-project-scope # login, MFA, membership, live revocation (collaborate.ex:25)
   - shared-log-viewer # hosted through RunViewerPanel in the IDE's right panel (FullScreenIDE.tsx:1285-1293); the log viewer's own behaviour is not repeated here
   - shared-editor-session
@@ -74,7 +74,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit # router.ex:303; owned by workflow-editor-canvas, this view is a URL state of it
+    - live /projects/:project_id/w/:id  WorkflowLive.Collaborate :edit # router.ex:351; owned by workflow-editor-canvas, this view is a URL state of it
   events:
     - WorkflowChannel#request_metadata # workflow_channel.ex:135-170; S11
     - WorkflowLive.Collaborate#open_credential_modal # handoff only, owned by workflow-editor-inspectors; pushed with source "ide" (FullScreenIDE.tsx:599-605; CredentialModalContext.tsx:121-135)
@@ -97,7 +97,7 @@ inventory:
   policies:
     - Lightning.Policies.ProjectUsers (:edit_workflow, :run_workflow resolved at
       join into channel assigns; workflow_channel.ex:1516-1549,
-      project_users.ex:160-172)
+      project_users.ex:182-192)
     - Lightning.Policies.Workflows (:access_read at join; via
       shared-editor-session)
     - Lightning.Policies.ProjectUsers (:access_project in
@@ -106,7 +106,7 @@ inventory:
   workers: [] # Lightning.TaskWorker :cli_task_worker runs the metadata CLI; not an Oban worker (application.ex:189)
   api_endpoints:
     - GET /projects/:project_id/runs/:run_id/dataclip  DataclipController
-      :show_for_run # router.ex:207-209; called from FullScreenIDE.tsx:349-366; owned by workflow-editor-manual-run
+      :show_for_run # router.ex:255-257; called from FullScreenIDE.tsx:349-366; owned by workflow-editor-manual-run
   emails: []
   config:
     - user.preferences.experimental_features
@@ -245,7 +245,7 @@ it fails with a single misleading message.
 
 ## 3. Who can do what
 
-Source: `lib/lightning/policies/project_users.ex:160-172` (`:edit_workflow`,
+Source: `lib/lightning/policies/project_users.ex:182-192` (`:edit_workflow`,
 `:run_workflow` are editor actions for owner, admin, editor, and for support
 with no row when support access is on); resolved once at join into channel
 assigns (`workflow_channel.ex:1516-1549`) and refreshed by

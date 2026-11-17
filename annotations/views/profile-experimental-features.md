@@ -10,7 +10,7 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - everything profile-account lists for `/profile` (signed in,
-      config-injected `:services` live_session, `router.ex:340-356`,
+      config-injected `:services` live_session, `router.ex:388-404`,
       `config/config.exs:50-61`)
     - rendered on every `/profile` load, for every user, with no condition
       (`components.ex:67-71`)

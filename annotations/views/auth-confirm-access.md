@@ -11,15 +11,15 @@ trigger:
   reachable_when:
     - the browser holds a session for an active, non-TOTP-pending account; the
       route sits in the `[:browser, :require_authenticated_user]` scope
-      (`router.ex:189-190`, `:242-244`) and the `:auth` live_session mounts
-      `LightningWeb.InitAssigns` (`router.ex:242`; `init_assigns.ex:17-35`)
+      (`router.ex:237-238`, `:290-292`) and the `:auth` live_session mounts
+      `LightningWeb.InitAssigns` (`router.ex:290`; `init_assigns.ex:17-35`)
     - the session holds `user_return_to`; `mount/3` matches only that session
       shape (`re_authenticate_live/new.ex:9`; 6.1 row 1). In practice it is set
       by `UserAuth.require_sudo_user/2` when a sudo-gated GET is refused
-      (`user_auth.ex:397-410`, `:490-512`), or by any earlier signed-out GET
-      (`user_auth.ex:490-492`)
+      (`user_auth.ex:383-396`, `:464-486`), or by any earlier signed-out GET
+      (`user_auth.ex:464-466`)
     - the only links into this page are the two sudo gates' redirects
-      (`user_auth.ex:407`, `:455`); no UI links to it
+      (`user_auth.ex:393`, `:429`); no UI links to it
 
 inherits:
   - shared-authenticated-session # applies: S01 (login redirect), S02 (disabled account), S03 (TOTP pending), S04 and S05 (lockout, via InitAssigns `locked_out?` at init_assigns.ex:26-30), S11 (first setup, :browser pipeline). Does not apply: S06 (deadline warning lives in LayoutComponents.header, layout_components.ex:259-275, not rendered here), S07 (no sidebar in the :app layout, layouts/app.html.heex:1-5), S08 and S09 (no `:banner` slot rendered), S10 (GDPR banner is in layouts/live.html.heex:102-104, not the :app layout)
@@ -31,7 +31,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /auth/confirm_access  ReAuthenticateLive.New :new # router.ex:242-244, live_session :auth
+    - live /auth/confirm_access  ReAuthenticateLive.New :new # router.ex:290-292, live_session :auth
   events:
     - ReAuthenticateLive.New#toggle-option # new.ex:29-32
     - ReAuthenticateLive.New#reauthenticate-user # new.ex:34-46
@@ -46,7 +46,7 @@ inventory:
   config: []
   not_reachable_here:
     - UserAuth.reauth_sudo_mode/2, require_sudo_user/2, on_mount(:ensure_sudo)
-      (user_auth.ex:211-231, :397-410, :443-475); the gates that send users here
+      (user_auth.ex:212-232, :383-396, :417-449); the gates that send users here
       and consume the token; owned by flow-reauth-backup-codes
     - Accounts.sudo_session_token_valid?/2 (accounts.ex:1030-1035); consumer of
       the token this page mints; owned by flow-reauth-backup-codes
@@ -105,7 +105,7 @@ where the user was headed, and that memory breaks in both directions.
 ## 3. Who can do what
 
 Sources: `re_authenticate_live/new.ex:9-59`; `new.html.heex:99-120`;
-`router.ex:189-190`, `:242-244`. No policy module: every action is on the
+`router.ex:237-238`, `:290-292`. No policy module: every action is on the
 session's own user.
 
 | Action                                   | Signed-in user without MFA                                      | Signed-in user with MFA | Superuser / support       | Signed out                            |
@@ -144,7 +144,7 @@ session's own user.
 - `push_navigate(replace: true)` back to the page asked for, `user_return_to`
   (`new.ex:40-42`, `:71-78`); crossing into the `:sudo_auth` live_session (or
   the print controller) causes a full page load where the sudo plugs read the
-  token (`router.ex:252-264`); owned by flow-reauth-backup-codes
+  token (`router.ex:300-312`); owned by flow-reauth-backup-codes
 - No audit event, email, PubSub broadcast or Oban job (`new.ex:34-46`)
 
 **Deferred side effects**
@@ -268,8 +268,8 @@ Feature: Confirm access
 
 | What                                                                                                                                                                                                                                                              | Where                                                                        | What a user sees                          | Disposition |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------- | ----------- |
-| `mount/3` matches only a session holding `user_return_to`. Opening `/auth/confirm_access` directly, or being redirected by `:ensure_sudo` (which stores no return path) when nothing earlier set the key, raises `FunctionClauseError`. Tests always seed the key | `new.ex:9`; `user_auth.ex:443-458`; `reauthenticate_live_test.exs:10-12`     | an error page instead of "Confirm access" | fix         |
-| The gates set the flash "You must verify yourself again in order to access this page.", but the `:app` layout and this template render no flash                                                                                                                   | `user_auth.ex:401-404`, `:450-454`; `new.ex:16`; `layouts/app.html.heex:1-5` | no explanation of why they were sent here | fix         |
+| `mount/3` matches only a session holding `user_return_to`. Opening `/auth/confirm_access` directly, or being redirected by `:ensure_sudo` (which stores no return path) when nothing earlier set the key, raises `FunctionClauseError`. Tests always seed the key | `new.ex:9`; `user_auth.ex:417-432`; `reauthenticate_live_test.exs:10-12`     | an error page instead of "Confirm access" | fix         |
+| The gates set the flash "You must verify yourself again in order to access this page.", but the `:app` layout and this template render no flash                                                                                                                   | `user_auth.ex:387-390`, `:424-428`; `new.ex:16`; `layouts/app.html.heex:1-5` | no explanation of why they were sent here | fix         |
 | `toggle-option` uses `String.to_existing_atom` on client input; an unknown value raises `ArgumentError` and any other existing atom shows the code form even to non-MFA users                                                                                     | `new.ex:29-32`; `new.html.heex:34`, `:55`                                    | a crashed LiveView (reconnects)           | fix         |
 | `reauthenticate-user` with neither `password` nor `code` in `user` params has no matching `valid_user_input?/2` or `error_msg/1` clause and raises                                                                                                                | `new.ex:53-67`                                                               | a crashed LiveView                        | fix         |
 | Both tests for the wrong-input errors compute `=~` without `assert` and expect copy ("Invalid password!. Try again") that the page never renders                                                                                                                  | `reauthenticate_live_test.exs:118-123`, `:172-177`; `new.ex:61-67`           | nothing; the refusal path is untested     | fix         |
@@ -280,7 +280,7 @@ Feature: Confirm access
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------- |
 | Recovery codes are not accepted here, unlike the login two-factor page                                                                                                                                                                | `new.ex:12`, `:53-59`; compare `user_totp_controller.ex` | decide      |
 | Password is the default method even for MFA users; the `authentication_options` assign is set and never read                                                                                                                          | `new.ex:12-13`                                           | preserve    |
-| Lives in its own `:auth` live_session so navigating back to a `:sudo_auth` page forces a full page load through the sudo plugs                                                                                                        | `router.ex:242-244`, `:252-263`                          | preserve    |
+| Lives in its own `:auth` live_session so navigating back to a `:sudo_auth` page forces a full page load through the sudo plugs                                                                                                        | `router.ex:290-292`, `:300-311`                          | preserve    |
 | Renders in the bare `:app` layout: no header, sidebar, banners or flash                                                                                                                                                               | `new.ex:16`; `layouts/app.html.heex:1-5`                 | decide      |
 | The logo is a link to `#`, the form has `action="#"`, and the page has two `h1` elements                                                                                                                                              | `new.html.heex:3-9`, `:10-12`, `:33`, `:45-52`           | decide      |
 | Copy uses title case and "!" ("Authentication Code", "Invalid password! Try again.", "Invalid OTP code! Try again.") and mixes "authentication code" with "OTP code"; the button reads "Confirm" for passwords and "Verify" for codes | `new.ex:61-67`; `new.html.heex:33-39`, `:76-82`          | decide      |
@@ -293,7 +293,7 @@ Feature: Confirm access
 
 | What                                   | Where                | Why unreachable                                                                               |
 | -------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------- |
-| `append_token(nil, _)` returning `"/"` | `new.ex:69`          | `mount/3` requires `user_return_to` and every writer stores a string (`user_auth.ex:490-492`) |
+| `append_token(nil, _)` returning `"/"` | `new.ex:69`          | `mount/3` requires `user_return_to` and every writer stores a string (`user_auth.ex:464-466`) |
 | `authentication_options` assign        | `new.ex:12`          | never read by the template or handlers                                                        |
 | InitAssigns sidebar toggle hook        | `init_assigns.ex:56` | the `:app` layout renders no sidebar control                                                  |
 
@@ -334,7 +334,7 @@ Feature: Confirm access
 
 - none. Referenced: `shared-authenticated-session` (S01 to S05 and S11 apply;
   S06 to S10 do not, see `inherits`). The sudo gate trio guards only the backup
-  codes routes today (`router.ex:252-265`); a `shared-sudo-mode` annotation
+  codes routes today (`router.ex:300-313`); a `shared-sudo-mode` annotation
   would be warranted only if a second sudo-gated route appears.
 
 ## Lead resolution (batch 9)

@@ -11,10 +11,10 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - '/users/confirm (GET/POST): any visitor, signed in or out; the scope pipes
-      only through :browser (router.ex:66-74)'
+      only through :browser (router.ex:93-101)'
     - '/users/confirm/:token and /users/send-confirmation-email: a signed-in
-      session that passes :require_authenticated_user (router.ex:189-190,
-      :229-236; user_auth.ex:288-311)'
+      session that passes :require_authenticated_user (router.ex:237-238,
+      :229-236; user_auth.ex:280-303)'
     - 'an account locked out pending confirmation still reaches all three,
       through the lockout allow-list (confirmation_lockout.ex:18-33)'
     - 'nothing in the app links to /users/confirm; it is reached by typing the
@@ -43,11 +43,11 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/confirm  UserConfirmationController :new # router.ex:72
-    - post /users/confirm  UserConfirmationController :create # router.ex:73
-    - get /users/confirm/:token  UserConfirmationController :edit # router.ex:229; also claimed by flow-resend-account-confirmation
-    - post /users/confirm/:token  UserConfirmationController :update # router.ex:230; also claimed by flow-resend-account-confirmation
-    - get /users/send-confirmation-email  UserConfirmationController :send_email # router.ex:236; owned by flow-resend-account-confirmation (controller:send-confirmation-email)
+    - get /users/confirm  UserConfirmationController :new # router.ex:99
+    - post /users/confirm  UserConfirmationController :create # router.ex:100
+    - get /users/confirm/:token  UserConfirmationController :edit # router.ex:277; also claimed by flow-resend-account-confirmation
+    - post /users/confirm/:token  UserConfirmationController :update # router.ex:278; also claimed by flow-resend-account-confirmation
+    - get /users/send-confirmation-email  UserConfirmationController :send_email # router.ex:284; owned by flow-resend-account-confirmation (controller:send-confirmation-email)
   events:
     - UserConfirmationController#new
     - UserConfirmationController#create
@@ -69,7 +69,7 @@ inventory:
     - :hammer backend (config/config.exs:25-28)
   not_reachable_here:
     - UserConfirmationController#confirm_email (GET
-      /profile/confirm_email/:token, router.ex:232-234;
+      /profile/confirm_email/:token, router.ex:280-282;
       user_confirmation_controller.ex:34-49) lives in this module but is the
       email-change link, owned by flow-change-email-confirm
       (controller:confirm-email)
@@ -140,8 +140,8 @@ using them.
 
 ## 3. Who can do what
 
-No policy module. Sources: `router.ex:66-74`, `:189-190`, `:229-236`;
-`user_auth.ex:288-311`; `user_confirmation_controller.ex:16-28`, `:51-77`,
+No policy module. Sources: `router.ex:93-101`, `:237-238`, `:277-284`;
+`user_auth.ex:280-303`; `user_confirmation_controller.ex:16-28`, `:51-77`,
 `:106-137`; `confirmation_lockout.ex:18-39`.
 
 | Action                                                              | Signed out | Signed in, unconfirmed | Locked out (unconfirmed, past 48 h) | Signed in, confirmed | TOTP pending   | Signed in as another user (token page) |
@@ -175,7 +175,7 @@ No policy module. Sources: `router.ex:66-74`, `:189-190`, `:229-236`;
   bucket `confirmation_request::<user_id>` (`accounts.ex:762-767`, `:1166`)
 - Token page: `users_tokens` joined to `users` by hashed token, context
   `confirm`, age and `sent_to` (`accounts.ex:1220-1228`;
-  `user_token.ex:168-183`); session user (`user_auth.ex:175-182`)
+  `user_token.ex:168-183`); session user (`user_auth.ex:176-183`)
 
 **Writes**
 
@@ -184,7 +184,7 @@ No policy module. Sources: `router.ex:66-74`, `:189-190`, `:229-236`;
 - Confirm (POST): `users.confirmed_at` set and every `confirm` token for the
   user deleted, in one transaction (`accounts.ex:1236-1255`)
 - Session `user_return_to` when a signed-out visitor opens the token link
-  (`user_auth.ex:296-298`, `:490-492`)
+  (`user_auth.ex:288-290`, `:464-466`)
 
 **Immediate side effects**
 
@@ -215,7 +215,7 @@ No policy module. Sources: `router.ex:66-74`, `:189-190`, `:229-236`;
   `edit.html.heex:43-48`)
 - `require_email_verification` only through the lockout
   (`accounts.ex:1362-1368`); the controller ignores it
-- `allow_first_setup` through the FirstSetup plug (`router.ex:29`;
+- `allow_first_setup` through the FirstSetup plug (`router.ex:30`;
   `first_setup.ex:11-33`)
 - Link host from the endpoint URL; sender name and address
   (`user_notifier.ex:53`, `:96`)
@@ -244,10 +244,10 @@ Feature: Account confirmation
     Then I see "If your email is in our system and it has not been confirmed yet, you will receive an email with instructions shortly."
     And "amara@example.org" is sent an email with subject "Confirm your OpenFn account"
     And its link opens the confirm step of flow "flow-resend-account-confirmation"
-    # router.ex:72-73; new.html.heex:5, :10-38; user_confirmation_controller.ex:12-28
+    # router.ex:99-100; new.html.heex:5, :10-38; user_confirmation_controller.ex:12-28
     # accounts.ex:1161-1175, :1135-1142; user_notifier.ex:90-102
     # user_confirmation_controller_test.exs:14-19, :86-99 (asserts a confirm token, not the email)
-    # signed out, /projects redirects on to /users/log_in, which renders the flash (user_auth.ex:290-299; user_session_html/new.html.heex:23-27); see 6.2 and 6.5
+    # signed out, /projects redirects on to /users/log_in, which renders the flash (user_auth.ex:282-291; user_session_html/new.html.heex:23-27); see 6.2 and 6.5
 
   @S02
   Scenario Outline: The resend form gives the same answer for any address
@@ -289,7 +289,7 @@ Feature: Account confirmation
     Then I am on "/projects"
     And I see "User confirmed successfully."
     And the flow "flow-resend-account-confirmation" has reached its confirm step (its S01)
-    # router.ex:229-230; user_confirmation_controller.ex:10, :30-32, :89-94, :106-112
+    # router.ex:277-278; user_confirmation_controller.ex:10, :30-32, :89-94, :106-112
     # edit.html.heex:5, :10-31; accounts.ex:1236-1255
     # user_confirmation_controller_test.exs:172-188, :247-268
     # wrong-user, expired and reused links: flow-resend-account-confirmation S05 to S07
@@ -301,7 +301,7 @@ Feature: Account confirmation
     When I open "/users/confirm/<token>"
     Then I am on "/users/log_in"
     And the flow "flow-login-return-to" has started for "/users/confirm/<token>"
-    # router.ex:189-190, :229-230; user_auth.ex:290-299, :490-492
+    # router.ex:237-238, :277-278; user_auth.ex:282-291, :464-466
     # user_confirmation_controller_test.exs:167-170, :240-245
     # shared-authenticated-session S01; flow-resend-account-confirmation S04
 
@@ -314,7 +314,7 @@ Feature: Account confirmation
     Then I receive an email with subject "Confirm your OpenFn account"
     And I end up on "/users/confirm-required"
     And the flow "flow-resend-account-confirmation" has started
-    # router.ex:236; confirmation_lockout.ex:28-30; user_auth.ex:305-306, :327-351
+    # router.ex:284; confirmation_lockout.ex:28-30; user_auth.ex:297-298, :319-343
     # user_confirmation_controller.ex:51-73, :79-86
     # confirmation_lockout_recovery_test.exs:46-61 (redirect to /projects, email sent, /projects then redirects to /users/confirm-required)
 ```
@@ -331,24 +331,24 @@ Feature: Account confirmation
 
 ### 6.2 Quirks and implementation details
 
-| What                                                                                                                                                                                                                                                           | Where                                                                                                                                | Disposition |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| Nothing in the app links to `/users/confirm`; the signed-out resend form is reachable only by typing the URL                                                                                                                                                   | `router.ex:72-73`; no `user_confirmation_path(_, :new)` or `"/users/confirm"` reference outside the router and the form's own action | decide      |
-| The resend form redirects to /projects, so a signed-out visitor bounces on to /users/log_in to read the flash                                                                                                                                                  | `user_confirmation_controller.ex:27`; `user_auth.ex:290-299`                                                                         | decide      |
-| The resend form sends the welcome copy ("Welcome to OpenFn ... If you didn't create an account with us, please ignore this.") rather than the reminder copy the banner sends; an admin-created account also gets the welcome copy instead of its enroller copy | `accounts.ex:1171-1174`; `user_notifier.ex:90-102` vs `:107-119`, `:121-133`                                                         | decide      |
-| Email lookup is case-insensitive (citext column)                                                                                                                                                                                                               | `accounts.ex:318-320`; `20220405135153_create_users.exs:12`                                                                          | preserve    |
-| Opening the link renders a "Confirm my account" button; only the POST confirms; owned as a decide row in flow-resend-account-confirmation 6.2                                                                                                                  | `user_confirmation_controller.ex:30-32`, `:89-104`                                                                                   | decide      |
-| A stale link opened by a confirmed account redirects with no message; owned as a preserve row in flow-resend-account-confirmation 6.2                                                                                                                          | `user_confirmation_controller.ex:119-127`; `user_confirmation_controller_test.exs:225-236`                                           | preserve    |
-| Both templates wrap the form in `id="reset-password"` (copied from the reset password page)                                                                                                                                                                    | `new.html.heex:9`; `edit.html.heex:9`                                                                                                | decide      |
-| The pages use the bare logo nav and call the header without `current_user`, so a signed-in user on the confirm page gets no sidebar, no log out, no confirmation banner and the signed-out title size                                                          | `edit.html.heex:1-7`; `layout_components.ex:259-266`, `:283-288`, `:315-332`                                                         | decide      |
-| "Register" shows only when self-signup is allowed                                                                                                                                                                                                              | `new.html.heex:50-55`; `edit.html.heex:43-48`                                                                                        | preserve    |
-| The lockout allow-list prefix `["users", "confirm"]` also matches `/users/confirm`, which is outside the authenticated scope and never consults it; the lockout test lists it as exempt                                                                        | `confirmation_lockout.ex:18-20`; `confirmation_lockout_test.exs:48-69`                                                               | preserve    |
+| What                                                                                                                                                                                                                                                           | Where                                                                                                                                 | Disposition |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Nothing in the app links to `/users/confirm`; the signed-out resend form is reachable only by typing the URL                                                                                                                                                   | `router.ex:99-100`; no `user_confirmation_path(_, :new)` or `"/users/confirm"` reference outside the router and the form's own action | decide      |
+| The resend form redirects to /projects, so a signed-out visitor bounces on to /users/log_in to read the flash                                                                                                                                                  | `user_confirmation_controller.ex:27`; `user_auth.ex:282-291`                                                                          | decide      |
+| The resend form sends the welcome copy ("Welcome to OpenFn ... If you didn't create an account with us, please ignore this.") rather than the reminder copy the banner sends; an admin-created account also gets the welcome copy instead of its enroller copy | `accounts.ex:1171-1174`; `user_notifier.ex:90-102` vs `:107-119`, `:121-133`                                                          | decide      |
+| Email lookup is case-insensitive (citext column)                                                                                                                                                                                                               | `accounts.ex:318-320`; `20220405135153_create_users.exs:12`                                                                           | preserve    |
+| Opening the link renders a "Confirm my account" button; only the POST confirms; owned as a decide row in flow-resend-account-confirmation 6.2                                                                                                                  | `user_confirmation_controller.ex:30-32`, `:89-104`                                                                                    | decide      |
+| A stale link opened by a confirmed account redirects with no message; owned as a preserve row in flow-resend-account-confirmation 6.2                                                                                                                          | `user_confirmation_controller.ex:119-127`; `user_confirmation_controller_test.exs:225-236`                                            | preserve    |
+| Both templates wrap the form in `id="reset-password"` (copied from the reset password page)                                                                                                                                                                    | `new.html.heex:9`; `edit.html.heex:9`                                                                                                 | decide      |
+| The pages use the bare logo nav and call the header without `current_user`, so a signed-in user on the confirm page gets no sidebar, no log out, no confirmation banner and the signed-out title size                                                          | `edit.html.heex:1-7`; `layout_components.ex:259-266`, `:283-288`, `:315-332`                                                          | decide      |
+| "Register" shows only when self-signup is allowed                                                                                                                                                                                                              | `new.html.heex:50-55`; `edit.html.heex:43-48`                                                                                         | preserve    |
+| The lockout allow-list prefix `["users", "confirm"]` also matches `/users/confirm`, which is outside the authenticated scope and never consults it; the lockout test lists it as exempt                                                                        | `confirmation_lockout.ex:18-20`; `confirmation_lockout_test.exs:48-69`                                                                | preserve    |
 
 ### 6.3 Unreachable or dead code
 
 | What                                                                 | Where                                         | Why unreachable                                                                                                                                                                             |
 | -------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The `:error` and `:info` flash blocks in both templates              | `new.html.heex:18-27`; `edit.html.heex:18-27` | every action in this controller redirects to /projects, and no redirect into these pages carries a flash (login return uses `redirect_with_return_to`, `user_auth.ex:63-70`, with no flash) |
+| The `:error` and `:info` flash blocks in both templates              | `new.html.heex:18-27`; `edit.html.heex:18-27` | every action in this controller redirects to /projects, and no redirect into these pages carries a flash (login return uses `redirect_with_return_to`, `user_auth.ex:64-71`, with no flash) |
 | `update/2`'s `:error` branch for a token that the plug just accepted | `user_confirmation_controller.ex:96-102`      | reachable only if the token is consumed or expires between the plug's lookup and `confirm_user/1` in the same request (`:10`, `:90`, `:106-112`)                                            |
 
 ### 6.4 Performance and operational limits

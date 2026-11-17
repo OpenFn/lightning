@@ -9,8 +9,8 @@ trigger:
   new_route:
   old_route_disposition: unchanged
   reachable_when:
-    - the user is signed in and admitted by shared-authenticated-session (`router.ex:189-190`, `:default` live_session `router.ex:288`, route `router.ex:324`)
-    - "`:id` is the signed-in user's own id (`edit.ex:61-70`; `policies/users.ex:23-30`); any other id is sent back to `/profile`"
+    - the user is signed in and admitted by shared-authenticated-session (`router.ex:237-238`, `:default` live_session `router.ex:336`, route `router.ex:372`)
+    - "`:id` is the signed-in user's own id (`edit.ex:61-70`; `policies/users.ex:35-41`); any other id is sent back to `/profile`"
     - the account is not already scheduled for deletion (such an account has no session left: `accounts.ex:964-968`)
     - entered from the "Delete my account" card on profile-account (profile-account S11; `components.ex:86-100`)
 
@@ -32,7 +32,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /profile/:id/delete  ProfileLive.Edit :delete      # router.ex:324, :default live_session
+    - live /profile/:id/delete  ProfileLive.Edit :delete      # router.ex:372, :default live_session
   events:
     - Components.UserDeletionModal#validate       # user_deletion_modal.ex:24-35; behaviour owned by shared-user-deletion-modal (proposed)
     - Components.UserDeletionModal#delete         # user_deletion_modal.ex:38-82; scheduling branch only, see 6.3
@@ -40,7 +40,7 @@ inventory:
   js_hooks:
     - ModalHook                                   # assets/js/hooks/index.ts:522-530, via modal.ex:37
   policies:
-    - Lightning.Policies.Users :delete_account (policies/users.ex:23-30)
+    - Lightning.Policies.Users :delete_account (policies/users.ex:35-41)
   workers: []                                     # the purge job is reached through flow-account-revocation-teardown
   api_endpoints: []
   emails:
@@ -103,7 +103,7 @@ but what "deleted" actually means, and when it happens, needs explaining.
 
 ## 3. Who can do what
 
-Sources: `policies/users.ex:23-30` (`:delete_account`), `edit.ex:61-85`,
+Sources: `policies/users.ex:35-41` (`:delete_account`), `edit.ex:61-85`,
 `user.ex:338-343`, `:418-440`.
 
 | Action                | Signed-in user, own id | Superuser, own id | Support user, own id | Anyone, another user's id |
@@ -115,7 +115,7 @@ Sources: `policies/users.ex:23-30` (`:delete_account`), `edit.ex:61-85`,
 **Preconditions beyond role**
 
 - Self only: the URL id must match the session's user
-  (`policies/users.ex:23-30`).
+  (`policies/users.ex:35-41`).
 - The typed email must equal the account's stored email exactly
   (`user.ex:430-440`).
 - Superusers are refused at save, not at the door (`user.ex:418-428`).
@@ -221,7 +221,7 @@ Feature: Deleting my own account from the profile
     Then I am on "/profile"
     And I see "You can't perform this action"
     And I do not see the "Delete user" dialog
-    # edit.ex:61-70, :82-84; policies/users.ex:23-30
+    # edit.ex:61-70, :82-84; policies/users.ex:35-41
     # profile_live_test.exs:239-249
 
   @S05
@@ -281,8 +281,8 @@ flow-account-revocation-teardown S01, S06 and S07. They are not restated here.
 | The activity note checks only runs created by the user, while the purge is also blocked by project files and keychain credentials the user created; the note says "active projects" but counts runs in any project                                | `accounts.ex:31-40` vs `:104-127`; `user_deletion_modal.ex:173-177`                         | decide      |
 | The typed email is compared to the stored email exactly; stored emails are lowercase, so typing the address with capitals is refused as "doesn't match"                                                                                           | `user.ex:430-433`; `utils/validators.ex:27`                                                 | decide      |
 | The URL `:id` only feeds the policy; the modal is always given the session's `current_user`, and the loaded `@user` assign is not read by the template                                                                                            | `edit.ex:62`, `:80`; `components.ex:44-45`; `edit.html.heex:16-25`                          | preserve    |
-| A refused id uses `push_patch` to `/profile`, which sits in another live_session (`:services`), so it lands as a redirect during mount rather than a patch                                                                                        | `edit.ex:83-84`; `router.ex:288`, `:324`, `:351-355`; `profile_live_test.exs:245-247`       | preserve    |
-| `/profile/:id/delete` is in `:default` and `/profile` in `:services`, so opening the dialog and "Cancel" are full page loads; same as profile-account 6.2                                                                                         | `router.ex:324`, `:351-355`; `components.ex:92`, `:47`; `user_deletion_modal.ex:86`         | decide      |
+| A refused id uses `push_patch` to `/profile`, which sits in another live_session (`:services`), so it lands as a redirect during mount rather than a patch                                                                                        | `edit.ex:83-84`; `router.ex:336`, `:372`, `:399-403`; `profile_live_test.exs:245-247`       | preserve    |
+| `/profile/:id/delete` is in `:default` and `/profile` in `:services`, so opening the dialog and "Cancel" are full page loads; same as profile-account 6.2                                                                                         | `router.ex:372`, `:399-403`; `components.ex:92`, `:47`; `user_deletion_modal.ex:86`         | decide      |
 | The profile reads the modal module from `/profile`'s route metadata, while the admin users list hard-codes `UserDeletionModal`, so a deployment's substitute applies to self-deletion only                                                        | `edit.ex:73-76`; `user_live/index.html.heex:21`                                             | decide      |
 | A hidden `user[id]` field is submitted and ignored                                                                                                                                                                                                | `user_deletion_modal.ex:185`, `:38-44`                                                      | preserve    |
 | The initial changeset already fails the email check, but its errors are hidden until the first change sets an action                                                                                                                              | `user_deletion_modal.ex:18`, `:32`                                                          | preserve    |

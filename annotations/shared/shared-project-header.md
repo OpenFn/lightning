@@ -323,7 +323,7 @@ Feature: Project page header and project picker
     And I am on the project's workflows page
     When I click "Resend confirmation email"
     Then the flow "flow-resend-account-confirmation" has started
-    # layout_components.ex:271-276, common.ex:266-271 (plain link), router.ex:236
+    # layout_components.ex:271-276, common.ex:266-271 (plain link), router.ex:284
     # The warning text itself is shared-authenticated-session S06
 
   @S15
@@ -396,14 +396,14 @@ Feature: Project page header and project picker
 | The sidebar's experimental indicator doc says it links to the profile; it renders no link (the account menu's version does)                                                                | `menu.ex:11-16`, `menu_test.exs:45`                                                       | preserve    |
 | The confirmation deadline in the banner is formatted in UTC regardless of the viewer's time zone                                                                                           | `layout_components.ex:270`                                                                | decide      |
 | "Resend confirmation email" is a link to a controller that sends the email, then returns to the referring path without its query string                                                    | `common.ex:267`, `user_confirmation_controller.ex:51-86`                                  | decide      |
-| Sidebar footer shows the release version chip                                                                                                                                              | `layout_components.ex:630-650`                                                            | preserve    |
+| Sidebar footer shows the release version chip, written without a leading "v" (for example "2.21.0")                                                                                        | `layout_components.ex:630-650`; `bootstrap.ex:1035`                                       | preserve    |
 
 ### 6.3 Unreachable or dead code
 
 | What                                                         | Where                                                                            | Why unreachable                                                                                                                |
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `OpenProjectPickerViaCtrlP` hook                             | `assets/js/hooks/KeyHandlers.ts:392-421`, exported at `hooks/index.ts:24`, `:45` | no template mounts it; the Picker's own key listener handles Ctrl/Cmd+P. It would also click the wrapper `div`, not the button |
-| `jobs` section in `project_picker_target/2`                  | `layout_components.ex:554`, `project_picker_sections_test.exs:15`                | the only `/projects/:project_id/jobs` route is a controller endpoint (`router.ex:203`), not a page the picker is opened from   |
+| `jobs` section in `project_picker_target/2`                  | `layout_components.ex:554`, `project_picker_sections_test.exs:15`                | the only `/projects/:project_id/jobs` route is a controller endpoint (`router.ex:251`), not a page the picker is opened from   |
 | `global_picker` layout attr                                  | `layouts.ex:12`, `:16`; `live.html.heex:110`                                     | nothing in this repo passes it; an extension point                                                                             |
 | Custom `menu_items` and `user_menu_items` components         | `layout_components.ex:54-58`, `:135-140`, `:207-218`                             | not configured in this repo; variant `custom-menus` replaces the project menu and the account menu entirely                    |
 | Header `:period`, `:description` slots and the `socket` attr | `layout_components.ex:251-256`                                                   | declared, never rendered                                                                                                       |
@@ -443,7 +443,7 @@ Feature: Project page header and project picker
 ## Proposed flows
 
 - `flow-resend-account-confirmation`: "Resend confirmation email" in the header
-  is a GET to `/users/send-confirmation-email` (`router.ex:236`). The controller
+  is a GET to `/users/send-confirmation-email` (`router.ex:284`). The controller
   sends only when `confirmed_at` is nil
   (`user_confirmation_controller.ex:51-77`), allows 3 sends per 15 minutes per
   account (`accounts.ex:758-782`, `:1197-1206`), inserts a `user_tokens` confirm

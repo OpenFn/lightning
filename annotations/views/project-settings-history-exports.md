@@ -42,7 +42,7 @@ config_variants:
 inventory:
   routes:
     - live /projects/:project_id/settings  ProjectLive.Settings :index # catalogued by project-settings-setup
-    - get /project_files/:id/download  ProjectFileController :download # linked from here (settings.html.heex:1075); owned by flow-history-export (router.ex:227)
+    - get /project_files/:id/download  ProjectFileController :download # linked from here (settings.html.heex:1075); owned by flow-history-export (router.ex:275)
   events: [] # the panel has no phx-click or handle_event of its own
   js_hooks:
     - LocalTimeConverter # Common.datetime in the date column (data_tables.ex:310; common.ex:422-470; assets/js/hooks/index.ts)
@@ -102,7 +102,7 @@ Sources: no policy is consulted when rendering the panel
 (`settings.html.heex:1055-1100`); the list is loaded for every viewer at mount
 (`settings.ex:115`, `:208`). Download is checked by the controller via
 `Exports.authorize(:download)`, which is `:access_project` (`exports.ex:21-24`,
-`project_users.ex:134`, `:136`); the full download matrix is in
+`decision.ex:59-66`, `project_users.ex:160-162`); the full download matrix is in
 flow-history-export section 3.
 
 | Action                                            | Viewer                         | Editor | Admin | Owner | Superuser (no row)         | Support (no row, access on) |
@@ -184,7 +184,7 @@ Feature: Project history exports panel
     Then that row's "Download" link points to "/project_files/<project_file_id>/download" and opens in a new tab
     When I click "Download"
     Then the flow "flow-history-export" continues at controller:project-file-download for that file
-    # settings.html.heex:1071-1080 (no role check on the link); router.ex:227
+    # settings.html.heex:1071-1080 (no role check on the link); router.ex:275
     # end-to-end delivery and access checks: flow-history-export S01, S07, S08
     Examples:
       | role   |

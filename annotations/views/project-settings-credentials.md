@@ -58,11 +58,12 @@ inventory:
       action (project_users.ex:39-49, :167-172); host flag settings.ex:166-171
     - Lightning.Policies.Credentials (:create_keychain_credential,
       :edit_keychain_credential), admin, owner or support
-      (policies/credentials.ex:32-63, :87-98); host flag settings.ex:173-178,
-      component flag credential_index_component.ex:41-47, form flags
-      keychain_credential_form_component.ex:44-59
-    - Lightning.Policies.Users (:edit_credential, :delete_credential), owner
-      only (policies/users.ex:40-44), via shared-credential-index-component
+      (policies/credentials.ex:119-146, :203-206); host flag
+      settings.ex:173-178, component flag credential_index_component.ex:41-47,
+      form flags keychain_credential_form_component.ex:44-59
+    - Lightning.Policies.Credentials (:edit_credential, :delete_credential),
+      owner only (policies/credentials.ex:76-147), via
+      shared-credential-index-component
   workers: [] # the purge worker belongs to flow-credential-scheduled-deletion
   api_endpoints: []
   emails: [] # deletion and transfer emails belong to their flows
@@ -150,9 +151,11 @@ role, and that produces some odd moments.
 ## 3. Who can do what
 
 Sources: `lib/lightning/policies/project_users.ex:39-49`, `:134`, `:167-172`
-(credentials and OAuth clients); `lib/lightning/policies/credentials.ex:32-63`,
-`:87-98` (keychains); `lib/lightning/policies/users.ex:40-44` (row actions on
-credentials and OAuth clients); flags at `settings.ex:166-178`.
+(credentials and OAuth clients);
+`lib/lightning/policies/credentials.ex:119-146, :203-206` (keychains);
+`lib/lightning/policies/credentials.ex:76-147` (row actions on credentials) and
+`lib/lightning/policies/users.ex:40-44` (OAuth clients); flags at
+`settings.ex:166-178`.
 
 | Action                                                            | Viewer            | Editor            | Admin             | Owner             | Superuser (no row)           | Support (no row, access on) |
 | ----------------------------------------------------------------- | ----------------- | ----------------- | ----------------- | ----------------- | ---------------------------- | --------------------------- |
@@ -168,10 +171,11 @@ credentials and OAuth clients); flags at `settings.ex:166-178`.
 **Preconditions beyond role**
 
 - A support user with a membership row gets that row's role, not support
-  standing (`project_users.ex:163-172`, `policies/credentials.ex:89-93`).
+  standing (`project_users.ex:163-172`,
+  `policies/credentials.ex:119-146, :203-206`).
 - Every action is denied when the project requires MFA and the actor hasn't
-  enrolled (`project_users.ex:134`, `policies/credentials.ex:90-93`); in
-  practice the scope gate redirects first (shared-project-scope).
+  enrolled (`decision.ex:59-66`, `policies/credentials.ex:119-146, :203-206`);
+  in practice the scope gate redirects first (shared-project-scope).
 - Row actions on credentials and OAuth clients depend on ownership, not role
   (shared-credential-index-component section 3).
 - The create flags are fixed at mount (`settings.ex:118-188`) and re-checked on
@@ -287,7 +291,7 @@ Feature: Project credentials
     And "Malawi HIV" allows support access
     When I choose "Add new" then "Credential", complete and save it
     Then I am back on the "Credentials" tab and the credential is listed
-    # project_users.ex:167-169, settings.ex:166-171; project_live_test.exs:1077-1123
+    # project_users.ex:182-192, settings.ex:166-171; project_live_test.exs:1077-1123
 
   @S07
   Scenario: Viewer cannot create anything on this tab
@@ -308,7 +312,7 @@ Feature: Project credentials
     When I open "Add new" on the "Credentials" tab
     Then "Credential" and "OAuth client" are enabled
     And "Keychain" is disabled
-    # settings.html.heex:334-340, settings.ex:173-178, policies/credentials.ex:87-98; project_live_test.exs:1193-1213 asserts the admin side only
+    # settings.html.heex:334-340, settings.ex:173-178, policies/credentials.ex:119-146, :203-206; project_live_test.exs:1193-1213 asserts the admin side only
 
   @S09
   Scenario: Editor creates an OAuth client shared with this project
@@ -329,7 +333,7 @@ Feature: Project credentials
     When I choose "Add new" then "Credential" on the "Credentials" tab of "Malawi HIV"
     Then the type picker offers "Google"
     And it does not offer "Mine only"
-    # credential_form_component.ex:1355-1395 (list_clients(project) when a project is assigned), oauth_clients.ex:60-80
+    # credential_form_component.ex:1373-1413 (list_clients(project) when a project is assigned), oauth_clients.ex:60-80
 
   @S11
   Scenario: Admin creates a keychain
@@ -402,7 +406,7 @@ Feature: Project credentials
     Then I am back on the "Credentials" tab with "Credential scheduled for deletion"
     And "DHIS2 prod" is no longer listed on this tab
     And the flow "flow-credential-scheduled-deletion" has started for "DHIS2 prod"
-    # credential_index_component.ex:240-254, credential_deletion_modal.ex:40-51, credentials.ex:1036-1052; credential_live_test.exs:541-580
+    # credential_index_component.ex:240-254, credential_deletion_modal.ex:40-44, credentials.ex:1036-1052; credential_live_test.exs:541-580
 
   @S18
   Scenario: Owner starts a credential transfer from project settings
@@ -421,7 +425,7 @@ Feature: Project credentials
     When I start a new credential of type "Google" on the "Credentials" tab and sign in with the provider
     Then the flow "flow-oauth-credential-authorize" has started
     And the provider's answer is delivered to the credential form on this tab
-    # settings.ex:682-686 (handle_info {:forward, ...} -> send_update), credential_form_component.ex:1355-1395
+    # settings.ex:682-686 (handle_info {:forward, ...} -> send_update), credential_form_component.ex:1373-1413
 ```
 
 ## 6. Unclear value
@@ -493,7 +497,7 @@ Feature: Project credentials
   here with "Cancel deletion" (6.1)?
 - Should keychain create, update and delete be audited like credentials (6.2)?
 - The keychain form also renders inside the workflow editor's credential form
-  (`credential_form_component.ex:1181-1204`). Should keychain scenarios S11 to
+  (`credential_form_component.ex:1186-1209`). Should keychain scenarios S11 to
   S16 move to a shared annotation (see Proposed shared)?
 
 ## Proposed flows
@@ -510,7 +514,7 @@ entry surface (flow-credential-scheduled-deletion asks this in its section 8).
   `Components.Credentials.keychain_credential_form` (name, JSONPath, default
   credential, project-scoped validation). Surfaces: project-settings-credentials
   (catalogued here as its main home, S11 to S16), workflow editor credential
-  modal (`credential_form_component.ex:1181-1204`, `from_collab_editor` pages
+  modal (`credential_form_component.ex:1186-1209`, `from_collab_editor` pages
   with "Back").
 
 ## Lead resolution (batch 2)

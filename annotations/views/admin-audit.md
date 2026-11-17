@@ -11,7 +11,7 @@ trigger:
   reachable_when:
     - the session is admitted by shared-authenticated-session; the route sits in
       the `:settings` live_session, which mounts `InitAssigns`
-      (`lib/lightning_web/router.ex:268`, `:278`)
+      (`lib/lightning_web/router.ex:316`, `:326`)
     - the viewer is a superuser (`audit_live/index.ex:7`; gate owned by
       shared-admin-space S02, S03)
     - entered from the "Audit" item in the admin side menu (shared-admin-space
@@ -44,7 +44,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /settings/audit  AuditLive.Index :index # router.ex:278
+    - live /settings/audit  AuditLive.Index :index # router.ex:326
   events: [] # no handle_event; the only interaction is pagination patches into handle_params (index.ex:26-35)
   js_hooks:
     - LocalTimeConverter # via Common.datetime (common.ex:455); owned by shared-local-datetime
@@ -76,7 +76,7 @@ related:
   - project-settings-credentials
   - credentials-index
   - project-settings-webhook-security
-  - project-settings-github-sync # repo_connection_created / removed
+  - project-settings-github-sync # repo_connection_created / updated / removed
   - project-settings-history-exports # history_export requested
   - channels-index
   - dataclip-show # dataclip label_created / label_deleted
@@ -131,7 +131,7 @@ works.
 | Page through events                     | no         | no           | no           | yes                   |
 | Filter, search, export or delete events | n/a        | n/a          | n/a          | n/a (no such control) |
 
-Sources: `audit_live/index.ex:7`; `policies/users.ex:19-21` (via
+Sources: `audit_live/index.ex:7`; `policies/users.ex:30-32` (via
 shared-admin-space); `index.html.heex:1-56` (no controls besides pagination).
 Test: `test/lightning_web/live/audit_live_test.exs:12-22` (regular user is
 redirected to `/projects` with "Sorry, you don't have access to that.").
@@ -183,19 +183,19 @@ user events, the before and after email, name, role, `disabled` and
 Every row in `audit_events` is listed whatever its event name; the page has no
 allow-list. The writers found, by subject (`item_type`):
 
-| Subject             | Events                                                                                                                                                                                       | Writer                                                                 |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| credential          | created, updated, added_to_project, removed_from_project, deleted, transfered, token_refreshed, token_refresh_failed, token_revoked                                                          | `credentials/audit.ex:5-18`                                            |
-| oauth_client        | created, updated, added_to_project, removed_from_project, deleted                                                                                                                            | `credentials/oauth_client_audit.ex:5-14`                               |
-| project             | allow_support_access_updated, collaborator_added, collaborator_removed, collaborator_role_changed, dataclip_retention_period_updated, history_retention_period_updated, requires_mfa_updated | `projects/audit.ex:5-16`                                               |
-| project             | repo_connection_created, repo_connection_removed                                                                                                                                             | `version_control/audit.ex:5-11`, `:20-56`                              |
-| channel             | created, updated, deleted, auth_method_added, auth_method_removed, auth_method_changed                                                                                                       | `channels/audit.ex:9-19`                                               |
-| webhook_auth_method | created, updated, added_to_trigger, removed_from_trigger, deleted                                                                                                                            | `workflows/webhook_auth_method_audit.ex:5-14`                          |
-| workflow            | snapshot_created, enabled, disabled, deleted_by_provisioner, inserted_by_provisioner, updated_by_provisioner, marked_for_deletion                                                            | `workflows/audit.ex:5-16`                                              |
-| user                | created, updated                                                                                                                                                                             | `accounts/audit.ex:5-8`                                                |
-| service_account     | token_issued                                                                                                                                                                                 | `service_account/audit.ex:5-15`                                        |
-| dataclip            | label_created, label_deleted                                                                                                                                                                 | `invocation/dataclip_audit.ex:5-8`                                     |
-| history_export      | requested                                                                                                                                                                                    | `workorders/export_audit.ex:5-8`; written at `invocation.ex:1315-1321` |
+| Subject             | Events                                                                                                                                                                                                                                   | Writer                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| credential          | created, updated, added_to_project, removed_from_project, deleted, transfered, token_refreshed, token_refresh_failed, token_revoked                                                                                                      | `credentials/audit.ex:5-18`                                            |
+| oauth_client        | created, updated, added_to_project, removed_from_project, deleted                                                                                                                                                                        | `credentials/oauth_client_audit.ex:5-14`                               |
+| project             | allow_support_access_updated, collaborator_added, collaborator_removed, collaborator_role_changed, created, dataclip_retention_period_updated, description_updated, history_retention_period_updated, name_updated, requires_mfa_updated | `projects/audit.ex:5-19`                                               |
+| project             | repo_connection_created, repo_connection_updated, repo_connection_removed                                                                                                                                                                | `version_control/audit.ex:5-12`, `:21-66`                              |
+| channel             | created, updated, deleted, auth_method_added, auth_method_removed, auth_method_changed                                                                                                                                                   | `channels/audit.ex:9-19`                                               |
+| webhook_auth_method | created, updated, added_to_trigger, removed_from_trigger, deleted                                                                                                                                                                        | `workflows/webhook_auth_method_audit.ex:5-14`                          |
+| workflow            | snapshot_created, enabled, disabled, deleted_by_provisioner, inserted_by_provisioner, updated_by_provisioner, marked_for_deletion                                                                                                        | `workflows/audit.ex:5-16`                                              |
+| user                | created, updated                                                                                                                                                                                                                         | `accounts/audit.ex:5-8`                                                |
+| service_account     | token_issued                                                                                                                                                                                                                             | `service_account/audit.ex:5-15`                                        |
+| dataclip            | label_created, label_deleted                                                                                                                                                                                                             | `invocation/dataclip_audit.ex:5-8`                                     |
+| history_export      | requested                                                                                                                                                                                                                                | `workorders/export_audit.ex:5-8`; written at `invocation.ex:1315-1321` |
 
 **Writers the page cannot fully display.** The page renders `changes.before` and
 `changes.after` and, from `metadata`, only `credential_bodies`

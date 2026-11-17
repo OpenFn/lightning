@@ -47,14 +47,15 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/runs/:id  RunLive.Show :show # router.ex:297; no run-show view annotation yet
-    - get /dataclip/body/:id  DataclipController :show # router.ex:201; editor run viewer reads bodies here
+    - live /projects/:project_id/runs/:id  RunLive.Show :show # router.ex:345; no run-show view annotation yet
+    - get /dataclip/body/:id  DataclipController :show # router.ex:249; editor run viewer reads bodies here
     - post /projects/:project_id/runs/:run_id/retry  WorkflowController
-      :retry_run # router.ex:223-225; editor header Retry (6.1)
+      :retry_run # router.ex:271-273; editor header Retry (6.1)
   events:
     - ProjectLive.Settings#save_retention_settings # entry, owned by project-settings-data-storage
     - RunLive.Show handle_info Runs.Events.DataclipUpdated # show.ex:407-409, a no-op (6.1)
-    - RunChannel#fetch:dataclip # run_channel.ex:184-191
+    - RunChannel#fetch:dataclip # run_channel.ex:185-199 (also captures keychain selections, S08)
+    - RunChannel#fetch:credential # run_channel.ex:145-166 (keychain selection, S08 to S11)
     - RunChannel#step:complete # run_channel.ex:218-224
     - RunChannel#run:complete # run_channel.ex:122
     - RunChannel handle_info Runs.Events.DataclipUpdated # run_channel.ex:320-323, pushes "dataclip:updated" (6.3)
@@ -304,6 +305,56 @@ Feature: Runs on a zero-persistence project
     And a worker fetches the run's input
     Then "Sample patient" still has its body
     # query.ex:367-368 (named and :global excluded); run_channel_test.exs:553-566 covers :global only, named is inferred from code
+
+  @S08
+  Scenario: A keychain credential is chosen from the input even though the input is then erased
+    # Value: jobs on a zero-persistence project get the credential their input selects (for example one per district), not the keychain's default.
+    Given project "Malawi HIV" never retains I/O data
+    And job "Load" uses keychain "By district" with path "$.district" and a default credential
+    And a project credential has external id "kisumu"
+    And a run starts with input '{"district": "kisumu"}'
+    When a worker fetches the run's input
+    And the worker then asks for the credential of "By district"
+    Then the worker receives the credential with external id "kisumu", not the default
+    # run_channel.ex:185-197 (selections read just before the wipe, kept on the socket); run_channel.ex:150 (passed to the resolver)
+    # resolver.ex:143-182 (keychain_selectors, select_external_id), :195-206 (select_credential)
+    # run_channel_test.exs:881-950; resolver_test.exs:354-
+
+  @S09
+  Scenario: A keychain whose input is no longer available gets an error, not the default
+    # Value: a job is never run with the wrong credential just because its selecting input was already erased.
+    Given project "Malawi HIV" never retains I/O data
+    And job "Load" uses keychain "By district" with a default credential
+    And the run's input was erased before its keychain selections were read, for example the channel was rejoined after the erase
+    When the worker asks for the credential of "By district"
+    Then the reply is an error "Could not select a keychain credential: the run's input was erased before it could be read"
+    And the worker is not given the default credential
+    # run_channel.ex:190-196 (selections captured only on the first fetch), :638-649; resolver.ex:165 (wiped input counts as unavailable), :195-206
+    # run_channel_test.exs:950-990
+
+  @S10
+  Scenario: A keychain with an unusable path fails only the job that uses it
+    # Value: one misconfigured keychain doesn't stop the run's other jobs, including those that use no keychain.
+    Given project "Malawi HIV" never retains I/O data
+    And keychain "Broken" has a path the database cannot evaluate
+    And a run has a job using "Broken" and another job using no keychain
+    When the worker fetches the run's input
+    Then the fetch succeeds
+    When the worker asks for the credential of "Broken"
+    Then the reply is an error "Could not select a keychain credential: its path could not be evaluated against the run's input"
+    # resolver.ex:143-182 (one query per keychain; a database error marks only that keychain), :651-662 in run_channel.ex
+    # resolver_test.exs (invalid path cases); run_channel_test.exs:881-990
+
+  @S11
+  Scenario: A worker can only fetch credentials its run's snapshot lists
+    # Value: a run uses the credentials it was started with, even if someone edits the job's credential afterwards.
+    Given a run was started from a workflow version whose job "Load" uses credential "C1"
+    And the job has since been edited to use credential "C2"
+    When the worker asks for credential "C1" for that run
+    Then it receives "C1"
+    And asking for "C2" returns "not found"
+    # resolver.ex:257-295 (get_run_credential reads the run's snapshot jobs); run_channel.ex:145-166
+    # resolver_test.exs (snapshot cases)
 ```
 
 The workflow editor's run viewer has no scenario here: what it shows for a

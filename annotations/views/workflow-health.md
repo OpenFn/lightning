@@ -16,10 +16,10 @@ trigger:
       hooks.ex:138-158; workflows.ex:1330-1336; query.ex:35-40)
     - the React component's three data requests pass the API controller's own
       check, which repeats the project and workflow test
-      (workflow_health_controller.ex:110-133)
+      (workflow_health_controller.ex:105-111)
 
 inherits:
-  - shared-authenticated-session # router.ex:189-190 (require_authenticated_user), :288 (live_session :default, InitAssigns)
+  - shared-authenticated-session # router.ex:237-238 (require_authenticated_user), :288 (live_session :default, InitAssigns)
   - shared-project-scope # health.ex:10; its S12 is the deleted-workflow redirect, which this page takes via health.ex:11
   - shared-project-header # health.ex:28-46 (project picker, "Workflows" and workflow crumbs, "Health")
   - shared-flash-messages # added by lead (final pass)
@@ -48,23 +48,23 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w/:id/health  WorkflowLive.Health :show # router.ex:304
+    - live /projects/:project_id/w/:id/health  WorkflowLive.Health :show # router.ex:352
     - get
       /api/projects/:project_id/workflows/:workflow_id/health/outcomes  API.WorkflowHealthController
-      :outcomes # router.ex:142-144
+      :outcomes # router.ex:179-181
     - get
       /api/projects/:project_id/workflows/:workflow_id/health/failures  API.WorkflowHealthController
-      :error_signatures # router.ex:146-148
+      :error_signatures # router.ex:183-185
     - get
       /api/projects/:project_id/workflows/:workflow_id/health/runs  API.WorkflowHealthController
-      :runs # router.ex:150-152
+      :runs # router.ex:187-189
   events: [] # WorkflowLive.Health has no handle_event, handle_info or handle_params (health.ex:1-66)
   # handle_info Projects.Events.WorkflowDeleted arrives through the project-scope hook (hooks.ex:325-335); owned by shared-project-scope S12
   js_hooks:
     - ReactComponent WorkflowHealth # health.ex:50-60; assets/js/health/WorkflowHealth.tsx
     # The component also uses the React Tooltip (RangePicker.tsx:3, :40-46) and Recharts tooltips (ChartTooltip.tsx); neither is a LiveView hook
   policies:
-    - Lightning.Policies.ProjectUsers :access_project # workflow_health_controller.ex:121; project_users.ex:134, :136, :193-194
+    - Lightning.Policies.ProjectUsers :access_project # workflow_health_controller.ex:105-111; decision.ex:59-66; project_users.ex:160-162; scope.ex:224-226
     # The LiveView itself evaluates no policy beyond shared-project-scope
   workers: []
   api_endpoints:
@@ -168,9 +168,9 @@ into) takes some explaining.
 
 ## 3. Who can do what
 
-Source: `lib/lightning/policies/project_users.ex:134` (MFA unsatisfied denies
+Source: `lib/lightning/policies/decision.ex:59-66` (MFA unsatisfied denies
 everything), `:136` and `:193-194` (`:access_project` is a membership row or
-support access), `workflow_health_controller.ex:110-133`. The page shows the
+support access), `workflow_health_controller.ex:105-111`. The page shows the
 same thing to every role; there is no role-dependent control on it. Page gate is
 shared-project-scope; endpoint gate is the controller plug, which applies the
 same policy.
@@ -185,15 +185,20 @@ same policy.
 **Preconditions beyond role**
 
 - Signed in; an anonymous data request is a 401, not a redirect
-  (`router.ex:137-138`; `user_auth.ex:288-293`;
+  (`router.ex:222-238`; `user_auth.ex:280-285`;
   `workflow_health_controller_test.exs:63-75`).
 - The workflow must belong to the project in the URL and not be deleted, on the
   page (`hooks.ex:138-158`) and on every endpoint
-  (`workflow_health_controller.ex:113-120`; `workflows.ex:151-157`).
-- Every endpoint refusal is a 404, including MFA not enrolled on an MFA-required
-  project and a project scheduled for deletion
-  (`workflow_health_controller.ex:124-131`;
-  `workflow_health_controller_test.exs:149-203`).
+  (`workflow_health_controller.ex:105-111`; `workflows.ex:154-165`).
+- The access check runs before anything else is read. A caller who may not open
+  the project hears the same 403 whether the workflow exists, is missing or has
+  an id that is not a UUID, including MFA not enrolled on an MFA-required
+  project and a superuser or support user with no standing on it. A project
+  scheduled for deletion answers 409 `scheduled_for_deletion`. Only a caller who
+  may open the project learns a workflow is missing, deleted or in another
+  project (404), or that its id is malformed (400)
+  (`workflow_health_controller.ex:105-111`; `target.ex:50-62`;
+  `workflow_health_controller_test.exs:54-222`).
 - Support users need the project's support access switched on
   (`workflow_health_controller_test.exs:123-147`).
 - A range longer than the project's history retention cannot be picked in the UI
@@ -207,7 +212,7 @@ same policy.
   (`history_retention_period`, `health.ex:59`), plus the project-scope reads
   (shared-project-scope)
 - Endpoints: `workflows` with `projects`
-  (`workflow_health_controller.ex:116-120`), `project_users` via the policy
+  (`workflow_health_controller.ex:105-111`), `project_users` via the policy
   scope
 - Outcomes: `work_orders` grouped by state (`stats.ex:57-67`)
 - Failures: `work_orders`, `runs`, `steps`, `run_steps`, `workflow_snapshots`
@@ -233,7 +238,7 @@ same policy.
 - The runs reply carries `vary: x-timezone`
   (`workflow_health_controller.ex:41-53`)
 - Drill-down links open History in a new tab (`TriageTable.tsx:158-167`;
-  `Donut.tsx:87-91`, `:131-134`; `VolumeBars.tsx:182-191`)
+  `Donut.tsx:72-76`, `:131-134`; `VolumeBars.tsx:182-191`)
   - **Changed on purpose in the port:** the ported page opens these links in the
     same tab, because a new tab is jarring. Don't restore the new tab for
     parity.
@@ -430,7 +435,7 @@ Feature: Workflow health
     When I click "Failed" in the "Outcomes" legend
     Then the flow "flow-workflow-health-drilldown" has started
     And History opens in this tab, not a new one (changed on purpose; Lightning opened a new tab)
-    # Donut.tsx:87-91, :128-152; OutcomesDonut.tsx:57-76; FailureBreakdownDonut.tsx:66; historyUrl.ts:47-56
+    # Donut.tsx:72-76, :128-152; OutcomesDonut.tsx:57-76; FailureBreakdownDonut.tsx:66; historyUrl.ts:47-56
     # OutcomesDonut.test.tsx:154-195; FailureBreakdownDonut.test.tsx:133-150
 
   @S16
@@ -516,7 +521,7 @@ Feature: Workflow health
 
   @S24
   Scenario Outline: The page's data is served only to people who can open it
-    # Value: the data endpoints behind the page never show a workflow's failure counts to someone the page itself would turn away, or confirm the workflow exists.
+    # Value: the data endpoints behind the page never show a workflow's failure counts to someone the page itself would turn away, and a refused caller hears the same answer whether or not the workflow exists.
     Given <who>
     When the browser requests the outcomes, failures or runs data for "Daily sync"
     Then the response is <status>
@@ -525,14 +530,16 @@ Feature: Workflow health
       | I am a viewer on "Malawi HIV"                                               | 200    |
       | I am a support user and "Malawi HIV" allows support access                  | 200    |
       | I am not signed in                                                          | 401    |
-      | I am signed in but not on "Malawi HIV"                                      | 404    |
-      | I am a support user and "Malawi HIV" does not allow support access          | 404    |
-      | "Malawi HIV" requires MFA and I have not enrolled                           | 404    |
-      | "Malawi HIV" is scheduled for deletion                                      | 404    |
-      | "Daily sync" has been deleted                                               | 404    |
-      | the request names "Daily sync" under project "Kenya TB", which I am not on  | 404    |
-    # workflow_health_controller.ex:1-22, :110-133; router.ex:137-153; project_users.ex:134, :136, :193-194
-    # workflow_health_controller_test.exs:53-230; flow-workflow-health-drilldown S09 covers the cross-project case for the drill-down slices
+      | I am signed in but not on "Malawi HIV"                                      | 403    |
+      | I am a support user and "Malawi HIV" does not allow support access          | 403    |
+      | I am a superuser with no role on "Malawi HIV"                               | 403    |
+      | "Malawi HIV" requires MFA and I have not enrolled                           | 403    |
+      | "Malawi HIV" is scheduled for deletion                                      | 409    |
+      | "Daily sync" has been deleted and I am a viewer on "Malawi HIV"             | 404    |
+      | the request names "Daily sync" under project "Kenya TB", which I am not on  | 403    |
+      | the request names a workflow that is not in "Malawi HIV", which I am on     | 404    |
+    # workflow_health_controller.ex:105-111; target.ex:50-62; api/fallback_controller.ex:37-62; router.ex:222-238; decision.ex:59-66; project_users.ex:160-162; scope.ex:224-226
+    # workflow_health_controller_test.exs:54-222; flow-workflow-health-drilldown S09 covers the cross-project case for the drill-down slices
 
   @S25
   Scenario: A failure alert's health link lands on this page
@@ -542,7 +549,7 @@ Feature: Workflow health
     Then I am on the health page of "Daily sync"
     And the flow "flow-failure-alert-email" ends on this page
     And if I was signed out, the flow "flow-login-return-to" starts for that URL
-    # failure_alerter.ex:81-85; failure_alert.html.heex:19-22; failure_alert_test.exs:152; router.ex:189-190, :304
+    # failure_alerter.ex:81-85; failure_alert.html.heex:19-22; failure_alert_test.exs:152; router.ex:237-238, :352
 
   @S26
   Scenario: A digest's health link lands on this page
@@ -580,39 +587,40 @@ Feature: Workflow health
 
 | What                                                                                                                                                                                                                                                                                                                           | Where                                                                                       | What a user sees                                                                                | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------- |
-| A failed refresh keeps the last numbers with no sign they are stale, and refreshes keep failing silently for as long as the tab is open (for example after the session expires, which answers 401). The Panel comment speaks of a "polite stamp above" that would fall silent, but no stamp or "last updated" time is rendered | `useHealthQuery.ts:87-93`, `:103-136`; `WorkflowHealth.tsx:226-227`; `user_auth.ex:288-293` | numbers that look current but stopped updating, with nothing to say so                          | decide      |
+| A failed refresh keeps the last numbers with no sign they are stale, and refreshes keep failing silently for as long as the tab is open (for example after the session expires, which answers 401). The Panel comment speaks of a "polite stamp above" that would fall silent, but no stamp or "last updated" time is rendered | `useHealthQuery.ts:87-93`, `:103-136`; `WorkflowHealth.tsx:226-227`; `user_auth.ex:280-285` | numbers that look current but stopped updating, with nothing to say so                          | decide      |
 | A browser timezone that Tzdata does not know yet (a zone newer than the server's tz database) is refused with a 400, so the "Runs" tab shows "Could not load workflow stats" on every load; the controller says this is deliberate                                                                                             | `workflow_health_controller.ex:78-82`, `:93-108`; `useHealthQuery.ts:55-65`                 | a runs chart that never loads for readers in that zone, with advice to refresh that cannot help | decide      |
 | "Steps with failures" labels a job with the name from its heaviest triage row, while the triage table labels each row from that row's newest snapshot, so after a rename the two panels can name the same job differently                                                                                                      | `StepFailureBars.tsx:125-136`; `stats.ex:551-573`                                           | "Load" in the step bars beside "Load to DHIS2" in the triage table                              | decide      |
 
 ### 6.2 Quirks and implementation details
 
-| What                                                                                                                                                                             | Where                                                                                                                   | Disposition |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------- |
-| The range and tab are React state only, so a reload, a shared link or an email link always opens on "Last 7 days" and "Work orders"                                              | `WorkflowHealth.tsx:42`, `:78-91`                                                                                       | decide      |
-| The browser tab title reads "Health Stats for <name>" while the heading reads the bare workflow name and the crumb reads "Health"                                                | `health.ex:21`, `:42`; `WorkflowHealth.tsx:61-63`                                                                       | decide      |
-| The side menu highlights "Workflows" on this page                                                                                                                                | `health.ex:19`; `menu.ex:46-52`                                                                                         | preserve    |
-| The workflow name and retention period reach React once, at mount, behind `phx-update="ignore"`; a rename or a retention change while the page is open shows only after a reload | `health.ex:50-60`                                                                                                       | decide      |
-| The endpoints accept `days=30` whatever the project's retention; only the UI disables it                                                                                         | `workflow_health_controller.ex:56-76`; `RangePicker.tsx:34-35`                                                          | preserve    |
-| `days` is a closed string set: "007", "7.5", "0" and "36500" are all 400 "days must be one of 1, 7, 30"; an access failure answers 404 before a bad `days` can answer 400        | `workflow_health_controller.ex:19-22`, `:56-76`; `workflow_health_controller_test.exs:89-99`, `:533-555`                | preserve    |
-| `x-timezone` goes to all three endpoints, but only runs reads it; an invalid value answers 400 "x-timezone must be an IANA timezone name"                                        | `useHealthQuery.ts:55-65`; `workflow_health_controller.ex:22`, `:85-108`; `workflow_health_controller_test.exs:476-495` | preserve    |
-| Outcomes and triage count work orders by `last_activity` strictly after the window start, so an old work order retried today is counted in today's window                        | `stats.ex:53-61`, `:410`; `stats_test.exs:81-92`                                                                        | preserve    |
-| The runs chart's oldest bar reaches back past `now - days` and its window differs from the other two slices'; empty-message wording floors the day count                         | `stats.ex:95-108`, `:194-205`; `WorkflowHealth.tsx:260-270`                                                             | preserve    |
-| On a spring-forward day the runs grid covers one real hour less than the donuts beside it                                                                                        | `stats.ex:105-107`, `:137-140`                                                                                          | preserve    |
-| Each slice's `window` is cached with its counts, so the window start (and the date on drill-down links) can be up to 5 minutes old                                               | `stats.ex:298-299`, `:317-321`                                                                                          | preserve    |
-| Triage rows tied on count sort rows with no step name before named ones (Elixir term order puts `nil` before strings)                                                            | `stats.ex:555`                                                                                                          | decide      |
-| Triage rows can sum past the failure total in the donuts, by design                                                                                                              | `stats.ex:8-11`, `:75-78`; `StepFailureBars.tsx:16-20`                                                                  | preserve    |
-| Donut wedges open History by mouse only; the legend rows carry the same links for keyboard and screen readers                                                                    | `Donut.tsx:82-91`, `:122-152`                                                                                           | preserve    |
-| "Cancelled" appears in "Outcomes" and the runs chart only when non-zero; "Success" and "Failed" stay at zero                                                                     | `OutcomesDonut.tsx:66-79`; `VolumeBars.tsx:100-105`                                                                     | preserve    |
-| The disabled range explains itself in a hover tooltip only                                                                                                                       | `RangePicker.tsx:38-46`                                                                                                 | decide      |
-| The error copy says "Refresh to try again", but the panel also recovers on its own at the next 30-second refresh                                                                 | `useHealthQuery.ts:8`, `:103-136`                                                                                       | decide      |
-| Switching projects in the picker from this page lands on the other project's workflow list                                                                                       | `layout_components.ex:543-563` (shared-project-header S09, S10)                                                         | preserve    |
-| The breadcrumb links use `patch` to other LiveViews and carry `aria-current="page"`                                                                                              | owned by shared-project-header 6.1 and 6.2                                                                              | preserve    |
+| What                                                                                                                                                                                                                                                                | Where                                                                                                                   | Disposition |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------- |
+| The range and tab are React state only, so a reload, a shared link or an email link always opens on "Last 7 days" and "Work orders"                                                                                                                                 | `WorkflowHealth.tsx:42`, `:78-91`                                                                                       | decide      |
+| The browser tab title reads "Health Stats for <name>" while the heading reads the bare workflow name and the crumb reads "Health"                                                                                                                                   | `health.ex:21`, `:42`; `WorkflowHealth.tsx:61-63`                                                                       | decide      |
+| The side menu highlights "Workflows" on this page                                                                                                                                                                                                                   | `health.ex:19`; `menu.ex:46-52`                                                                                         | preserve    |
+| The workflow name and retention period reach React once, at mount, behind `phx-update="ignore"`; a rename or a retention change while the page is open shows only after a reload                                                                                    | `health.ex:50-60`                                                                                                       | decide      |
+| The endpoints accept `days=30` whatever the project's retention; only the UI disables it                                                                                                                                                                            | `workflow_health_controller.ex:56-76`; `RangePicker.tsx:34-35`                                                          | preserve    |
+| `days` is a closed string set: "007", "7.5", "0" and "36500" are all a 400 `invalid_parameter` naming `days` ("is invalid"); a caller the access check refuses hears 403 before a bad `days` can answer 400, and a bad `days` is reported before a bad `x-timezone` | `workflow_health_controller.ex:19-22`, `:56-76`; `workflow_health_controller_test.exs:89-99`, `:533-555`                | preserve    |
+| `x-timezone` goes to all three endpoints, but only runs reads it; an invalid value (not an IANA zone name, empty, repeated or very long) answers 400 `invalid_header` naming `x-timezone` ("is invalid")                                                            | `useHealthQuery.ts:55-65`; `workflow_health_controller.ex:22`, `:85-108`; `workflow_health_controller_test.exs:476-495` | preserve    |
+| Outcomes and triage count work orders by `last_activity` strictly after the window start, so an old work order retried today is counted in today's window                                                                                                           | `stats.ex:53-61`, `:410`; `stats_test.exs:81-92`                                                                        | preserve    |
+| The runs chart's oldest bar reaches back past `now - days` and its window differs from the other two slices'; empty-message wording floors the day count                                                                                                            | `stats.ex:95-108`, `:194-205`; `WorkflowHealth.tsx:260-270`                                                             | preserve    |
+| On a spring-forward day the runs grid covers one real hour less than the donuts beside it                                                                                                                                                                           | `stats.ex:105-107`, `:137-140`                                                                                          | preserve    |
+| Each slice's `window` is cached with its counts, so the window start (and the date on drill-down links) can be up to 5 minutes old                                                                                                                                  | `stats.ex:298-299`, `:317-321`                                                                                          | preserve    |
+| Triage rows tied on count sort rows with no step name before named ones (Elixir term order puts `nil` before strings)                                                                                                                                               | `stats.ex:555`                                                                                                          | decide      |
+| Triage rows can sum past the failure total in the donuts, by design                                                                                                                                                                                                 | `stats.ex:8-11`, `:75-78`; `StepFailureBars.tsx:16-20`                                                                  | preserve    |
+| Donut wedges open History by mouse only; the legend rows carry the same links for keyboard and screen readers                                                                                                                                                       | `Donut.tsx:66-76`, `:122-152`                                                                                           | preserve    |
+| Hovering a donut slice shows no tooltip; counts and links are in the legend beside it, and each legend row also carries its share for screen readers                                                                                                                | `Donut.tsx:66-76`, `:112-134`                                                                                           | preserve    |
+| "Cancelled" appears in "Outcomes" and the runs chart only when non-zero; "Success" and "Failed" stay at zero                                                                                                                                                        | `OutcomesDonut.tsx:66-79`; `VolumeBars.tsx:100-105`                                                                     | preserve    |
+| The disabled range explains itself in a hover tooltip only                                                                                                                                                                                                          | `RangePicker.tsx:38-46`                                                                                                 | decide      |
+| The error copy says "Refresh to try again", but the panel also recovers on its own at the next 30-second refresh                                                                                                                                                    | `useHealthQuery.ts:8`, `:103-136`                                                                                       | decide      |
+| Switching projects in the picker from this page lands on the other project's workflow list                                                                                                                                                                          | `layout_components.ex:543-563` (shared-project-header S09, S10)                                                         | preserve    |
+| The breadcrumb links use `patch` to other LiveViews and carry `aria-current="page"`                                                                                                                                                                                 | owned by shared-project-header 6.1 and 6.2                                                                              | preserve    |
 
 ### 6.3 Unreachable or dead code
 
 | What                                                                                                  | Where                          | Why unreachable                                                                                                              |
 | ----------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `on_mount(:ensure_workflow_belongs_to_project, _params, ...)` fallback that continues without a check | `hooks.ex:160-167`             | both routes that mount it carry `:id` (`router.ex:302-304`)                                                                  |
+| `on_mount(:ensure_workflow_belongs_to_project, _params, ...)` fallback that continues without a check | `hooks.ex:160-167`             | both routes that mount it carry `:id` (`router.ex:350-352`)                                                                  |
 | `Stats.outcomes/2` and `Stats.error_signatures/2` default `days_back` of 30                           | `stats.ex:29`, `:45`, `:80-83` | the controller always passes 1, 7 or 30 (`workflow_health_controller.ex:27`, `:34-37`); only the stats tests use the default |
 | `Stats.boundaries/3` public with `@doc false`                                                         | `stats.ex:182-192`             | called only by `bucket_window/3` and `stats_test.exs:762`                                                                    |
 
@@ -639,9 +647,9 @@ Feature: Workflow health
   above" that is not rendered. It may be left over from a removed "last updated"
   line (see 6.1).
 - Superusers without a membership row are refused by both the page and the
-  endpoints (`project_users.ex:136`, `:193-194`). That matches the rest of the
-  project pages, but nothing here says whether it is intended for a read-only
-  stats page.
+  endpoints (`project_users.ex:160-162`, `:193-194`). That matches the rest of
+  the project pages, but nothing here says whether it is intended for a
+  read-only stats page.
 
 ## 7. Not migrating
 
@@ -669,7 +677,7 @@ Feature: Workflow health
   same tab in the port, chosen on purpose) with `filters[workflow_id]`,
   `filters[log]=true`, `filters[date_after]` set to the slice's window start and
   one `filters[<state>]=true` per state the slice counts (all six failure states
-  for "Failed"); History lists those work orders (`Donut.tsx:87-91`, `:128-152`;
+  for "Failed"); History lists those work orders (`Donut.tsx:72-76`, `:128-152`;
   `OutcomesDonut.tsx:57-76`; `FailureBreakdownDonut.tsx:61-67`;
   `historyUrl.ts:13-56`; `OutcomesDonut.test.tsx:154-195`).
   flow-workflow-health-drilldown lists these links as outside its scope (its
@@ -678,7 +686,7 @@ Feature: Workflow health
 - **flow-login-return-to** (referenced; proposed by
   shared-authenticated-session): a signed-out visitor following the failure
   alert's or digest's health link is sent to log in and returned to the health
-  page afterwards (`router.ex:189-190`). Surfaces: email:failure-alert,
+  page afterwards (`router.ex:237-238`). Surfaces: email:failure-alert,
   email:project-digest, controller:user-session, workflow-health.
 - Referenced, existing: flow-workflow-health-drilldown (S14, entry),
   flow-failure-alert-email (S25, exit), flow-digest-email (S26, exit of its

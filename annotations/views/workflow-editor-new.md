@@ -13,7 +13,7 @@ trigger:
     - the viewer may create workflows in this project, otherwise mount redirects to /projects/:project_id/w (collaborate.ex:35-59)
 
 inherits:
-  - shared-authenticated-session      # :default live_session, InitAssigns (router.ex:288)
+  - shared-authenticated-session      # :default live_session, InitAssigns (router.ex:336)
   - shared-project-scope              # on_mount :project_scope (collaborate.ex:25)
   - shared-usage-limits-banner        # on_mount :check_limits and the :banner slot (collaborate.ex:27, :238-242)
   - shared-editor-session
@@ -187,7 +187,7 @@ unsatisfied denies everything). Page gate: `collaborate.ex:35-59`. Channel gate:
 
 - Page access is the shared project scope gate (`collaborate.ex:25`, see
   shared-project-scope); a member who has not met the project's MFA requirement
-  is denied by the policy (`project_users.ex:134`).
+  is denied by the policy (`decision.ex:59-66`).
 - The collaboration channel re-checks `:create_workflow` on join with action
   "new" before anything is resolved (`workflow_channel.ex:2224-2237`).
 - A "new" join for an id that already belongs to another project is refused as
@@ -488,7 +488,7 @@ Feature: Start a new workflow
   @S20 @variant:ai-enabled
   Scenario: Editor hands a description to the AI assistant
     # Value: people who don't know the workflow shape yet can start from a plain-language goal.
-    # LandingScreen.tsx:41-49, :66-136; CollaborativeEditor.tsx:394-397; createUIStore.ts:173-178; AIAssistantPanelWrapper.tsx:363-375; LandingScreen.test.tsx:71-104
+    # LandingScreen.tsx:46-56, :66-146; CollaborativeEditor.tsx:394-397; createUIStore.ts:173-178; AIAssistantPanelWrapper.tsx:363-375; LandingScreen.test.tsx:71-104
     Given the AI assistant is configured on this instance
     And I am on the new workflow landing screen
     Then I see "Build with AI" marked "Recommended" with the AI disclaimer and a "Learn more." link
@@ -559,6 +559,19 @@ Feature: Start a new workflow
     When I click "Build from scratch"
     Then the workflow is created
     And its webhook trigger is saved disabled
+
+  @S28 @variant:ai-enabled
+  Scenario: The Build with AI prompt offers the design skill
+    # Value: someone starting from nothing can ask the assistant to work out what the workflow should do before building it.
+    Given the AI assistant is configured on this instance
+    And I am on the new workflow landing screen
+    When I type "/" in the Build with AI prompt
+    Then I see a menu listing only "/design"
+    When I choose it, type "a monthly stock report" and press Enter
+    Then the landing screen closes
+    And the AI assistant panel sends "/design a monthly stock report" (handoff to workflow-editor-ai-assistant S35)
+    # LandingScreen.tsx:46-48, :99-146; CollaborativeEditor.tsx:370, :404; useSessionContext.ts:170-189; skills.ex:19-38
+    # LandingScreen.test.tsx
 ```
 
 ## 6. Unclear value
@@ -664,7 +677,7 @@ Feature: Start a new workflow
 - **flow-legacy-editor-redirect**: old legacy editor bookmarks
   `/projects/:project_id/w/new/legacy` and `/w/:id/legacy` redirect to the
   collaborative editor, forwarding the query string and renaming `a` to `run`
-  (`legacy_redirect_controller.ex:17-44`, `router.ex:310-311`,
+  (`legacy_redirect_controller.ex:17-44`, `router.ex:358-359`,
   `legacy_redirect_controller_test.exs`). This view only asserts that
   `/w/new/legacy` lands here. Surfaces: controller:legacy-redirect,
   workflow-editor-new, workflow-editor-canvas.

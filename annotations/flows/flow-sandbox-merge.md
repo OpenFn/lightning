@@ -164,7 +164,7 @@ Columns are the viewer's role on the project named in the row. Sources:
   `workflow_channel_test.exs:1122-1164`; `projects_test.exs:4606-4635`).
 - `:merge_sandbox` and `:delete_sandbox` go through `Scope`, so an unmet MFA
   requirement or a project already scheduled for deletion refuses them
-  (`policies/sandboxes.ex:98-119`; `scope.ex:139-152`).
+  (`policies/sandboxes.ex:98-119`; `scope.ex:267-276`).
 - A keychain only the sandbox has is carried only when the merger may create
   keychains on the parent (`sandboxes.ex:596-626`).
 - Promote and the archive redirect need the experimental features flag on the
@@ -221,13 +221,16 @@ Columns are the viewer's role on the project named in the row. Sources:
 **External, non-transactional effects**
 
 - List entry, parent synced to GitHub: two `openfn-pull.yml` dispatches around
-  the merge (`index.ex:1128-1160`; sandboxes-index S47)
+  the merge, with the v2 inputs for a v2 connection (`index.ex:1128-1160`;
+  sandboxes-index S47; flow-github-sync-actions S18)
 
 **Depends on config**
 
 - Experimental features flag (editor entry and archive redirect); usage limiter
-  (provisioner import can refuse with the limiter's text;
-  `workflow_channel.ex:1688-1694`; sandboxes-index S45)
+  (provisioner import refuses a document over the workflow or collection limit
+  with a changeset error, which the merge reports as the generic failure;
+  `provisioner.ex:657-670`; `workflow_channel.ex:1688-1694`; sandboxes-index
+  S45)
 
 **Product limits**
 

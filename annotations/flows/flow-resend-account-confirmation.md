@@ -11,9 +11,9 @@ trigger:
     - shared-project-header # "Resend confirmation email" in the LiveView banner (layout_components.ex:259-277)
     - auth-register # second entry: POST /users/register sends the welcome variant of the email (user_registration_controller.ex:13-20; accounts.ex:579-589, :1161-1175)
     - workflow-editor-canvas # same link in the React banner (EmailVerificationBanner.tsx:40-46; Header.tsx:647)
-    - controller:send-confirmation-email # GET /users/send-confirmation-email (router.ex:236; user_confirmation_controller.ex:51-87)
+    - controller:send-confirmation-email # GET /users/send-confirmation-email (router.ex:284; user_confirmation_controller.ex:51-87)
     - email:confirmation # "Confirm your OpenFn account": welcome variant on sign-up (user_notifier.ex:90-102), reminder variant on resend (:121-133)
-    - auth-confirm-account # GET/POST /users/confirm/:token (router.ex:229-230; user_confirmation_controller.ex:89-104)
+    - auth-confirm-account # GET/POST /users/confirm/:token (router.ex:277-278; user_confirmation_controller.ex:89-104)
     - projects-dashboard # where a confirmation lands, without the banner
     - profile-account # profile-account names this flow
     - auth-confirmation-required
@@ -52,13 +52,13 @@ config_variants:
 
 inventory:
   routes:
-    - get /users/send-confirmation-email  UserConfirmationController :send_email # router.ex:236
-    - get /users/confirm/:token  UserConfirmationController :edit # router.ex:229
-    - post /users/confirm/:token  UserConfirmationController :update # router.ex:230
-    # post /users/register (router.ex:179) is in auth-register's inventory; this flow covers only the email it sends
+    - get /users/send-confirmation-email  UserConfirmationController :send_email # router.ex:284
+    - get /users/confirm/:token  UserConfirmationController :edit # router.ex:277
+    - post /users/confirm/:token  UserConfirmationController :update # router.ex:278
+    # post /users/register (router.ex:227) is in auth-register's inventory; this flow covers only the email it sends
   events: [] # the banner link is a plain anchor, not a LiveView event (common.ex:266-270; EmailVerificationBanner.tsx:40-46)
   js_hooks: []
-  policies: [] # gated by :require_authenticated_user and the controller's confirmed_at match, not a policy module (router.ex:189-190)
+  policies: [] # gated by :require_authenticated_user and the controller's confirmed_at match, not a policy module (router.ex:237-238)
   workers: [] # both variants are sent inline in the request, not through Oban (user_notifier.ex:49-60)
   api_endpoints: []
   emails:
@@ -72,7 +72,7 @@ inventory:
       user_notifier.ex:26, :53)
   not_reachable_here:
     - UserConfirmationController :new and :create (GET/POST /users/confirm,
-      router.ex:72-73) belong to auth-confirm-account's signed-out resend form,
+      router.ex:99-100) belong to auth-confirm-account's signed-out resend form,
       not this flow
     - UserConfirmationController :confirm_email (/profile/confirm_email/:token)
       is the email-change link
@@ -161,7 +161,7 @@ your place.
 ## 3. Who can do what
 
 No policy module: the routes sit behind `:require_authenticated_user`
-(`router.ex:189-190`, `user_auth.ex:288-311`) and the controller matches on
+(`router.ex:237-238`, `user_auth.ex:280-303`) and the controller matches on
 `confirmed_at: nil` (`user_confirmation_controller.ex:51-53`). The confirm step
 accepts only a token belonging to the signed-in user
 (`user_confirmation_controller.ex:106-117`).
@@ -290,7 +290,7 @@ Feature: Account confirmation email (first send and resend)
     Then I am on "/projects"
     And I see "User confirmed successfully."
     And I do not see the account confirmation banner
-    # layout_components.ex:259-277; common.ex:266-270; router.ex:229-230, :236
+    # layout_components.ex:259-277; common.ex:266-270; router.ex:277-278, :284
     # user_confirmation_controller.ex:51-86, :89-94; accounts.ex:1197-1206, :1236-1255; user_notifier.ex:121-133
     # edit.html.heex:10-31; user_confirmation_controller_test.exs:23-41, :247-268; user_notifier_test.exs:65-89
 
@@ -328,7 +328,7 @@ Feature: Account confirmation email (first send and resend)
     And the flow "flow-login-return-to" has started
     When I log in
     Then I see a "Confirm my account" button
-    # router.ex:189-190, :229; user_auth.ex:288-299, :490-492; user_confirmation_controller_test.exs:167-170
+    # router.ex:237-238, :277; user_auth.ex:280-291, :464-466; user_confirmation_controller_test.exs:167-170
 
   @S05 @variant:require-email-verification
   Scenario: A link for another account does not confirm the signed-in account
@@ -373,7 +373,7 @@ Feature: Account confirmation email (first send and resend)
     When I open a confirmation link I was sent and click "Confirm my account"
     Then my account is confirmed
     And I can open "/projects" without logging in again
-    # confirmation_lockout.ex:18-20; user_auth.ex:305-306, :327-330; accounts.ex:1362-1368
+    # confirmation_lockout.ex:18-20; user_auth.ex:297-298, :319-322; accounts.ex:1362-1368
     # confirmation_lockout_recovery_test.exs:46-80, :82-103
 
   @S09 @variant:require-email-verification
@@ -400,7 +400,7 @@ Feature: Account confirmation email (first send and resend)
     And I see "User confirmed successfully."
     And I do not see the account confirmation banner
     # user_registration_controller.ex:13-20 (logged in on sign-up, so the link needs no login); accounts.ex:579-589, :1135-1142, :1161-1175
-    # user_notifier.ex:90-102; router.ex:229-230; user_confirmation_controller.ex:89-94, :106-112; accounts.ex:1236-1255
+    # user_notifier.ex:90-102; router.ex:277-278; user_confirmation_controller.ex:89-94, :106-112; accounts.ex:1236-1255
     # accounts_test.exs:1743-1759 (token in the body is a "confirm" token sent_to the user's email); no test drives the welcome link end to end
 
   @S11 @variant:signup-allowed
@@ -430,7 +430,7 @@ Feature: Account confirmation email (first send and resend)
 
 | What                                                                                                                                                                                                                                       | Where                                                                                  | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ----------- |
-| Resend is a link that sends mail, and returns to the referer path with its query string dropped (the editor loses its selected job or run); owned as a decide row in shared-project-header 6.2                                             | `user_confirmation_controller.ex:79-86`; `router.ex:236`                               | decide      |
+| Resend is a link that sends mail, and returns to the referer path with its query string dropped (the editor loses its selected job or run); owned as a decide row in shared-project-header 6.2                                             | `user_confirmation_controller.ex:79-86`; `router.ex:284`                               | decide      |
 | With no Referer header the resend lands on /projects                                                                                                                                                                                       | `user_confirmation_controller.ex:84`                                                   | decide      |
 | Confirming lands on /projects, not the page the user came from                                                                                                                                                                             | `user_confirmation_controller.ex:90-94`                                                | decide      |
 | Opening the link does not confirm; it renders a "Confirm my account" button that POSTs                                                                                                                                                     | `user_confirmation_controller.ex:30-32`, `:89-104`; `edit.html.heex:10-31`             | decide      |

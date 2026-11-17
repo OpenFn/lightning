@@ -12,15 +12,15 @@ trigger:
     - auth-confirmation-required # correction form, UserConfirmationRequiredLive#change_email (user_confirmation_required_live.ex:79-116)
     - email:update-email-warning # "Your OpenFn email was changed", to the current address (user_notifier.ex:289-301)
     - email:update-email-instructions # "Please confirm your new email", to the new address (user_notifier.ex:270-284)
-    - controller:confirm-email # GET /profile/confirm_email/:token (router.ex:232-234; user_confirmation_controller.ex:34-49)
+    - controller:confirm-email # GET /profile/confirm_email/:token (router.ex:280-282; user_confirmation_controller.ex:34-49)
     - projects-dashboard # where the controller lands, with the flash
     - admin-users # cross-reference, admins change email without confirmation
     - admin-user-edit # cross-reference, admins change email without confirmation
     - auth-confirm-account
   reachable_when:
     - the user is signed in; the confirm link sits behind
-      :require_authenticated_user (router.ex:189-190, :232-234;
-      user_auth.ex:288-299)
+      :require_authenticated_user (router.ex:237-238, :280-282;
+      user_auth.ex:280-291)
     - the link is opened within 7 days of the request (user_token.ex:33,
       :207-217)
     - the signed-in account's current email is still the one the request was
@@ -40,7 +40,7 @@ config_variants:
 inventory:
   routes:
     - get /profile/confirm_email/:token  UserConfirmationController
-      :confirm_email # router.ex:232-234
+      :confirm_email # router.ex:280-282
   events:
     - UserConfirmationRequiredLive#change_email # user_confirmation_required_live.ex:79-116; entry hop; the view annotation auth-confirmation-required should also claim it
     - UserConfirmationRequiredLive#validate_email # user_confirmation_required_live.ex:70-77; same
@@ -127,7 +127,7 @@ self-service change is treated much more lightly than an admin one.
 
 No policy module. The request hop checks the current password
 (`accounts.ex:827-858`); the confirm hop sits behind
-`:require_authenticated_user` (`router.ex:189-190`, `:232-234`) and only finds a
+`:require_authenticated_user` (`router.ex:237-238`, `:280-282`) and only finds a
 token whose context is `change:<signed-in user's email>` (`accounts.ex:702-708`;
 `user_token.ex:207-217`).
 
@@ -224,7 +224,7 @@ Feature: Change account email with confirmation
     When I open "/profile"
     Then I see "Email: amara@new.example.org"
     # form_component.ex:25-39; accounts.ex:740-756, :702-728; user_notifier.ex:270-301
-    # router.ex:232-234; user_confirmation_controller.ex:34-39; components.ex:20
+    # router.ex:280-282; user_confirmation_controller.ex:34-39; components.ex:20
     # accounts_test.exs:1243-1279, :1291-1310; user_confirmation_controller_test.exs:324-353
 
   @S02 @variant:require-email-verification
@@ -241,7 +241,7 @@ Feature: Change account email with confirmation
     And my email is "amara@example.org" and my account is confirmed
     And I am no longer redirected to "/users/confirm-required"
     # user_confirmation_required_live.ex:79-90; .html.heex:44-52, :75-123; accounts.ex:795-801
-    # confirmation_lockout.ex:18-23; user_auth.ex:305-306, :327-330; user.ex:367-370
+    # confirmation_lockout.ex:18-23; user_auth.ex:297-298, :319-322; user.ex:367-370
     # user_confirmation_required_live_test.exs:160-185, :187-216
 
   @S03
@@ -266,7 +266,7 @@ Feature: Change account email with confirmation
     Then I am asked to log in
     And my email is still "amara@example.org"
     And the flow "flow-login-return-to" has started for "/profile/confirm_email/<token>"
-    # router.ex:189-190; user_auth.ex:288-299, :490-492
+    # router.ex:237-238; user_auth.ex:280-291, :464-466
     # user_confirmation_controller_test.exs:373-380 (asserts only the redirect to login)
 
   @S05
@@ -311,7 +311,7 @@ Feature: Change account email with confirmation
     When I open an expired "Please confirm your new email" link
     Then I am on "/users/confirm-required"
     And I see "Email change link is invalid or it has expired."
-    # user_confirmation_controller.ex:41-48; user_auth.ex:305-306, :345-351
+    # user_confirmation_controller.ex:41-48; user_auth.ex:297-298, :337-343
     # user_auth_test.exs:692-723
 
   @S10
@@ -339,7 +339,6 @@ Feature: Change account email with confirmation
 
 | What                                                                                                                                                                | Where                                                                              | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------- |
-| The confirm step is a GET that writes; there is no confirm button, unlike `/users/confirm/:token`                                                                   | `router.ex:232-234`; `user_confirmation_controller.ex:34-49`                       | decide      |
 | The controller lands on `/projects`, not back on the profile where the change started                                                                               | `user_confirmation_controller.ex:36-39`                                            | decide      |
 | Completing the change sets `confirmed_at`, so an unconfirmed account is confirmed by it; this is what makes S02 work                                                | `accounts.ex:717-721`; `user.ex:367-370`; `user_confirmation_required_live.ex:4-7` | preserve    |
 | Several pending requests are all valid until one is used; using one deletes the rest                                                                                | `accounts.ex:740-742`, `:722-727`                                                  | preserve    |

@@ -41,8 +41,8 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/settings  ProjectLive.Settings :index (config-injected, live_session :services; config/config.exs:52-57, router.ex:339-355)
-    - live /projects/:project_id/settings/delete  ProjectLive.Settings :delete (live_session :default; router.ex:291-292)
+    - live /projects/:project_id/settings  ProjectLive.Settings :index (config-injected, live_session :services; config/config.exs:52-57, router.ex:387-403)
+    - live /projects/:project_id/settings/delete  ProjectLive.Settings :delete (live_session :default; router.ex:339-340)
   events:
     - ProjectLive.Settings#validate          # shared with the data storage tab's form; this view covers #project-settings-form and #project-concurrency-form
     - ProjectLive.Settings#save
@@ -117,15 +117,14 @@ project down would need a superuser.
 - **Change the project** (admins and owners)
   - Rename the project and edit its description
   - Switch parallel run execution off or back on for the whole project
-- **Export the project**
-  - Members export the project as YAML
+- **Export the project** moved to the Sync tab (project-settings-github-sync
+  S49)
 - **Delete it** (owners)
   - Owners schedule a project for deletion after typing its name
   - Sandbox owners delete a sandbox after typing its name
 
-**Straightforwardness: 3 of 5.** The edit and export parts are simple, but
-deletion does more than it says, and the sandbox delete dialog tells people the
-wrong thing.
+**Straightforwardness: 3 of 5.** The edit part is simple, but deletion does more
+than it says, and the sandbox delete dialog tells people the wrong thing.
 
 ### Most surprising behaviours
 
@@ -161,7 +160,6 @@ project); `downloads_controller.ex:13-19` (export needs `:access_project`).
 | See the panel                                 | yes    | yes    | yes                             | yes                             | no                 | yes, when support access is on |
 | Edit name and description                     | no     | no     | yes                             | yes                             | no                 | no                             |
 | Switch parallel execution                     | no     | no     | yes                             | yes                             | no                 | no                             |
-| Export project                                | yes    | yes    | yes                             | yes                             | no                 | yes, when support access is on |
 | See the danger zone and open the delete modal | no     | no     | no                              | yes                             | no                 | no                             |
 | Schedule a root project for deletion          | no     | no     | no                              | yes                             | no                 | no                             |
 | Delete a sandbox (UI)                         | no     | no     | no                              | yes, on the sandbox             | no                 | no                             |
@@ -192,9 +190,10 @@ own name
 **Writes**
 
 - Save: `projects.name`, `projects.description`, `projects.concurrency`,
-  `projects.color` via `Project.changeset/2` (`settings.ex:771-774`,
-  `projects.ex:589-597`). No audit event: `Audit.derive_events` only covers
-  support access, retention and MFA (`projects/audit.ex:20-39`).
+  `projects.color` via `Project.changeset/2` (`settings.ex:751-768`,
+  `projects.ex:620-650`). Audit events: a changed name or description is
+  recorded in the same transaction as `name_updated` or `description_updated`;
+  concurrency and colour record none (`projects/audit.ex:24-44`).
 - Schedule project deletion: every project trigger `enabled = false`,
   `projects.scheduled_deletion = now + purge_deleted_after_days`
   (`projects.ex:1639-1690`)
@@ -268,7 +267,8 @@ Feature: Project setup
     And I click "Save" in the identity section
     Then I see "Project updated successfully"
     And the project is named "somename" with description "some description"
-    # settings.html.heex:107-167, settings.ex:351-363, :771-783; project_live_test.exs:1775-1804
+    And audit events "name_updated" and "description_updated" are recorded with me as the actor
+    # settings.html.heex:107-167, settings.ex:351-363, :771-783; projects.ex:620-650; projects/audit.ex:24-44; project_live_test.exs:1775-1804
 
   @S02
   Scenario: The name is turned into a URL-safe slug
@@ -325,7 +325,7 @@ Feature: Project setup
     When I open project settings
     Then "Project name", "Project description" and the concurrency switch are disabled
     And the identity "Save" button is disabled
-    And I see "Role based permissions: You cannot modify this project's basic settings, but you can export a copy."
+    And I see "Role based permissions: You cannot modify this project's basic settings."
     When "save" is sent anyway
     Then I see "You are not authorized to perform this action."
     # settings.html.heex:68-79, :118, :148, :162, :205, layout_components.ex:590-592, :620-626, settings.ex:351-363, :751-765
@@ -344,7 +344,7 @@ Feature: Project setup
     Then "Project name" and "Project description" are disabled
     When "save" is sent anyway
     Then I see "You are not authorized to perform this action."
-    # project_users.ex:160-161; project_live_test.exs:1977-2009
+    # project_users.ex:182-192; project_live_test.exs:1977-2009
 
   @S09
   Scenario: Admin disables parallel execution
@@ -369,14 +369,13 @@ Feature: Project setup
     # new_inputs.ex:815-822 (toggles between "" and "1"), settings.ex:351-363
 
   @S11
-  Scenario: Any member can export the project
-    # Value: anyone on the project can take a copy of it as code, even without edit rights.
+  Scenario: The Setup tab no longer carries the export card
+    # Value: export lives with the other ways of moving a project in and out, on the Sync tab, so Setup stays about the project's identity and its deletion.
     Given I am a viewer on project "project-1"
     When I open project settings
-    Then I see "Export your project as code, to save this version or edit your project locally."
-    And "Export project" links to "/download/yaml?id=<project_id>" in a new tab
-    And clicking it starts the flow "flow-export-project-yaml"
-    # settings.html.heex:252-266; project_live_test.exs:197-211
+    Then I do not see "Export your project" or "Export project" on the Setup tab
+    And the Sync tab offers "Export project", which starts the flow "flow-export-project-yaml" (project-settings-github-sync S49)
+    # settings.html.heex:853-867; project_live_test.exs:197-211 (follows the link on the settings page)
 
   @S12
   Scenario: Owner schedules the project for deletion
@@ -496,6 +495,19 @@ Feature: Project setup
       | reason        | message                                            |
       | unauthorized  | You don't have permission to delete this sandbox   |
       | another error | Could not delete sandbox. Please try again later.  |
+
+  @S22
+  Scenario Outline: A save that cannot go through says why and keeps the form
+    # Value: someone whose save was lost to a deletion elsewhere, or could not be recorded, is told so and can retry, instead of seeing the page break or nothing happen.
+    Given I am an admin on project "project-1"
+    And saving the identity form fails because <reason>
+    When I click "Save" in the identity section
+    Then I see "<message>"
+    Examples:
+      | reason                                    | message                                                                                |
+      | the project was deleted while I edited it | Someone else changed or deleted this record while you were editing it. Reload and try again. |
+      | the audit event was refused               | Changes couldn't be saved, please try again                                             |
+    # settings.ex:751-768, live_helpers.ex:213-222, projects.ex:620-650
 ```
 
 ## 6. Unclear value
@@ -517,7 +529,7 @@ Feature: Project setup
 
 | What                                                                                                                                                                                                                               | Where                                                                                                 | Disposition |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------- |
-| `/settings` lives in the config-injected `:services` live_session and `/settings/delete` in `:default`, so opening and closing the delete modal are full page loads, and the unauthorised bounce is a `push_patch` across sessions | `router.ex:291-292`, `:339-355`, `settings.ex:267`, `project_deletion_modal.ex:92`, `settings.ex:459` | decide      |
+| `/settings` lives in the config-injected `:services` live_session and `/settings/delete` in `:default`, so opening and closing the delete modal are full page loads, and the unauthorised bounce is a `push_patch` across sessions | `router.ex:339-340`, `:387-403`, `settings.ex:267`, `project_deletion_modal.ex:92`, `settings.ex:459` | decide      |
 | On `/settings/delete` the route metadata is not read, so the concurrency switch is missing behind the modal, and other tabs' lists (`project_users`, `webhook_auth_methods`) are empty                                             | `settings.ex:233-260` (only `:index` assigns them), `:262-281`                                        | decide      |
 | The project deletion modal's "Delete project" button is enabled before anything is typed (an empty deletion changeset is valid); submitting empty is still refused                                                                 | `project_deletion_modal.ex:37-41`, `:167`                                                             | decide      |
 | Deletion confirmation compares the typed name with the hidden `name` field the form submits, not the stored name (Ecto `validate_confirmation` reads params)                                                                       | `project_deletion_modal.ex:158-159`, `project.ex:276-280`                                             | fix         |
@@ -527,15 +539,13 @@ Feature: Project setup
 | Under `no-concurrency-slot` the "Concurrency Override" card and its "Save" still render with no control                                                                                                                            | `settings.html.heex:171-240`                                                                          | decide      |
 | `validate` without a `project` key is ignored (reached when a form has no inputs, e.g. the concurrency form under `no-concurrency-slot`)                                                                                           | `settings.ex:325-328`                                                                                 | preserve    |
 | Under `purge-immediate` the project is scheduled for "today", but the purge cron is only registered when the setting is above 0, so the project stays scheduled and inaccessible indefinitely                                      | `projects.ex:1655-1659`, `bootstrap.ex:307-316`                                                       | decide      |
-| Saving name, description or concurrency writes no audit event                                                                                                                                                                      | `projects/audit.ex:20-39`                                                                             | decide      |
 | Sandbox delete modal closes on click-away and Escape (pushes `close-delete-modal`, a full navigation); the project deletion modal does neither                                                                                     | `sandbox_live/components.ex:150-158`, `project_deletion_modal.ex:112`                                 | decide      |
 
 ### 6.3 Unreachable or dead code
 
 | What                                                                                                                 | Where                                             | Why unreachable                                                                                                                                                                   |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ProjectDeletionModal` branch for an already scheduled project (`delete_project_async`, "Project deletion started…") | `project_deletion_modal.ex:66-74`, `:96-97`       | the project scope gate refuses scheduled projects before this view mounts (`scope.ex:112-117`); reachable only from the superuser projects list (`project_live_test.exs:322-356`) |
-| `save_project` `{:error, :not_related_to_project}` flash "Changes couldn't be saved, please try again" for this tab  | `settings.ex:782-785`, `projects.ex:610-614`      | only a failing non-project Multi step reaches it, and this tab's fields create no audit step                                                                                      |
+| `ProjectDeletionModal` branch for an already scheduled project (`delete_project_async`, "Project deletion started…") | `project_deletion_modal.ex:66-74`, `:96-97`       | the project scope gate refuses scheduled projects before this view mounts (`scope.ex:173-183`); reachable only from the superuser projects list (`project_live_test.exs:322-356`) |
 | `usage_caps_input_slot/1`                                                                                            | `settings.ex:89-98`, `settings.html.heex:245-250` | no OSS route metadata sets `:usage_caps_input` (`config/config.exs:52-57`); only under `usage-caps-slot`                                                                          |
 | `confirm_delete_modal` child sandbox copy                                                                            | `sandbox_live/components.ex:176-181`              | `descendants` never passed here (see 6.1)                                                                                                                                         |
 
@@ -580,7 +590,7 @@ Feature: Project setup
 - Who may delete a sandbox from its own settings: owners only, or the policy's
   owners and admins of the sandbox or root?
 - Under `purge-immediate`, should scheduled projects ever be purged?
-- Should identity and concurrency changes be audited?
+- Should concurrency changes be audited?
 
 ## Proposed flows
 

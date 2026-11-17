@@ -153,13 +153,13 @@ it was put on.
   runs after connect (`index.ts:532-549`).
 - The `:nav` card renders only in the live layout (`live.html.heex:94-96`);
   every caller redirects to `/projects`, which is in that layout (`hooks.ex:50`,
-  `:124`, `:130`; `maintenance_live/index.ex:26`; `user_auth.ex:433`, `:514`;
+  `:124`, `:130`; `maintenance_live/index.ex:26`; `user_auth.ex:410`, `:488`;
   `credential_transfer_controller.ex:17`).
 
 ## 4. What it touches
 
 **Reads**: none (flash lives in the session cookie across redirects and in
-socket assigns on a live page; `router.ex:22-23` `fetch_session`,
+socket assigns on a live page; `router.ex:23-24` `fetch_session`,
 `fetch_live_flash`)
 
 **Writes**: none
@@ -237,7 +237,7 @@ Feature: Flash messages
     Given an action put the info flash "Credential transfer confirmed successfully." and redirected me to "/projects"
     When "/projects" renders
     Then I see an info toast reading "Credential transfer confirmed successfully."
-    # router.ex:22-23 (fetch_live_flash); live.html.heex:92-93; handoff from flow-credential-transfer (credential_transfer_controller.ex:9-13)
+    # router.ex:23-24 (fetch_live_flash); live.html.heex:92-93; handoff from flow-credential-transfer (credential_transfer_controller.ex:9-13)
 
   @S06
   Scenario: A Not Found or No Access flash replaces the page with a card
@@ -282,7 +282,7 @@ Feature: Flash messages
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------- |
 | `Common.flash` passes the bare id ("flash-1A2B3C", no `#`) as the `to:` selector of `JS.hide` and the error branch's `JS.remove_class`, so they match no element; the fade-out never runs and the `phx:hide-start` listener that cancels the timer never fires | `common.ex:521`, `:532-533`, `:574`, `:600-608`; `index.ts:540`                                                                  | the toast vanishes abruptly once the server re-renders; with the socket disconnected, clicking or the timer does nothing | fix         |
 | The error toast pushes `lv:clear-flash` with no `phx-value-key` (the info toast sets `"info"`), so LiveView clears every flash key                                                                                                                             | `common.ex:530-534` vs `:576`; behaviour of `lv:clear-flash` without a key read from Phoenix LiveView 1.0.19, not vendored here  | dismissing an error also removes an info toast shown at the same time, and a `:nav` card if one is up                    | fix         |
-| Pages in the `:app` layout that don't render the flash themselves drop it: the re-auth page never shows "You must verify yourself again in order to access this page."                                                                                         | `layouts/app.html.heex:1-5`; `re_authenticate_live/new.ex:16`; `user_auth.ex:401-407`, `:450-454` (also auth-confirm-access 6.1) | arrives on "Confirm access" with no explanation                                                                          | fix         |
+| Pages in the `:app` layout that don't render the flash themselves drop it: the re-auth page never shows "You must verify yourself again in order to access this page."                                                                                         | `layouts/app.html.heex:1-5`; `re_authenticate_live/new.ex:16`; `user_auth.ex:387-393`, `:424-428` (also auth-confirm-access 6.1) | arrives on "Confirm access" with no explanation                                                                          | fix         |
 | Back on the `:nav` card is `javascript:history.back()`                                                                                                                                                                                                         | `live_helpers.ex:137`                                                                                                            | in a fresh tab (link opened from an email or chat) Back does nothing                                                     | decide      |
 
 ### 6.2 Quirks and implementation details

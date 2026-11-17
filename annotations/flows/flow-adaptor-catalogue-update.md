@@ -15,8 +15,8 @@ trigger:
     - pubsub:adaptors:client_update:<instance> # ChannelBroadcaster, 250 ms coalesce (channel_broadcaster.ex:18, :59-79; supervisor.ex:227-228)
     - capability:credential-schema-reconciler  # rewrites short credential schema names (schema_reconciler.ex:48-90; credentials.ex:608-645)
     - controller:workflow-channel              # WorkflowChannel pushes adaptors_updated (workflow_channel.ex:86, :957-960)
-    - controller:adaptor-catalogue             # GET /adaptors/catalogue, ETag and 304 (router.ex:155-160; adaptor_controller.ex:21-54)
-    - controller:adaptor-icons                 # GET /adaptors/icons/:name/:filename, 200 or 302 to the current sha (router.ex:81-83; adaptor_icon_controller.ex:64-156)
+    - controller:adaptor-catalogue             # GET /adaptors/catalogue, ETag and 304 (router.ex:247-251; adaptor_controller.ex:21-54)
+    - controller:adaptor-icons                 # GET /adaptors/icons/:name/:filename, 200 or 302 to the current sha (router.ex:108-110; adaptor_icon_controller.ex:64-156)
     - workflow-editor-inspectors               # store refetches and re-renders pickers, version list and icons (createAdaptorStore.ts:272-321)
     - workflow-editor-ide                      # same store, IDE header pickers
     - workflow-editor-canvas
@@ -42,8 +42,8 @@ config_variants:
 
 inventory:
   routes:
-    - get /adaptors/catalogue  AdaptorController :index                  # router.ex:155-160
-    - get /adaptors/icons/:name/:filename  AdaptorIconController :show   # router.ex:81-83, in the :browser scope (router.ex:66-67)
+    - get /adaptors/catalogue  AdaptorController :index                  # router.ex:247-251
+    - get /adaptors/icons/:name/:filename  AdaptorIconController :show   # router.ex:108-110, in the :browser scope (router.ex:93-94)
   events:
     - MaintenanceLive.Index#refresh_adaptors, #refresh_icons              # owned by admin-maintenance; handoff only
     - Lightning.Adaptors.Scheduler handle_info(:tick), handle_call(:refresh_now | :refresh_icons | {:await_refresh, _} | {:refresh_package, _})   # scheduler.ex:247-261, :362-399
@@ -55,8 +55,8 @@ inventory:
   js_hooks:
     - createAdaptorStore channel.on("adaptors_updated") and requestAdaptors on connect   # createAdaptorStore.ts:272-321
   policies:
-    - Lightning.Policies.Users :access_admin_space                       # operator entry only (policies/users.ex:19-21); owned by admin-maintenance
-    - none on the receiving side; every joined channel is pushed, and /adaptors/catalogue needs only a signed-in user (router.ex:155-160)
+    - Lightning.Policies.Users :access_admin_space                       # operator entry only (policies/users.ex:30-32); owned by admin-maintenance
+    - none on the receiving side; every joined channel is pushed, and /adaptors/catalogue needs only a signed-in user (router.ex:247-251)
   workers: []                                                            # no Oban; see oban:adaptor-scheduler note above
   api_endpoints:
     - get /adaptors/catalogue
@@ -140,11 +140,11 @@ actually see don't always line up.
 
 ## 3. Who can do what
 
-Starting the flow from the page is superuser only (`policies/users.ex:19-21`;
+Starting the flow from the page is superuser only (`policies/users.ex:30-32`;
 admin-maintenance section 3). The scheduled tick has no actor. The receiving
 side checks no role: every joined WorkflowChannel is pushed
 (`workflow_channel.ex:957-960`), the catalogue needs only a signed-in user
-(`router.ex:155-160`), and icons need no session at all (`router.ex:66-67`,
+(`router.ex:247-251`), and icons need no session at all (`router.ex:93-94`,
 `:81-83`).
 
 | Action                                       | Signed out | Viewer | Editor | Admin | Owner | Superuser                |

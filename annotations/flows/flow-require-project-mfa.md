@@ -16,7 +16,7 @@ trigger:
   reachable_when:
     - the actor is an owner or admin on the project and passes the usage limiter for `:require_mfa` (project-settings-security S01, S06; settings.ex:411-414)
     - the project is not a sandbox (project-settings-security S07; settings.html.heex:731-732)
-    - at least one member (or a support user reaching the project through support access) has not enrolled in MFA (`users.mfa_enabled` not true; scope.ex:217-224)
+    - at least one member (or a support user reaching the project through support access) has not enrolled in MFA (`users.mfa_enabled` not true; scope.ex:370-373)
 
 inherits:
 shared-project-scope            # the receiving gate: S05 sends an unenrolled member to /mfa_required
@@ -30,19 +30,19 @@ config_variants:
 
 inventory:
   routes:
-    - live /mfa_required  ProjectLive.MFARequired :index            # router.ex:288-289, live_session :default
+    - live /mfa_required  ProjectLive.MFARequired :index            # router.ex:336-337, live_session :default
     - live /profile  ProfileLive.Edit :edit                         # config-injected, config/config.exs:58-59; MFA card at components.ex:57-61
-    - live /profile/auth/backup_codes  BackupCodesLive.Index :index # router.ex:252-265, sudo; where first enrolment lands
-    - live /projects/:project_id/w  WorkflowLive.Index :index      # exit, router.ex:301
+    - live /profile/auth/backup_codes  BackupCodesLive.Index :index # router.ex:300-313, sudo; where first enrolment lands
+    - live /projects/:project_id/w  WorkflowLive.Index :index      # exit, router.ex:349
   events:
     - ProjectLive.Settings#toggle-mfa                               # entry, owned by project-settings-security
     - ProfileLive.MfaComponent#show-mfa-options                     # mfa_component.ex:24-47
     - ProfileLive.MfaComponent#save_totp                            # mfa_component.ex:53-66
   js_hooks: []
   policies:
-    - Lightning.Policies.ProjectUsers.permitted?/2 (MFA clause, project_users.ex:134)
-    - Lightning.Policies.ProjectUsers.blocked_by_mfa?/1 (project_users.ex:186-188)
-    - Lightning.Projects.Scope mfa_satisfied? (scope.ex:217-224)
+    - Lightning.Policies.ProjectUsers.permitted?/2 (MFA clause, decision.ex:59-66)
+    - Lightning.Policies.ProjectUsers.blocked_by_mfa?/1 (project_users.ex:139-141)
+    - Lightning.Scope mfa_satisfied? (scope.ex:370-373)
   workers: []
   api_endpoints: []
   emails: []
@@ -103,11 +103,11 @@ person switching it on.
 
 ## 3. Who can do what
 
-Source: `lib/lightning/policies/project_users.ex:134` (any action is refused
-while MFA is unsatisfied), `:186-188` (`blocked_by_mfa?`: standing on the
-project but MFA unsatisfied), `lib/lightning/projects/scope.ex:217-224` (only
-`mfa_enabled == true` counts; support users are bound too). Starting the flow is
-governed by project-settings-security section 3.
+Source: `lib/lightning/policies/decision.ex:59-66` (any action is refused while
+MFA is unsatisfied), `:186-188` (`blocked_by_mfa?`: standing on the project but
+MFA unsatisfied), `lib/lightning/scope.ex:370-373` (only `mfa_enabled == true`
+counts; support users are bound too). Starting the flow is governed by
+project-settings-security section 3.
 
 | Action                                   | Viewer         | Editor         | Admin          | Owner          | Superuser (no row)                       | Support (no row, access on) |
 | ---------------------------------------- | -------------- | -------------- | -------------- | -------------- | ---------------------------------------- | --------------------------- |
@@ -136,7 +136,7 @@ governed by project-settings-security section 3.
 **Hop 2: member's next project page (shared-project-scope)**
 
 - Reads `projects`, `project_users`, `users.mfa_enabled` through `Scope.fetch/2`
-  (`scope.ex:111-117`, `:184-200`).
+  (`scope.ex:173-183`, `:323-360`).
 - `:project_scope` halts with a redirect to `/mfa_required` when
   `blocked_by_mfa?` (`hooks.ex:98-101`). The socket has already subscribed to
   the project topic (`hooks.ex:86`, `:272-287`); the subscription dies with the
@@ -175,7 +175,7 @@ handoffs)
   (`mail_recipients.ex:28-32`; flow-digest-email S04, flow-failure-alert-email
   S05) and resume once they enrol.
 - Plain routes, the bearer-token API and websocket channel joins refuse
-  unenrolled members through the same policy clause (`project_users.ex:134`;
+  unenrolled members through the same policy clause (`decision.ex:59-66`;
   `project_mfa_enforcement_test.exs:1-35`;
   `workflow_channel_test.exs:1771-1822`).
 
@@ -211,7 +211,7 @@ Feature: Requiring MFA on a project
     And Bob sees "This project requires all members to use multi-factor authentication."
     And Bob sees a "Visit your account" link to "/profile"
     # entry: project-settings-security S01 (settings.ex:411-427)
-    # gate: shared-project-scope S05 (hooks.ex:98-101; project_users.ex:186-188; scope.ex:221-222)
+    # gate: shared-project-scope S05 (hooks.ex:98-101; project_users.ex:139-141; scope.ex:370-373)
     # mfa_required.html.heex:29-46; mfa_required_live_test.exs:11-18; index_test.exs:85-111
 
   @S02
@@ -221,7 +221,7 @@ Feature: Requiring MFA on a project
     And Amara is an admin on project "Malawi HIV" who has enrolled in MFA
     When Amara opens the workflows page of project "Malawi HIV"
     Then she sees the workflows page for project "Malawi HIV"
-    # scope.ex:221-222; project_users.ex:136, :193-194; index_test.exs:89-102
+    # scope.ex:370-373; project_users.ex:160-162, :193-194; index_test.exs:89-102
 
   @S03
   Scenario: A stopped member enrols on their profile and gets back in
@@ -271,10 +271,10 @@ flow-failure-alert-email S05.
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                                                                        | Where                                                                                                                               | What a user sees                                                                                                      | Disposition |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------- |
-| An owner or admin who hasn't enrolled can turn the requirement on and is blocked by it at once, including from turning it back off, until they enrol; the superuser project form has no control for it (it casts `requires_mfa` but renders nothing for it) | `settings.ex:411-427`; `project_users.ex:134`; `project.ex:165-180`; `form_component.ex:76-80`; project-settings-security 6.1 row 1 | success flash, then "not authorized" on every action and `/mfa_required` on the next page, with no warning beforehand | decide      |
-| `/mfa_required` shows "This project requires..." to any signed-in unenrolled user who reaches it, including someone with no MFA-required project at all                                                                                                     | `mfa_required.ex:16-24`; `mfa_required.html.heex:33-38`                                                                             | a page saying a project requires MFA when none does                                                                   | fix         |
+| What                                                                                                                                                                                                                                                        | Where                                                                                                                            | What a user sees                                                                                                      | Disposition |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------- |
+| An owner or admin who hasn't enrolled can turn the requirement on and is blocked by it at once, including from turning it back off, until they enrol; the superuser project form has no control for it (it casts `requires_mfa` but renders nothing for it) | `settings.ex:411-427`; `decision.ex:59-66`; `project.ex:165-180`; `form_component.ex:76-80`; project-settings-security 6.1 row 1 | success flash, then "not authorized" on every action and `/mfa_required` on the next page, with no warning beforehand | decide      |
+| `/mfa_required` shows "This project requires..." to any signed-in unenrolled user who reaches it, including someone with no MFA-required project at all                                                                                                     | `mfa_required.ex:16-24`; `mfa_required.html.heex:33-38`                                                                          | a page saying a project requires MFA when none does                                                                   | fix         |
 
 ### 6.2 Quirks and implementation details
 
@@ -282,7 +282,7 @@ flow-failure-alert-email S05.
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------- |
 | `/mfa_required` doesn't name the project that sent the member there, and nothing remembers it, so after enrolling the member has to find the project again | `hooks.ex:100-101`; `mfa_required.html.heex:28-46`                               | decide      |
 | First enrolment lands on the backup codes page, not back on the project or the profile                                                                     | `mfa_component.ex:89-97`                                                         | preserve    |
-| Enrolment counts straight away for the current session; the member isn't asked to sign in again with the new factor                                        | `accounts.ex:415-437`; `scope.ex:221-222` reads only `users.mfa_enabled`         | preserve    |
+| Enrolment counts straight away for the current session; the member isn't asked to sign in again with the new factor                                        | `accounts.ex:415-437`; `scope.ex:370-373` reads only `users.mfa_enabled`         | preserve    |
 | A member who later disables MFA on their profile is warned only that their account is less secure, not that they will lose access to MFA-required projects | `mfa_component.html.heex:91-95`; `mfa_component.ex:68-76`; `accounts.ex:444-457` | decide      |
 | The MFA required page title is title case ("MFA Required for Project")                                                                                     | `mfa_required.ex:32`                                                             | decide      |
 

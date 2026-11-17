@@ -19,7 +19,7 @@ trigger:
       links always render (dashboard_components.ex:507-514, :534-543)
 
 inherits:
-  - shared-project-scope # both pages; the link is a live navigate inside live_session :default (router.ex:288, :294, :301)
+  - shared-project-scope # both pages; the link is a live navigate inside live_session :default (router.ex:336, :342, :349)
   - shared-usage-limits-banner # both pages mount :check_limits
 
 url_params:
@@ -64,8 +64,8 @@ config_variants:
 
 inventory:
   routes:
-    - live /projects/:project_id/w  WorkflowLive.Index :index # entry, owned by workflows-index (router.ex:301)
-    - live /projects/:project_id/history  RunLive.Index :index # exit, owned by history-work-orders (router.ex:294)
+    - live /projects/:project_id/w  WorkflowLive.Index :index # entry, owned by workflows-index (router.ex:349)
+    - live /projects/:project_id/history  RunLive.Index :index # exit, owned by history-work-orders (router.ex:342)
   events: [] # every hop is a <.link navigate>; no handle_event on the path
   js_hooks: []
   policies:
@@ -145,7 +145,7 @@ you why.
 
 Source: both pages sit behind the shared project scope gate
 (`workflow_live/index.ex:15`, `run_live/index.ex:67`); following a link calls no
-policy. `lib/lightning/policies/project_users.ex:134` denies everything when the
+policy. `lib/lightning/policies/decision.ex:59-66` denies everything when the
 project's MFA requirement is unmet.
 
 | Action                         | Viewer | Editor | Admin | Owner | Superuser (no row) | Support (no row)               |

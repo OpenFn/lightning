@@ -35,11 +35,11 @@ inventory:
   routes:
     - live /projects/:project_id/settings  ProjectLive.Settings :index   # config-injected (config/config.exs:52-57); catalogued by project-settings-setup
   events:
-    - ProjectLive.Settings#toggle-mfa                                   # settings.ex:411-431
+    - ProjectLive.Settings#toggle-mfa                                   # settings.ex:399-409
   js_hooks:
     - Tooltip (on the switch when the viewer can't edit the project; settings.html.heex:736)
   policies:
-    - Lightning.Policies.ProjectUsers (:edit_project; project_users.ex:29-37, :134, :160-161; flag computed settings.ex:122-123; re-checked settings.ex:414, :744-749)
+    - Lightning.Policies.ProjectUsers (:edit_project; project_users.ex:29-37, :160-162, :182-192; decision.ex:59-66; flag computed settings.ex:122-123; re-checked settings.ex:402, :740-745)
   workers: []
   api_endpoints: []
   emails: []
@@ -53,7 +53,7 @@ related:
   - profile-mfa                           # where a member enrols
   - flow-digest-email                     # recipients must satisfy the project's MFA requirement (S04 there)
   - flow-failure-alert-email              # same rule for failure alerts
-  - lib/lightning/projects/scope.ex       # the one place requires_mfa is read for authorisation (scope.ex:225-229)
+  - lib/lightning/scope.ex       # the one place requires_mfa is read for authorisation (scope.ex:370-373)
 flows:
   - flow-require-project-mfa
 ---
@@ -105,9 +105,9 @@ Source: `lib/lightning/policies/project_users.ex:29-37` (`:edit_project` is an
 admin action), `:134` (MFA unsatisfied denies everything), `:160-161` (admin
 actions need an owner or admin row; support standing never fills them). Flag
 computed once at mount, `settings.ex:122-123`; the handler re-checks the policy
-against a freshly loaded scope, `settings.ex:414`, `:744-749`,
-`scope.ex:111-117`, `:165`. The usage limit is a separate gate,
-`settings.ex:414`, `hooks.ex:214-227`.
+against a freshly loaded scope, `settings.ex:402`, `:740-745`,
+`scope.ex:173-183`, `:323-360`. The usage limit is a separate gate,
+`settings.ex:402`, `hooks.ex:214-227`.
 
 | Action                                                               | Viewer | Editor | Admin | Owner | Superuser (no row)           | Support (no row, access on) |
 | -------------------------------------------------------------------- | ------ | ------ | ----- | ----- | ---------------------------- | --------------------------- |
@@ -119,34 +119,33 @@ against a freshly loaded scope, `settings.ex:414`, `:744-749`,
 **Preconditions beyond role**
 
 - The usage limiter must allow `%Action{type: :require_mfa}` for the project;
-  this is decided once at mount (`hooks.ex:214-227`; `settings.ex:54`, `:414`).
+  this is decided once at mount (`hooks.ex:214-227`; `settings.ex:54`, `:402`).
 - In a sandbox the switch is disabled (`settings.html.heex:731-732`).
 - A member who hasn't met the project's MFA requirement never reaches this page
   (shared-project-scope S05), and every policy check fails for them
-  (`project_users.ex:134`).
+  (`decision.ex:59-66`).
 - `requires_mfa` can't be set through the generic settings save
   (`settings.ex:341-345`, `:355-358`); that scenario lives in
   project-settings-setup.
 - No check that the admin is enrolled in MFA before they turn the requirement on
-  (`settings.ex:411-427`; see 6.1).
+  (`settings.ex:399-409, :770-784`; see 6.1).
 
 ## 4. What it touches
 
 **Reads**: `projects` (the project, preloaded with its parent,
-`settings.ex:108-110`; reloaded for every policy check, `scope.ex:165`,
-`:173-180`); `project_users` for the viewer's role (`scope.ex:183-188`);
-`users.mfa_enabled` and `support_user` via the scope (`scope.ex:189-197`,
-`:225-229`)
+`settings.ex:108-110`; reloaded for every policy check, `scope.ex:323-360`);
+`project_users` for the viewer's role (`scope.ex:323-360`); `users.mfa_enabled`
+and `support_user` via the scope (`scope.ex:323-360`, `:370-373`)
 
-**Writes**: `projects.requires_mfa` (`settings.ex:417-422`;
-`projects.ex:589-598`; cast in `project.ex:72-86`)
+**Writes**: `projects.requires_mfa` (`settings.ex:770-784`;
+`projects.ex:620-650`; cast in `project.ex:72-86`)
 
 **Immediate side effects** (in the same request)
 
 - Audit `project` event `requires_mfa_updated` with before and after values and
-  the acting user (`projects.ex:597`, `:620-625`; `audit.ex:15`, `:20-38`;
+  the acting user (`projects.ex:620-650`; `audit.ex:15`, `:20-38`;
   `projects_test.exs:3560-3579`)
-- Flash "Project MFA requirement updated successfully" (`settings.ex:427`)
+- Flash "Project MFA requirement updated successfully" (`settings.ex:770-784`)
 
 **Deferred side effects** (later, elsewhere)
 
@@ -196,7 +195,7 @@ Feature: Project MFA requirement
     And I see "(currently required for this project)"
     And project "Malawi HIV" requires MFA
     And an audit event "requires_mfa_updated" is recorded with me as the actor, before false and after true
-    # settings.html.heex:726-753; settings.ex:411-427; projects.ex:589-598; audit.ex:20-38
+    # settings.html.heex:726-753; settings.ex:399-409, :770-784; projects.ex:620-650; audit.ex:24-44
     # project_live_test.exs:2109-2127 (flash only), :2259-2278; projects_test.exs:3560-3579
 
   @S02
@@ -209,7 +208,7 @@ Feature: Project MFA requirement
     And I see "(currently optional for this project)"
     And project "Malawi HIV" does not require MFA
     And an audit event "requires_mfa_updated" is recorded with me as the actor, before true and after false
-    # settings.ex:411-427; settings.html.heex:747-751; audit.ex:20-38 (audit both directions; only the on direction is tested)
+    # settings.ex:399-409, :770-784; settings.html.heex:747-751; audit.ex:24-44 (audit both directions; only the on direction is tested)
 
   @S03
   Scenario Outline: Every member can see whether MFA is required
@@ -238,8 +237,8 @@ Feature: Project MFA requirement
     When I click the "Require MFA?" switch
     Then I see "You are not authorized to perform this action."
     And project "Malawi HIV" still does not require MFA
-    # settings.html.heex:729, :736; settings.ex:414, :428-430, :751-765; project_users.ex:160-161
-    # project_live_test.exs:2129-2155 (editor, viewer; flash asserted, DB not); support row from project_users.ex:160-161, untested
+    # settings.html.heex:729, :736; settings.ex:402, :408-409, :740-745; project_users.ex:182-192
+    # project_live_test.exs:2129-2155 (editor, viewer; flash asserted, DB not); support row from project_users.ex:182-192, untested
 
     Examples:
       | role                                  |
@@ -255,7 +254,7 @@ Feature: Project MFA requirement
     When I click the "Require MFA?" switch
     Then I see "You are not authorized to perform this action"
     And project "Malawi HIV" still does not require MFA
-    # settings.ex:414, :744-749; scope.ex:111-117, :183-188; membership_revocation_test.exs:261-273, :294-298
+    # settings.ex:402, :740-745; scope.ex:173-183, :323-360; membership_revocation_test.exs:261-273, :294-298
 
   @S06 @variant:mfa-limited
   Scenario: The usage limiter refuses requiring MFA
@@ -268,7 +267,7 @@ Feature: Project MFA requirement
     When "toggle-mfa" is sent directly
     Then I see "You are not authorized to perform this action"
     And project "Malawi HIV" still does not require MFA
-    # hooks.ex:214-227; settings.ex:54, :414, :429; settings.html.heex:696-704, :731
+    # hooks.ex:214-227; settings.ex:54, :402, :429; settings.html.heex:696-704, :731
     # project_live_test.exs:2280-2316; not-limited counterpart :2259-2278
 
   @S07 @variant:sandbox
@@ -287,28 +286,37 @@ Feature: Project MFA requirement
     And "bob@example.org" is an editor on the project who has not enrolled in MFA
     When I turn on the MFA requirement
     Then the flow "flow-require-project-mfa" has started for "bob@example.org"
-    # handoff only; scope.ex:225-229; project_users.ex:134; hooks.ex:98-101
+    # handoff only; scope.ex:370-373; decision.ex:59-66; hooks.ex:98-101
+
+  @S09
+  Scenario: A switch that cannot be saved says so and changes nothing
+    # Value: an admin whose change was refused for a reason outside their control is told, instead of the page breaking.
+    Given I am an admin on project "Malawi HIV"
+    And saving the project fails
+    When I click the "Require MFA?" switch
+    Then I see "Changes couldn't be saved, please try again"
+    And project "Malawi HIV" still does not require MFA
+    # settings.ex:399-409, :770-784; projects.ex:620-650
 ```
 
 ## 6. Unclear value
 
 ### 6.1 Possible bugs
 
-| What                                                                                                                                                                                                                             | Where                                                                                                                                        | What a user sees                                                                                                                                                 | Disposition |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| An admin who hasn't enrolled in MFA can turn the requirement on, which immediately fails every policy check for them, including turning it back off                                                                              | `settings.ex:411-427`; `scope.ex:225-229`; `project_users.ex:134`; tests do this with an unenrolled admin, `project_live_test.exs:2109-2127` | success flash, then "You are not authorized to perform this action" on any further change, and `/mfa_required` on the next page load, with no warning beforehand | decide      |
-| The switch's `disabled` ignores role: editors, viewers and support users get a greyed-out switch that is still clickable and sends `toggle-mfa`                                                                                  | `settings.html.heex:729`, `:731` (disabled only on `can_require_mfa` or sandbox) vs `:736`                                                   | a control styled as disabled that produces a red "not authorized" flash when clicked                                                                             | fix         |
-| The opposite mismatch on `mfa-limited`: an admin's switch is disabled but styled as enabled (no `opacity-50`, `cursor-pointer`), because the style follows `can_edit_project` not `can_require_mfa`                              | `settings.html.heex:729`, `:731`                                                                                                             | a normal-looking switch that does nothing                                                                                                                        | fix         |
-| `{:ok, project} = Projects.update_project(...)` crashes the LiveView on any changeset error, for example a project whose stored fields fail `Project.validate` or a `ProjectHook.handle_project_validation` adapter that rejects | `settings.ex:417-422`; `projects.ex:589-593`, `:609-610`                                                                                     | the page crashes and reconnects with no message                                                                                                                  | fix         |
-| The `:limit_mfa` hook matches only `:ok` and an error whose message has a `function`; an adapter returning `{:error, reason, %Message{text: ...}}` without one raises a case clause error at mount                               | `hooks.ex:214-227`; `message.ex:6-13`                                                                                                        | every project settings tab fails to load, not just Security                                                                                                      | fix         |
+| What                                                                                                                                                                                                | Where                                                                                                                                               | What a user sees                                                                                                                                                 | Disposition |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| An admin who hasn't enrolled in MFA can turn the requirement on, which immediately fails every policy check for them, including turning it back off                                                 | `settings.ex:399-409, :770-784`; `scope.ex:370-373`; `decision.ex:59-66`; tests do this with an unenrolled admin, `project_live_test.exs:2109-2127` | success flash, then "You are not authorized to perform this action" on any further change, and `/mfa_required` on the next page load, with no warning beforehand | decide      |
+| The switch's `disabled` ignores role: editors, viewers and support users get a greyed-out switch that is still clickable and sends `toggle-mfa`                                                     | `settings.html.heex:729`, `:731` (disabled only on `can_require_mfa` or sandbox) vs `:736`                                                          | a control styled as disabled that produces a red "not authorized" flash when clicked                                                                             | fix         |
+| The opposite mismatch on `mfa-limited`: an admin's switch is disabled but styled as enabled (no `opacity-50`, `cursor-pointer`), because the style follows `can_edit_project` not `can_require_mfa` | `settings.html.heex:729`, `:731`                                                                                                                    | a normal-looking switch that does nothing                                                                                                                        | fix         |
+| The `:limit_mfa` hook matches only `:ok` and an error whose message has a `function`; an adapter returning `{:error, reason, %Message{text: ...}}` without one raises a case clause error at mount  | `hooks.ex:214-227`; `message.ex:6-13`                                                                                                               | every project settings tab fails to load, not just Security                                                                                                      | fix         |
 
 ### 6.2 Quirks and implementation details
 
 | What                                                                                                                                                                                                            | Where                                                                                                                     | Disposition |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| The toggle flips the value held in the socket, not the stored one; if another tab changed it, the click writes the value already stored, records no audit (no change), but still flashes "updated successfully" | `settings.ex:416-427`; `audit.ex:28-31`                                                                                   | decide      |
+| The toggle flips the value held in the socket, not the stored one; if another tab changed it, the click writes the value already stored, records no audit (no change), but still flashes "updated successfully" | `settings.ex:399-409, :770-784`; `audit.ex:28-31`                                                                         | decide      |
 | Changing the requirement doesn't broadcast; another admin's open Security tab keeps showing the old state until reload                                                                                          | `projects.ex:600-607`, `:776-780`                                                                                         | decide      |
-| The success flash is the same in both directions and doesn't say whether MFA is now required                                                                                                                    | `settings.ex:427`                                                                                                         | decide      |
+| The success flash is the same in both directions and doesn't say whether MFA is now required                                                                                                                    | `settings.ex:770-784`                                                                                                     | decide      |
 | `aria-describedby="require-mfa-description"` points to an id that doesn't exist (the description is `id="mfa-description"`); `id="mfa-label"` is referenced by nothing                                          | `settings.html.heex:710`, `:714`, `:735`                                                                                  | fix         |
 | Description copy is ungrammatical: "before they are allowed access this project"                                                                                                                                | `settings.html.heex:715-718`                                                                                              | fix         |
 | UI labels are title case ("Multi-Factor Authentication") next to a sentence-case section heading ("Project security") and a question-style switch label ("Require MFA?")                                        | `settings.html.heex:683`, `:712`, `:745`                                                                                  | decide      |
@@ -326,9 +334,9 @@ Feature: Project MFA requirement
 
 ### 6.4 Performance and operational limits
 
-| What                                                                                   | Where                                         | User-visible? | Disposition |
-| -------------------------------------------------------------------------------------- | --------------------------------------------- | ------------- | ----------- |
-| Each policy check reloads the project and membership row (two queries per `authorize`) | `scope.ex:165`, `:173-188`; `settings.ex:414` | no            | preserve    |
+| What                                                                                   | Where                                 | User-visible? | Disposition |
+| -------------------------------------------------------------------------------------- | ------------------------------------- | ------------- | ----------- |
+| Each policy check reloads the project and membership row (two queries per `authorize`) | `scope.ex:323-360`; `settings.ex:402` | no            | preserve    |
 
 ### 6.5 Things seen but not understood
 

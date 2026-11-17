@@ -8,28 +8,28 @@ trigger:
   entry: project-settings-github-sync       # "Initiate Sync to Branch", or a connect/reconnect; also workflow-editor-versions-and-promote ("Save & Sync")
   exit: workflows-index                     # the project's workflows, after a commit to the branch deploys back
   surfaces:
-    - project-settings-github-sync          # initiate-sync, connect, reconnect (github_sync_component.ex:39-92, :193-315)
+    - project-settings-github-sync          # initiate-sync, connect, reconnect (github_sync_component.ex:56-125, :351-473)
     - workflow-editor-versions-and-promote  # Save & Sync split button and GitHubSyncModal (Header.tsx:144-191, :635-643; GitHubSyncModal.tsx:33-212)
     - controller:workflow-channel-save-and-sync   # WorkflowChannel "save_and_sync" (workflow_channel.ex:516-547, :886-942)
-    - external:github-workflow-dispatch     # POST repos/:repo/actions/workflows/openfn-pull.yml/dispatches on the default branch (version_control.ex:192-215; github_client.ex:21-28)
-    - external:github-actions-pull          # priv/github/pull.yml, openfn/cli-pull-action@v1
-    - controller:api-provision-show         # GET /api/provision/:id and GET /api/provision/yaml (router.ex:114-115; provisioning_controller.ex:131-205)
+    - external:github-workflow-dispatch     # POST repos/:repo/actions/workflows/openfn-pull.yml/dispatches on the default branch (version_control.ex:473-513; github_client.ex:21-28)
+    - external:github-actions-pull          # priv/github/pull.yml (openfn/cli-pull-action@v1) for legacy connections, priv/github/pull_v2.yml (@v2) for v2 ones
+    - controller:api-provision-show         # GET /api/provision/:id and GET /api/provision/yaml (router.ex:133-134; provisioning_controller.ex:148-230)
     - external:github-branch-commit         # the pull action commits the project spec to the connected branch; or someone pushes/merges to it
-    - external:github-actions-deploy        # priv/github/deploy.yml, openfn/cli-deploy-action@v1, on push to the branch
-    - controller:api-provision-create       # POST /api/provision (router.ex:115; provisioning_controller.ex:62-100)
-    - pubsub:project_events:<project_id>#WorkflowDeleted   # provisioner.ex:132-134; receiving end owned by flow-delete-open-workflow
+    - external:github-actions-deploy        # priv/github/deploy.yml (@v1) or deploy_v2.yml (@v2), on push to the branch (v2: only when the workspace folder changes), by hand with "force", or on a commit marked [openfn force]
+    - controller:api-provision-create       # POST /api/provision (router.ex:134; provisioning_controller.ex:87-111)
+    - pubsub:project_events:<project_id>#WorkflowDeleted   # provisioner.ex:159-162; receiving end owned by flow-delete-open-workflow
     - workflows-index
     - sandboxes-index
   reachable_when:
     - the project has a GitHub connection (version_control.ex:158-160); without one the editor shows a plain Save button (Header.tsx:90-128) and the settings tab shows the connect form
-    - the GitHub app is configured on the instance (version_control.ex:562-568); otherwise the settings tab shows only the "not configured" notice (project-settings-github-sync S16)
-    - for a settings-tab sync, the connection verified healthy, since "Initiate Sync to Branch" is disabled otherwise (github_sync_component.html.heex:250-255)
+    - the GitHub app is configured on the instance (version_control.ex:905-915); otherwise the settings tab shows only the "not configured" notice (project-settings-github-sync S16)
+    - for a settings-tab sync, the connection verified healthy, since "Initiate Sync to Branch" is disabled otherwise (github_sync_component.html.heex:330-349)
     - for an editor sync, the workflow is saveable (useWorkflow.tsx:886-930) and not live outside a sandbox, where the save button is not rendered (Header.tsx:880-899)
     - the deploy direction needs nobody in Lightning: any push to the connected branch that GitHub runs deploy.yml for (deploy.yml:1-4)
 
 inherits:
   - shared-authenticated-session            # both Lightning-side entry surfaces
-  - shared-project-scope                    # entry surfaces only; the API hops are scoped through Projects.Scope separately (policies/provisioning.ex:59-69)
+  - shared-project-scope                    # entry surfaces only; the API hops are scoped through Lightning.Scope separately (policies/provisioning.ex:72-85)
 
 url_params:
   - name: "#vcs (URL fragment)"
@@ -37,19 +37,19 @@ url_params:
     effect: opens project-settings-github-sync; owned by that view
   - name: snapshots (query, on GET /api/provision)
     set_by: external:github-actions-pull (pull.yml:19-21, :38)
-    effect: limits the returned spec to those workflow snapshots (provisioning_controller.ex:142-143, :199)
+    effect: limits the returned spec to those workflow snapshots (provisioning_controller.ex:151, :232-240)
 
 config_variants:
   default: { github_app: { app_id, app_name, client_id, client_secret, cert all set }, usage_limiter: Lightning.Extensions.UsageLimiter }   # config/test.exs:168; read under this one
-  github-sync-limited: { usage_limiter: <refuses %Action{type: :github_sync}> }   # version_control_usage_limiter.ex:11-21; provisioner.ex:1091-1095; workflow_channel.ex:2425-2427
-  sync-v2: { project_repo_connection.sync_version: true }   # config file is openfn.yaml instead of openfn-<id>-config.json (project_repo_connection.ex:225-235; version_control.ex:672-685); not followed past the config file
-  import-direction: { project_repo_connection.sync_direction: deploy }   # connect commit not marked [skip actions] (version_control.ex:602-605)
+  github-sync-limited: { usage_limiter: <refuses %Action{type: :github_sync}> }   # version_control_usage_limiter.ex:11-21; provisioner.ex:1213-1222; workflow_channel.ex:2425-2427
+  sync-v2: { project_repo_connection.sync_version: true }   # the default for new connections: v2 templates and inputs (version_control.ex:528-561, :1050-1077), no config file committed (version_control.ex:1016-1017), the workspace openfn.yaml instead of openfn-<id>-config.json (project_repo_connection.ex:266-272)
+  import-direction: { project_repo_connection.sync_direction: deploy }   # connect commit not marked [skip actions] (version_control.ex:961-967)
 
 inventory:
   routes:
-    - get /api/provision/yaml  API.ProvisioningController :show_yaml   # router.ex:114
-    - get /api/provision/:id  API.ProvisioningController :show         # router.ex:115
-    - post /api/provision  API.ProvisioningController :create          # router.ex:115
+    - get /api/provision/yaml  API.ProvisioningController :show_yaml   # router.ex:133
+    - get /api/provision/:id  API.ProvisioningController :show         # router.ex:134
+    - post /api/provision  API.ProvisioningController :create          # router.ex:134
   events:
     - WorkflowChannel#save_and_sync                                    # workflow_channel.ex:516-547
     - ProjectLive.GithubSyncComponent#initiate-sync                    # owned by project-settings-github-sync; handoff here
@@ -59,7 +59,7 @@ inventory:
   policies:
     - Lightning.Policies.ProjectUsers :initiate_github_sync (settings tab; project_users.ex:39-49)
     - Lightning.Policies.ProjectUsers :edit_workflow (editor Save & Sync; workflow_channel.ex:1915-1956)
-    - Lightning.Policies.Provisioning :describe_project, :provision_project for a %ProjectRepoConnection{} actor (policies/provisioning.ex:59-69)
+    - Lightning.Policies.Provisioning :describe_project, :provision_project for a %ProjectRepoConnection{} actor (policies/provisioning.ex:72-85)
   workers: []
   api_endpoints:
     - GET /api/provision/:id
@@ -71,8 +71,8 @@ inventory:
     - Lightning.Config.repo_connection_token_signer (the secret the Actions authenticate with; project_repo_connection.ex:215-223)
     - :lightning, Lightning.Extensions, :usage_limiter (action :github_sync)
   not_reachable_here:
-    - Provisioner.import_document :reconcile_collaboration and :release options (provisioner.ex:62-71, :514-539); the provisioning controller passes neither
-    - Provisioner.maybe_add_project_credentials for a repo connection actor (provisioner.ex:942-944); only a %User{} adds credentials
+    - Provisioner.import_document :reconcile_collaboration and :release options (provisioner.ex:67-76, :96-99, :156-161); the provisioning controller passes neither
+    - Provisioner.maybe_add_project_credentials for a repo connection actor (provisioner.ex:1049-1052); only a %User{} adds credentials
 
 related:
   - project-settings-github-sync
@@ -81,11 +81,15 @@ related:
   - lib/lightning/version_control/project_repo_connection.ex
   - lib/lightning/projects/provisioner.ex
   - lib/lightning/policies/provisioning.ex
-  - lib/lightning/projects/scope.ex
+  - lib/lightning/scope.ex
   - lib/lightning_web/controllers/user_auth.ex
   - priv/github/pull.yml
   - priv/github/deploy.yml
-  - test/lightning_web/controllers/api/provisioning_controller_test.exs
+  - priv/github/pull_v2.yml
+  - priv/github/deploy_v2.yml
+  - test/lightning_web/controllers/api/provisioning/importing_test.exs
+  - test/lightning_web/controllers/api/provisioning/refusals_test.exs
+  - test/lightning_web/controllers/api/provisioning/snapshots_test.exs
   - test/lightning_web/channels/workflow_channel_test.exs
   - assets/test/collaborative-editor/components/GitHubSyncModal.test.tsx
   - assets/test/collaborative-editor/components/Header.keyboard.test.tsx
@@ -107,8 +111,8 @@ connected to.
 ## 2. What it does
 
 1. An editor (or above) on a connected project starts a sync, either with
-   "Initiate Sync to Branch" on the Sync to GitHub settings tab, or with "Save &
-   Sync" in the workflow editor.
+   "Initiate Sync to Branch" on the Sync settings tab, or with "Save & Sync" in
+   the workflow editor.
    - In the editor they first see the repository and branch, write a commit
      message (never blank), and the workflow is saved
    - Viewers, projects with no connection, projects over their sync limit, and
@@ -150,9 +154,10 @@ the same time.
 
 ## 3. Who can do what
 
-Sources: `project_users.ex:39-49`, `:160-172`; `policies/provisioning.ex:38-71`;
-`scope.ex:122-129`, `:156-160`, `:208-215`; `user_auth.ex:241-266`, `:357-367`;
-`workflow_channel.ex:527-528`, `:1915-1977`.
+Sources: `project_users.ex:39-49`, `:182-192`; `policies/provisioning.ex:54-85`;
+`scope.ex:286-306`, `:147-153`; `user_auth.ex:242-258`, `:341-354`;
+`plugs/person_or_service_account_auth.ex:23-37`; `workflow_channel.ex:527-528`,
+`:1915-1977`.
 
 | Action                                          | Viewer        | Editor | Admin | Owner | Superuser (no row) | Support (no row, access on) | Repo connection token |
 | ----------------------------------------------- | ------------- | ------ | ----- | ----- | ------------------ | --------------------------- | --------------------- |
@@ -172,14 +177,14 @@ covers only the token the Actions carry.
   repo as secret `OPENFN_<project_id>_API_KEY` (`version_control.ex:752-755`,
   `:801-820`); the bearer is resolved by a lookup on
   `project_repo_connections.access_token`, so deleting the connection row
-  revokes it (`user_auth.ex:263-266`; `version_control.ex:162-164`, `:138-145`).
+  revokes it (`user_auth.ex:255-258`; `version_control.ex:162-164`, `:138-145`).
 - A repo connection may act only on the project it belongs to, and never on one
-  scheduled for deletion (`scope.ex:122-129`, `:150-160`).
-- A repo connection authenticates with its own secret rather than a user login,
-  so the user MFA requirement does not apply (`scope.ex:202-215`).
+  scheduled for deletion, which answers 409 (`scope.ex:286-306`, `:363-365`).
+- A repo connection authenticates with its own secret, scoped to its project
+  (`scope.ex:147-153`).
 - The `:github_sync` usage limit is checked at dispatch
-  (`version_control.ex:178-182`) and at deploy (`provisioner.ex:97-99`,
-  `:1091-1095`).
+  (`version_control.ex:178-182`) and at deploy, once the document is valid
+  (`provisioner.ex:105-106`, `:1213-1222`).
 - The editor path also requires the workflow to be editable (not live outside a
   sandbox, not a pinned version) (`workflow_channel.ex:1915-1937`;
   `useWorkflow.tsx:886-930`).
@@ -212,34 +217,39 @@ controller:workflow-channel-save-and-sync (entry)**
 
 - An installation token is minted for the connection's installation
   (`github_client.ex:162-177`), the repo's default branch is read, and
-  `openfn-pull.yml` is dispatched on it with `projectId`, `apiSecretName`,
-  `pathToConfig`, `branch`, `commitMessage` and, when the project has workflows,
-  the space-separated current snapshot ids (`version_control.ex:192-215`,
-  `:249-255`)
+  `openfn-pull.yml` is dispatched on it (`version_control.ex:473-513`). Legacy
+  inputs: `projectId`, `apiSecretName`, `pathToConfig`, `branch`,
+  `commitMessage` and, when the project has workflows, the space-separated
+  current snapshot ids (`:528-543`, `:592-598`). v2 inputs: `projectId`,
+  `apiSecretName`, `endpoint` (this Lightning's URL), `branch`, `workspace`,
+  `commitMessage` and, on the first pull only, `alias` (`:547-561`). A v2
+  connection reads the repo's own `openfn-pull.yml` to pick which inputs to send
+  (`:515-526`, `:263-280`)
 
 **Hop 3, external:github-actions-pull → controller:api-provision-show**
 
 - Reads: `projects`, workflows, jobs, triggers, edges, credentials and
-  collections for the spec (`provisioning_controller.ex:131-148`, `:187-205`)
+  collections for the spec (`provisioning_controller.ex:148-160`, `:207-218`)
 - Writes on `GET /api/provision/:id`: a workflow version row for any workflow
-  without one (`provisioning_controller.ex:141`, `:150-157`)
-- The Action commits the spec and state to the connected branch (pull.yml:30-38;
-  external)
+  without one (`provisioning_controller.ex:152`, `:162-169`)
+- The legacy Action commits the spec and state to the connected branch
+  (pull.yml:30-38; external); the v2 Action runs `openfn project pull` into the
+  workspace and commits it (pull_v2.yml:36-54; external)
 
 **Hop 4, external:github-actions-deploy → controller:api-provision-create**
 
 - Writes, in one transaction: the project's workflows, jobs, triggers, edges,
   collections and channels; triggers of soft-deleted workflows disabled;
-  orphaned edges removed (`provisioner.ex:97-125`)
+  orphaned edges removed (`provisioner.ex:105-155`)
 - Audit: workflow `inserted_by_provisioner` / `updated_by_provisioner` /
   `deleted_by_provisioner`, `snapshot_created`, and channel events, with the
   repo connection as actor, shown as "GitHub" in the audit trail
-  (`provisioner.ex:115-117`, `:330-417`, `:468-499`; `workflows/audit.ex:38-49`;
+  (`provisioner.ex:134-139`, `:420-474`, `:509-557`; `workflows/audit.ex:38-49`;
   `auditing.ex:47-58`)
-- Workflow versions recorded with source `"cli"` (`provisioner.ex:384-402`)
+- Workflow versions recorded with source `"cli"` (`provisioner.ex:474-507`)
 - PubSub `WorkflowUpdated` on `workflow_events:<project_id>` for every workflow,
   and `WorkflowDeleted` on the project topic for each deleted one
-  (`provisioner.ex:130-134`; `workflows/events.ex:9-29`;
+  (`provisioner.ex:157-162`; `workflows/events.ex:9-29`;
   `projects/events.ex:123-131`)
 
 **Immediate side effects**
@@ -262,7 +272,8 @@ controller:workflow-channel-save-and-sync (entry)**
 - `:lightning, :github_app` for the installation token
   (`github_client.ex:162-164`)
 - Usage limiter `:github_sync` (github-sync-limited)
-- `sync_version` decides the config file the Actions read (sync-v2)
+- `sync_version` decides which workflow templates, dispatch inputs and config
+  file the Actions use (sync-v2)
 - `sync_direction` decides whether the connect commit triggers a deploy
   (import-direction)
 
@@ -283,14 +294,14 @@ Feature: Sync a project to and from GitHub
     # Value: the branch holds what Lightning is running, with a commit that says who asked for it.
     Given project "Malawi HIV" is connected to "amara/hiv-sync" branch "main" and verified
     And I am an editor on the project
-    When I click "Initiate Sync to Branch" on the "Sync to GitHub" tab
+    When I click "Initiate Sync to Branch" on the "Sync" tab
     Then I see "GitHub sync initiated"
-    And "openfn-pull.yml" is dispatched on the repository's default branch with branch "main"
+    And "openfn-pull.yml" is dispatched on the repository's default branch with branch "main" (legacy inputs, see S18 for v2)
     And the commit message is "user <my email> initiated a sync from Lightning"
     When the pull Action requests the project with the repository secret
     Then it receives the spec of project "Malawi HIV"
-    # github_sync_component.ex:81-83, :296-306; version_control.ex:178-215; pull.yml:1-38
-    # provisioning_controller.ex:131-148, :187-205; provisioning_controller_test.exs:808-838
+    # github_sync_component.ex:114-125, :454-473; version_control.ex:473-513; pull.yml:1-38
+    # provisioning_controller.ex:148-160, :207-218; refusals_test.exs:35-95
 
   @S02
   Scenario: An editor saves and syncs a workflow from the editor with their own message
@@ -312,13 +323,13 @@ Feature: Sync a project to and from GitHub
   @S03
   Scenario: A sync publishes only saved, current workflows
     # Value: drafts nobody saved, and workflows already deleted, never land in the repository as if they were live.
-    Given project "Malawi HIV" has workflows "Intake" and "Referral", and a deleted workflow "Old"
+    Given project "Malawi HIV" is connected in the legacy format and has workflows "Intake" and "Referral", and a deleted workflow "Old"
     And "Referral" has unsaved changes in someone's editor
     When an editor starts a sync from the settings tab
     Then the dispatch lists the current snapshots of "Intake" and "Referral" only
     And the spec the pull Action receives has the saved version of "Referral"
-    # version_control.ex:220-231, :249-255; pull.yml:19-21, :38; provisioning_controller.ex:142-143
-    # provisioning_controller_test.exs:840-922
+    # version_control.ex:563-598; pull.yml:19-21, :38; provisioning_controller.ex:151, :232-240
+    # snapshots_test.exs:99-170
 
   @S04
   Scenario: A commit to the branch deploys into the project and is attributed to GitHub
@@ -329,37 +340,38 @@ Feature: Sync a project to and from GitHub
     Then the project's workflow list shows "HIV intake"
     And the audit trail shows the change by "GitHub"
     And a new version of the workflow is recorded
-    # deploy.yml:1-19; provisioning_controller.ex:62-80; provisioner.ex:97-137, :330-417, :384-402, :468-499
-    # auditing.ex:47-58; provisioning_controller_test.exs:1286-1304
+    # deploy.yml:1-19; provisioning_controller.ex:87-111; provisioner.ex:105-172, :420-474, :474-507, :509-557
+    # auditing.ex:47-58; provisioning/importing_test.exs:322-360
 
   @S05
   Scenario: Configuring an export connection never deploys the branch over the project
     # Value: connecting a project to a branch that already holds files does not overwrite the project with them.
     Given I connect project "Malawi HIV" with "OpenFn --> GitHub: Export to GitHub (default, non-destructive)"
-    Then the commits that add the OpenFn workflow files are marked "[skip actions]"
+    Then the commit that adds the OpenFn workflow files is marked "[skip actions]"
     And the project's workflows are unchanged until a later commit to the branch
-    # version_control.ex:602-605, :650, :823-842; deploy.yml:1-4
+    # version_control.ex:961-962, :969-1013, :1264-1285; deploy.yml:1-4
 
   @S06 @variant:import-direction
   Scenario: Connecting in import mode deploys the branch into the project
     # Value: a team whose project already lives in a repo gets it into Lightning without exporting over it first.
-    Given I connect project "Malawi HIV" with "GitHub --> OpenFn: Import from GitHub (overwrite this project)" and config path "./config.json"
-    Then the "Configure OpenFn" commit to the branch is not marked "[skip actions]"
+    Given I connect project "Malawi HIV" in the v2 format with "GitHub --> OpenFn: Import from GitHub (overwrite this project)"
+    Then the "Configure OpenFn [openfn force]" commit to the branch is not marked "[skip actions]"
     And no pull Action is dispatched
-    And the deploy Action posts the branch's spec into project "Malawi HIV"
-    # version_control.ex:602-605, :836-840; deploy.yml:1-19; project-settings-github-sync S02
+    And the deploy Action deploys the branch's workspace into project "Malawi HIV", forced because of the commit's marker
+    # a legacy import commits "Configure OpenFn" and needs a config path (project-settings-github-sync S03)
+    # version_control.ex:961-967, :1279-1284; deploy_v2.yml:1-40; project-settings-github-sync S02
 
   @S07
   Scenario: A repository secret only reaches its own project
     # Value: the secret held by one repository can only read or write its own project, never another project, and can't create a new one.
     Given repository "amara/tb-sync" holds the secret of project "Malawi TB"
     When it requests or posts the spec of project "Malawi HIV"
-    Then it is refused with "Forbidden"
+    Then it is refused with 403 and code "forbidden"
     And project "Malawi HIV" is unchanged
     When it posts a spec with no project id
-    Then it is refused and no project is created
-    # policies/provisioning.ex:38-40, :59-69; scope.ex:122-129, :156-160; provisioning_controller.ex:207-213
-    # provisioning_controller_test.exs:924-944, :1022-1040
+    Then it is refused with 403 and code "forbidden" and no project is created
+    # policies/provisioning.ex:54-66, :72-85; scope.ex:286-306; provisioning_controller.ex:92-98, :242-248
+    # provisioning/refusals_test.exs:35-95, :149-225
 
   @S08
   Scenario: Removing the connection cuts GitHub's access to the project
@@ -367,27 +379,29 @@ Feature: Sync a project to and from GitHub
     Given project "Malawi HIV" was connected and its secret is still in "amara/hiv-sync"
     When an admin removes the integration
     And the deploy Action later posts a spec with that secret
-    Then it is refused as unauthorized
-    # user_auth.ex:241-266, :357-367; version_control.ex:138-155, :162-164
+    Then it is refused with 401 and code "invalid_token", and a 'www-authenticate: Bearer error="invalid_token"' challenge
+    # plugs/person_or_service_account_auth.ex:23-37; user_auth.ex:242-258, :349-362; auth.ex:98-109; version_control.ex:138-155, :162-164
+    # auth_test.exs:88-112 (an unknown token on the person_or_service_account_api pipeline)
 
   @S09
   Scenario: A deploy can't revive a project scheduled for deletion
     # Value: a push to the branch doesn't quietly turn back on triggers that shutting the project down disabled.
     Given project "Malawi HIV" is scheduled for deletion and its triggers are disabled
     When the deploy Action posts a spec that enables a trigger
-    Then it is refused
+    Then it is refused with 409 "scheduled_for_deletion"
     And the trigger stays disabled
-    And the pull Action is refused the project's spec
-    # scope.ex:150-153; policies/provisioning.ex:59-69; provisioning_controller_test.exs:1536-1660
+    And the pull Action is refused the project's spec the same way
+    # scope.ex:363-365; policies/decision.ex:59-66; policies/provisioning.ex:72-85; provisioning/refusals_test.exs:227-300
 
   @S10 @variant:github-sync-limited
   Scenario: A usage limit on GitHub sync stops a deploy and says why
-    # Value: a project over its usage limit isn't changed from GitHub, and the Action log carries the reason.
+    # Value: a project over its usage limit isn't changed from GitHub, and the Action log shows that a limit stopped it.
     Given the usage limiter refuses GitHub sync for project "Malawi HIV" with "<limit message>"
     When the deploy Action posts a spec with the repository secret
-    Then it receives 403 with error "<limit message>"
+    Then it receives 402 with code "exceeds_limit" and the fixed detail "This would exceed a limit of your plan.", not the limiter's own message
     And the project is unchanged
-    # provisioner.ex:97-99, :1091-1095; provisioning_controller.ex:87-97; provisioning_controller_test.exs:1042-1070
+    # provisioner.ex:105-106, :1213-1222; api/fallback_controller.ex:73-74; api/codes.ex:19, :170-180
+    # provisioning/importing_test.exs:18-42
 
   @S11 @variant:github-sync-limited
   Scenario: A usage limit on GitHub sync disables Save & Sync in the editor
@@ -443,7 +457,7 @@ Feature: Sync a project to and from GitHub
     When I save and sync workflow "Intake"
     Then I see an error naming "My Flow" and "My-Flow"
     And nothing is dispatched to GitHub
-    # version_control.ex:183-191; workflow_channel.ex:924-936; workflow_channel_test.exs:4296-4325
+    # version_control.ex:478-486; workflow_channel.ex:924-936; workflow_channel_test.exs:4296-4325
     # settings-tab equivalent: project-settings-github-sync S29
 
   @S16
@@ -453,15 +467,56 @@ Feature: Sync a project to and from GitHub
     When a commit that deletes "Old" is deployed into the project
     Then the flow "flow-delete-open-workflow" receives "WorkflowDeleted" for "Old"
     And amara lands on the workflow list with "Workflow deleted."
-    # provisioner.ex:132-134, :908-925; projects/events.ex:123-131; hooks.ex:320-341; workflow_channel.ex:1085-1090
+    # provisioner.ex:159-162, :1190-1200; projects/events.ex:123-131; hooks.ex:320-341; workflow_channel.ex:1085-1090
 
   @S17
   Scenario: The sync dialog links to the connection settings
     # Value: someone who notices they are about to sync to the wrong branch can fix it from where they noticed.
     Given I have the "Save and sync changes to GitHub" dialog open
     When I click "Modify connection"
-    Then I am on the project's "Sync to GitHub" settings tab
+    Then I am on the project's "Sync" settings tab
     # GitHubSyncModal.tsx:135-145; GitHubSyncModal.test.tsx:416-439; project-settings-github-sync url_params
+  @S18 @variant:sync-v2
+  Scenario: A v2 sync dispatches the pull workflow with workspace inputs
+    # Value: the pull Action receives what the CLI needs to pull the project into the right workspace folder under the right name.
+    Given project "Malawi HIV" is connected in the v2 format with workspace folder "ws" and local alias "demo"
+    And the repository's "openfn-pull.yml" is the v2 workflow
+    When an editor clicks "Initiate Sync to Branch"
+    Then "openfn-pull.yml" is dispatched with "projectId", "apiSecretName", "endpoint" (this Lightning's URL), "branch", "workspace" "ws" and the commit message
+    And "alias" "demo" is sent as well, because the project has not yet been filed in the workspace
+    And no snapshot list or config path is sent
+    And the run is titled with the commit message and the project id, which is how the Sync tab finds this project's runs
+    # version_control.ex:473-513, :547-561; pull_v2.yml:1-54; project_live_test.exs:7514-7636; version_control_test.exs:1319-1400
+    # sandboxes-index S47 sends the same v2 inputs
+
+  @S19 @variant:sync-v2
+  Scenario: A v2 connection made before the v2 workflow files existed still syncs
+    # Value: a team that connected earlier is not locked out of syncing until they reconnect.
+    Given project "Malawi HIV" is connected in the v2 format but the repository's "openfn-pull.yml" is still the legacy workflow
+    When an editor clicks "Initiate Sync to Branch"
+    Then "openfn-pull.yml" is dispatched with the legacy inputs, including "pathToConfig" "openfn.yaml" under the workspace
+    And the Sync tab offers admins "Reconnect" to update the workflow files
+    # version_control.ex:214-228, :263-280, :515-543; project_live_test.exs:6377-6409
+
+  @S20 @variant:sync-v2
+  Scenario: The v2 deploy workflow runs only for this project's workspace, and can be forced
+    # Value: pushes that don't touch a project's workspace don't redeploy it, and a team can deliberately overwrite a project that has changed in OpenFn.
+    Given project "Malawi HIV" is connected in the v2 format with workspace folder "ws"
+    When a commit changes files outside "ws"
+    Then the deploy workflow does not run
+    When a commit changes files under "ws"
+    Then the deploy workflow runs
+    And a commit whose message contains "[openfn force]", or a manual run with "force" ticked, deploys even if the project has changed in OpenFn since the last sync
+    And the connect commit that adds the workflow in the import direction carries that marker
+    # version_control.ex:964-967, :1050-1065; deploy_v2.yml:1-40; version_control_test.exs:1742-1800
+
+  @S21 @variant:sync-v2
+  Scenario: Pull and deploy runs on one branch never overlap, and the secret exists before the deploy workflow
+    # Value: two runs never push to the same branch at once, and the first deploy can authenticate.
+    Given project "Malawi HIV" is connected in the v2 format
+    Then the pull and the deploy workflow share the concurrency group "openfn-<branch>" and queue rather than cancel
+    And when connecting, the repository secret is written before the deploy workflow is committed, and no config file is committed
+    # pull_v2.yml:26-30; deploy_v2.yml:17-21; version_control.ex:1264-1285; version_control_test.exs:1703-1741
 ```
 
 ## 6. Unclear value
@@ -478,17 +533,17 @@ Feature: Sync a project to and from GitHub
 
 | What                                                                                                                                                                               | Where                                                                                            | Disposition |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------- |
-| A deploy does not reconcile open collaborative editors; an editor open on a deployed workflow keeps its pre-deploy Y.Doc. The provisioner documents this as deliberate             | `provisioning_controller.ex:71-75`; `provisioner.ex:62-71`, `:146-150`                           | decide      |
+| A deploy does not reconcile open collaborative editors; an editor open on a deployed workflow keeps its pre-deploy Y.Doc. The provisioner documents this as deliberate             | `provisioner.ex:59-76`, `:156-161`                                                               | decide      |
 | The editor path authorizes `:edit_workflow`, the settings tab `:initiate_github_sync`; both resolve to editor and above today                                                      | `workflow_channel.ex:528`, `:1950-1956`; `github_sync_component.ex:82`; `project_users.ex:39-49` | decide      |
-| Three default commit messages: editor "<email> initiated a sync from Lightning", settings tab "user <email> initiated a sync from Lightning", first sync on connect the bare email | `GitHubSyncModal.tsx:52`; `github_sync_component.ex:298`; `version_control.ex:837`               | decide      |
-| `WorkflowUpdated` is broadcast on `workflow_events:<project_id>` for every deployed workflow, but nothing in `lib/` subscribes to that topic                                       | `provisioner.ex:130`; `workflows/events.ex:9-29`                                                 | decide      |
-| `WorkflowUpdated` and `WorkflowDeleted` are broadcast inside the import transaction, before commit                                                                                 | `provisioner.ex:97-137`                                                                          | decide      |
-| A deploy from a repo connection never attaches project credentials named in the spec                                                                                               | `provisioner.ex:942-944`                                                                         | decide      |
-| Every connected project in one repository shares one concurrency group, so deploys of different projects queue behind each other                                                   | `deploy.yml:6-8`                                                                                 | decide      |
-| `pull.yml` runs from the repository's default branch, not the connected branch                                                                                                     | `version_control.ex:192-201`, `:623-660`                                                         | preserve    |
-| `GET /api/provision/:id` records workflow versions for workflows without one, so the pull is a read that writes                                                                    | `provisioning_controller.ex:141`, `:150-157`                                                     | preserve    |
-| The `show_yaml` docs name `/api/provision/:id.yaml`; the route is `/api/provision/yaml?id=`                                                                                        | `provisioning_controller.ex:12`, `:182`; `router.ex:114`                                         | preserve    |
-| The sync pre-flight always exports the v1 format, whatever `sync_version` says                                                                                                     | `version_control.ex:183-191`, `:236-246`                                                         | decide      |
+| Three default commit messages: editor "<email> initiated a sync from Lightning", settings tab "user <email> initiated a sync from Lightning", first sync on connect the bare email | `GitHubSyncModal.tsx:52`; `github_sync_component.ex:456`; `version_control.ex:1280`              | decide      |
+| `WorkflowUpdated` is broadcast on `workflow_events:<project_id>` for every deployed workflow, but nothing in `lib/` subscribes to that topic                                       | `provisioner.ex:157`; `workflows/events.ex:9-29`                                                 | decide      |
+| `WorkflowUpdated` and `WorkflowDeleted` are broadcast inside the import transaction, before commit                                                                                 | `provisioner.ex:105-172`                                                                         | decide      |
+| A deploy from a repo connection never attaches project credentials named in the spec                                                                                               | `provisioner.ex:1049-1052`                                                                       | decide      |
+| Every legacy-connected project in one repository shares one concurrency group, so deploys of different projects queue behind each other; v2 groups are per branch                  | `deploy.yml:6-8`; `deploy_v2.yml:17-21`                                                          | decide      |
+| `pull.yml` runs from the repository's default branch, not the connected branch                                                                                                     | `version_control.ex:473-513`, `:973-1013`                                                        | preserve    |
+| `GET /api/provision/:id` records workflow versions for workflows without one, so the pull is a read that writes                                                                    | `provisioning_controller.ex:152`, `:162-169`                                                     | preserve    |
+| The `show_yaml` docs name `/api/provision/:id.yaml`; the route is `/api/provision/yaml?id=`                                                                                        | `provisioning_controller.ex:12`, `:202`; `router.ex:133`                                         | preserve    |
+| The sync pre-flight always exports the v1 format, whatever `sync_version` says                                                                                                     | `version_control.ex:478-486`, `:581-590`                                                         | decide      |
 | "Save & Sync" uses an ampersand and title case; "Saving..." while in flight                                                                                                        | `Header.tsx:188`; `GitHubSyncModal.tsx:191`                                                      | decide      |
 
 ### 6.3 Unreachable or dead code
@@ -502,15 +557,16 @@ Feature: Sync a project to and from GitHub
 | What                                                                                                        | Where                                          | User-visible?                                         | Disposition |
 | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------- | ----------- |
 | The editor waits up to 75 s for the combined save, export pre-flight and dispatch                           | `createWorkflowStore.ts:157`, `:1757-1762`     | yes, "Saving..." for that long before a timeout error | preserve    |
-| Each sync runs a full export as a pre-flight and throws it away (owned by project-settings-github-sync 6.4) | `version_control.ex:166-191`                   | no                                                    | preserve    |
-| Snapshot ids for every workflow in the project go into one workflow_dispatch input                          | `version_control.ex:249-255`; `pull.yml:19-21` | not known; GitHub input size limits not checked       | decide      |
+| Each sync runs a full export as a pre-flight and throws it away (owned by project-settings-github-sync 6.4) | `version_control.ex:478-486`                   | no                                                    | preserve    |
+| Snapshot ids for every workflow in the project go into one workflow_dispatch input                          | `version_control.ex:563-598`; `pull.yml:19-21` | not known; GitHub input size limits not checked       | decide      |
 
 ### 6.5 Things seen but not understood
 
 - What `openfn/cli-pull-action@v1` and `openfn/cli-deploy-action@v1` actually
   call is outside this repository. The endpoints above are inferred from the
   provisioning controller and from its tests that use a repo connection token
-  (`provisioning_controller_test.exs:808-944`, `:1286-1304`).
+  (`provisioning/refusals_test.exs:35-225`,
+  `provisioning/importing_test.exs:322-360`).
 - Whether the pull Action's own commit to the branch triggers `deploy.yml`
   depends on how that Action pushes (GitHub does not start workflows for pushes
   made with `GITHUB_TOKEN`). If it does, every sync deploys straight back into
@@ -520,8 +576,9 @@ Feature: Sync a project to and from GitHub
   "Create" whenever a connection exists. Which holds was not traced.
 - What a later save from an editor that was open during a deploy does to the
   deployed change (overwrite, or a lock-version conflict) was not traced.
-- Under sync-v2 the Actions read `openfn.yaml`; how the CLI Actions treat the v2
-  format was not followed.
+- Under sync-v2 the `@v2` Actions run `openfn project pull` and
+  `openfn project deploy`; what they do inside the CLI is outside this
+  repository.
 
 ## 7. Not migrating
 
@@ -546,7 +603,7 @@ none
 
 ## Summary
 
-- 17 scenarios (S01 to S17).
+- 21 scenarios (S01 to S21).
 - Section 6: 6.1 three, 6.2 fourteen, 6.3 one, 6.4 three, 6.5 five.
 - Flows referenced: flow-delete-open-workflow (receiving end of a deployed
   workflow deletion); none proposed.

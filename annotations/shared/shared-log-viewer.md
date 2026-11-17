@@ -278,7 +278,7 @@ Feature: Run log viewer
 | --------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | The highlight event dispatch in `LogViewer.updated`             | `log-viewer/index.ts:50-54`                     | commented out                                                                                       |
 | Filter hidden when `current_user` is nil                        | `viewers.ex:84`                                 | the only LiveView host always passes a user (`show.ex:282`)                                         |
-| The dev components page's log viewer variation                  | `components_live.ex:68-73`; `router.ex:370-379` | dev build only; it passes a `%Run{}` struct as `run_state`, so the final-state branch never renders |
+| The dev components page's log viewer variation                  | `components_live.ex:68-73`; `router.ex:418-427` | dev build only; it passes a `%Run{}` struct as `run_state`, so the final-state branch never renders |
 | `log_viewer` doc example with `stream` and `highlight_id` attrs | `viewers.ex:30-36`                              | describes attrs the component no longer has                                                         |
 
 ### 6.4 Performance and operational limits

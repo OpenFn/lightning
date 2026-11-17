@@ -10,7 +10,7 @@ trigger:
   surfaces:
     - project-settings-webhook-security # create (or delete) the method; owns the form and the delete modal
     - workflow-editor-inspectors # trigger inspector, Configure step, "Authentication" picker; commits on Finish
-    - controller:webhooks # Plugs.WebhookAuth in the endpoint (endpoint.ex:91), then WebhooksController (router.ex:333-338)
+    - controller:webhooks # Plugs.WebhookAuth in the endpoint (endpoint.ex:91), then WebhooksController (router.ex:381-386)
     - history-work-orders # the work order an accepted request created
   reachable_when:
     - project-settings-webhook-security:
@@ -22,7 +22,7 @@ trigger:
         and :write_webhook_auth_method (workflow_channel.ex:697-698)
     - controller:webhooks:
         any HTTP client holding the URL; no Lightning session
-        (router.ex:333-338)
+        (router.ex:381-386)
 
 inherits:
   - shared-project-scope # who can open the settings tab, the editor and history; not repeated here
@@ -47,8 +47,8 @@ inventory:
       :write_webhook_auth_method; project_users.ex:29-49, :160-172)
   workers: []
   api_endpoints:
-    - plug LightningWeb.Plugs.WebhookAuth (webhook_auth.ex:42-125)
-    - module LightningWeb.Auth (auth.ex:21-79)
+    - plug LightningWeb.Plugs.WebhookAuth (webhook_auth.ex:44-112)
+    - module LightningWeb.Auth (auth.ex:54-73, :119-132, :152-189)
   emails: []
   config: []
   not_reachable_here:
@@ -138,7 +138,7 @@ a feature that decides who can push data in.
 
 Sources: `lib/lightning/policies/project_users.ex:29-49`, `:160-172`; attach
 gate `workflow_channel.ex:697-698`, `:1915-1937`, `:1958-1964`; enforcement
-`webhook_auth.ex:86-111`.
+`webhook_auth.ex:86-112`.
 
 | Action                                             | Viewer | Editor | Admin | Owner | Superuser (no row) | Support (no row) | Anonymous caller                |
 | -------------------------------------------------- | ------ | ------ | ----- | ----- | ------------------ | ---------------- | ------------------------------- |
@@ -164,7 +164,7 @@ gate `workflow_channel.ex:697-698`, `:1915-1937`, `:1958-1964`; enforcement
   (`workflow_channel.ex:2145-2148`; `webhook_auth_methods.ex:465-472`).
 - A caller matches if any attached method matches: an `x-api-key` equal to an
   API method's key, or Basic credentials equal to a basic method's username and
-  password, compared in constant time (`auth.ex:21-31`, `:42-79`).
+  password, compared in constant time (`auth.ex:54-64`, `:152-189`).
 
 ## 4. What it touches
 
@@ -176,8 +176,8 @@ gate `workflow_channel.ex:697-698`, `:1915-1937`, `:1958-1964`; enforcement
 - Attach: `triggers` (`:2136-2143`), `webhook_auth_methods` (`:2145-2148`),
   `trigger_webhook_auth_methods` (`webhook_auth_methods.ex:331`)
 - Webhook: `triggers` with `workflow`, `edges`, `webhook_auth_methods`
-  (`webhook_auth.ex:50-53`; `workflows.ex:1175-1248`), wrapped in the webhook
-  retry (`webhook_auth.ex:48-61`)
+  (`webhook_auth.ex:52-55`; `workflows.ex:1175-1248`), wrapped in the webhook
+  retry (`webhook_auth.ex:50-63`)
 
 **Writes, by hop**
 
@@ -214,7 +214,7 @@ gate `workflow_channel.ex:697-698`, `:1915-1937`, `:1958-1964`; enforcement
   what keeps the secret out of job code (`runs.ex:138-170`;
   `request_headers.ex:1-9`)
 - The purge cron later hard-deletes deleted methods; enforcement already ignores
-  them (`auth.ex:47`, `:62`); owned by capability:webhook-auth-method-purge
+  them (`auth.ex:157`, `:172`); owned by capability:webhook-auth-method-purge
 
 **External, non-transactional effects**
 
@@ -250,20 +250,20 @@ Feature: Webhook auth methods protect inbound requests
     Then I see "Authentication updated"
     And the trigger shows "Authentication (1 configured)"
     When a request with no credentials is posted to the trigger's URL
-    Then the response is 401 with body {"error": "Unauthorized"}
+    Then the response is 401 with a problem document with code "unauthenticated" and no `www-authenticate` challenge (a trigger that takes an API key challenges with 'ApiKey header="x-api-key"')
     And no work order is created for "Intake"
     # WebhookConfigureStep.tsx:345-380; useTriggerDraft.ts:196-212; useWebhookTrigger.ts:180-197
     # workflow_channel.ex:684-716; webhook_auth_methods.ex:325-379
-    # webhook_auth.ex:45-61, :86-118; webhook_auth_test.exs:156-164
+    # webhook_auth.ex:45-63, :86-112; auth.ex:125-132; webhook_auth_test.exs:156-164
 
   @S02
   Scenario: Wrong credentials look like a missing webhook
     # Value: a request with wrong credentials creates nothing and is answered as if the webhook did not exist.
     Given "Kobo basic" is attached to the trigger of "Intake"
     When a request with Basic credentials "kobo:wrongpassword" is posted to the trigger's URL
-    Then the response is 404 with body {"error": "Webhook not found"}
+    Then the response is 404 with a problem document with code "not_found"
     And no work order is created for "Intake"
-    # auth.ex:37-40, :58-77; webhook_auth.ex:99-111, :120-125; webhook_auth_test.exs:166-177
+    # auth.ex:70-73, :152-189; webhook_auth.ex:86-87, :100-112; webhook_auth_test.exs:166-177
 
   @S03
   Scenario Outline: A matching credential creates a work order that shows in History
@@ -274,7 +274,7 @@ Feature: Webhook auth methods protect inbound requests
     And the response has an "x-meta-work-order-id" header
     When I open the history page of "Malawi HIV"
     Then I see that work order for "Intake"
-    # auth.ex:42-79; webhook_auth.ex:95-103; webhooks_controller.ex:39-69, :119-148
+    # auth.ex:54-64, :152-189; webhook_auth.ex:96-104; webhooks_controller.ex:39-69, :119-148
     # work_orders.ex:102-125, :151-157; webhook_auth_test.exs:179-198; webhooks_controller_test.exs:722-752
     # exit: history-work-orders S01 (list on load); the live arrival on an open page is flow-history-live-updates S01
 
@@ -289,7 +289,7 @@ Feature: Webhook auth methods protect inbound requests
     Given "Kobo basic" and "DHIS2 key" are both attached to the trigger of "Intake"
     When a request with only the "DHIS2 key" API key is posted to the trigger's URL
     Then a work order is created for "Intake"
-    # WebhookAuthMethodSelect.tsx:93-101, :214-227; auth.ex:21-31; webhook_auth.ex:99-103
+    # WebhookAuthMethodSelect.tsx:93-101, :214-227; auth.ex:54-64; webhook_auth.ex:100-104
     # webhook_auth_test.exs:251-262
 
   @S05
@@ -301,7 +301,7 @@ Feature: Webhook auth methods protect inbound requests
     Then the response is 401
     When the same request carries Basic credentials for "kobo"
     Then a work order is created for "Intake"
-    # WebhookConfigureStep.tsx:366-369 ("applies to every URL above"); workflows.ex:1175-1187; webhook_auth.ex:50-57
+    # WebhookConfigureStep.tsx:366-369 ("applies to every URL above"); workflows.ex:1175-1187; webhook_auth.ex:52-57
     # webhook_auth_test.exs:109-153
 
   @S06
@@ -321,7 +321,7 @@ Feature: Webhook auth methods protect inbound requests
     When I delete "Kobo basic" on the "Webhook Security" tab
     Then a request with Basic credentials for "kobo" gets 404
     And a request with the "DHIS2 key" API key still creates a work order
-    # webhook_auth_methods.ex:674-703; auth.ex:47, :62; webhook_auth.ex:55
+    # webhook_auth_methods.ex:674-703; auth.ex:157, :172; webhook_auth.ex:57
     # webhook_auth_test.exs:200-262
 
   @S08
@@ -332,7 +332,7 @@ Feature: Webhook auth methods protect inbound requests
     Then the trigger shows "Authentication (none configured)"
     And a request with no credentials creates a work order for "Intake"
     # WebhookAuthMethodSelect.tsx:87-91; workflow_channel_test.exs:5727-5763
-    # webhook_auth.ex:88-93; WebhookShowPanel.tsx:68-73; webhook_auth_test.exs:267-292 (same via deletion)
+    # webhook_auth.ex:89-94; WebhookShowPanel.tsx:68-73; webhook_auth_test.exs:267-292 (same via deletion)
 
   @S09
   Scenario: An editor cannot change which methods protect a webhook
@@ -375,12 +375,11 @@ Feature: Webhook auth methods protect inbound requests
 | What                                                                                                                                                                                                   | Where                                                                            | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | ----------- |
 | Attaching takes effect on Finish, outside the workflow's save, versions and snapshots; discarding or resetting the workflow does not undo it                                                           | `useTriggerDraft.ts:196-212`; `workflow_channel.ex:684-716`                      | decide      |
-| No credentials is refused as unauthorized; wrong credentials are answered as not found                                                                                                                 | `webhook_auth.ex:99-111`; `workflows.ex:1237-1241`                               | decide      |
-| Any `authorization` or `x-api-key` header counts as "credentials", so a Bearer token or the wrong method type gets 404, not 401                                                                        | `auth.ex:37-40`                                                                  | preserve    |
+| No credentials is refused as unauthenticated (401); wrong credentials are answered as not found (404)                                                                                                  | `webhook_auth.ex:100-112`; `workflows.ex:1237-1241`                              | decide      |
+| Any `authorization` or `x-api-key` header counts as "credentials", so a Bearer token or the wrong method type gets 404, not 401                                                                        | `auth.ex:70-73`                                                                  | preserve    |
 | Auth runs before the trigger's enabled check: a disabled protected trigger gives 401 to callers without credentials and 403 `trigger_disabled` only to authenticated callers                           | `endpoint.ex:91`; `webhooks_controller.ex:40-41`, `:109-115`                     | preserve    |
-| The plug also guards `GET /i/...`, so the "webhook trigger found" check needs credentials on a protected trigger                                                                                       | `webhook_auth.ex:45-47`; `router.ex:336-337`; `webhooks_controller.ex:29-36`     | preserve    |
+| The plug also guards `GET /i/...`, so the "webhook trigger found" check needs credentials on a protected trigger                                                                                       | `webhook_auth.ex:45-47`; `router.ex:384-385`; `webhooks_controller.ex:29-36`     | preserve    |
 | Redaction scrubs only this trigger's own secrets from `authorization` and `x-api-key`; a caller's unrelated token in those headers is kept, and `cookie` and `proxy-authorization` are always redacted | `request_headers.ex:15-66`; `webhooks_controller_test.exs:792-918`               | preserve    |
-| The moduledoc says unknown triggers return `{"error":"webhook_not_found"}`; the body is `{"error": "Webhook not found"}`                                                                               | `webhook_auth.ex:32`, `:120-125`                                                 | fix         |
 | Enforcement uses every method attached to the trigger; the project check happens when attaching                                                                                                        | `webhook_auth.ex:50-55`; `workflow_channel.ex:2145-2148`                         | preserve    |
 | Creating a method from the inspector link and seeing it offered to every open collaborator is owned by workflow-editor-inspectors and shared-webhook-auth-method-form                                  | `WebhookConfigureStep.tsx:116-131`, `:374`; `collaborate.ex:209-235`, `:326-352` | preserve    |
 
@@ -389,13 +388,13 @@ Feature: Webhook auth methods protect inbound requests
 | What                                                                             | Where                                                                              | Why unreachable                                                                                                                                       |
 | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `create_auth_method/3` (create and attach in one step, audit `added_to_trigger`) | `webhook_auth_methods.ex:189-218`; `webhook_auth_method_form_component.ex:146-169` | neither the settings tab nor the inspector modal passes a trigger (`collaborate.ex:335-351`)                                                          |
-| `scheduled_deletion: nil` guards in `LightningWeb.Auth`                          | `auth.ex:47`, `:62`                                                                | deletion already removes every join row in the same transaction (`webhook_auth_methods.ex:696-699`); only reachable with rows inserted outside the UI |
+| `scheduled_deletion: nil` guards in `LightningWeb.Auth`                          | `auth.ex:157`, `:172`                                                              | deletion already removes every join row in the same transaction (`webhook_auth_methods.ex:696-699`); only reachable with rows inserted outside the UI |
 
 ### 6.4 Performance and operational limits
 
 | What                                                                                    | Where                                                  | User-visible?   | Disposition |
 | --------------------------------------------------------------------------------------- | ------------------------------------------------------ | --------------- | ----------- |
-| The auth lookup retries on DB connection errors and then answers 503 with `Retry-After` | `webhook_auth.ex:48-74`; `webhook_auth_test.exs:65-87` | yes, to callers | preserve    |
+| The auth lookup retries on DB connection errors and then answers 503 with `Retry-After` | `webhook_auth.ex:47-79`; `webhook_auth_test.exs:65-87` | yes, to callers | preserve    |
 
 ### 6.5 Things seen but not understood
 

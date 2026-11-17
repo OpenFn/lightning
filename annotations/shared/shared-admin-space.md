@@ -12,17 +12,17 @@ trigger:
   old_route_disposition: unchanged
   reachable_when:
     - the session is admitted by shared-authenticated-session
-      (`lib/lightning_web/router.ex:189-190` for `:settings`, `:349` for
+      (`lib/lightning_web/router.ex:237-238` for `:settings`, `:349` for
       `:services`, `:361` for `/dashboard`)
     - the module declares `on_mount {LightningWeb.Hooks, :ensure_admin}`
       (`lib/lightning_web/live/user_live/index.ex:7`, `user_live/edit.ex:8`,
       `project_live/index.ex:7`, `audit_live/index.ex:7`,
       `auth_providers/index.ex:7`, `collection_live/index.ex:4`), or for
-      /dashboard the route declares it (`router.ex:363-369`);
+      /dashboard the route declares it (`router.ex:411-417`);
       MaintenanceLive.Index checks the same policy itself
       (`maintenance_live/index.ex:16-29`, `:91-98`)
     - the viewer passes `Lightning.Policies.Users :access_admin_space`, which is
-      role `:superuser` only (`lib/lightning/policies/users.ex:19-21`)
+      role `:superuser` only (`lib/lightning/policies/users.ex:30-32`)
 
 inherits:
   - shared-authenticated-session # login redirect (S01), revoked sessions, TOTP and lockout gates, sidebar collapse (S07); S08 to S10 never render on the settings layout (its 6.2)
@@ -37,17 +37,17 @@ config_variants:
     } # layout_components.ex:188-205; not set anywhere in config/
 
 inventory:
-  routes: [] # owns no route; each admin view owns its own (router.ex:268-286, config/config.exs:60, router.ex:358-369)
+  routes: [] # owns no route; each admin view owns its own (router.ex:316-334, config/config.exs:60, router.ex:406-417)
   events: []
   js_hooks:
     - ToggleSidebarViaCtrlM # settings.html.heex:3-8; owned by shared-authenticated-session
     - SidebarHoverDelay # settings.html.heex:18-23; owned by shared-authenticated-session
     - ReactComponent Picker # settings.html.heex:104-106; owned by shared-project-header
   policies:
-    - Lightning.Policies.Users :access_admin_space (policies/users.ex:19-21),
+    - Lightning.Policies.Users :access_admin_space (policies/users.ex:30-32),
       via LightningWeb.Hooks :ensure_admin (hooks.ex:31-53) and
       MaintenanceLive.Index.superuser?/1 (maintenance_live/index.ex:91-98)
-    - LightningWeb.UserAuth.require_superuser plug (user_auth.ex:415-438),
+    - LightningWeb.UserAuth.require_superuser plug (user_auth.ex:401-412),
       /dashboard only
   workers: []
   api_endpoints: []
@@ -65,7 +65,6 @@ inventory:
       (live.html.heex:45-58); live layout only, owned by shared-project-header
       S15, S17
     - Hooks :ensure_admin nil-user clause (hooks.ex:31-38), see 6.3
-    - require_superuser JSON branch (user_auth.ex:424-429), see 6.3
 
 related:
   - admin-users
@@ -132,8 +131,8 @@ you'd expect; the oddities are small inconsistencies between admin pages.
 | Open /dashboard (LiveDashboard)                | no         | no           | no           | yes       |
 | See the admin side menu                        | n/a        | no           | no           | yes       |
 
-Sources: `policies/users.ex:19-21`; `hooks.ex:40-53`;
-`maintenance_live/index.ex:16-29`, `:32-66`, `:91-98`; `user_auth.ex:415-438`;
+Sources: `policies/users.ex:30-32`; `hooks.ex:40-53`;
+`maintenance_live/index.ex:16-29`, `:32-66`, `:91-98`; `user_auth.ex:401-412`;
 roles are only `:user` and `:superuser`
 (`lib/lightning/accounts/user.ex:16-19`); `support_user` is a separate flag the
 policy ignores. Tests: `test/lightning/policies/user_permissions_test.exs:62`,
@@ -143,9 +142,9 @@ policy ignores. Tests: `test/lightning/policies/user_permissions_test.exs:62`,
 
 - Signed-out, revoked, TOTP-pending and locked-out sessions are refused first by
   shared-authenticated-session; `InitAssigns` runs before `:ensure_admin` on
-  every admin route (`init_assigns.ex:17-35`, `router.ex:268`, `:365-368`).
+  every admin route (`init_assigns.ex:17-35`, `router.ex:316`, `:413-416`).
 - /dashboard is also gated by the `:require_superuser` plug on the HTTP request
-  (`router.ex:360-361`, `user_auth.ex:415-438`).
+  (`router.ex:408-409`, `user_auth.ex:401-412`).
 
 ## 4. What it touches
 
@@ -163,8 +162,8 @@ reads BEAM, OS (`os_mon`, `mix.exs:65`) and Postgres statistics
 
 - A refusal sets flash `:nav` to `:no_access` (hook and maintenance) or
   `:no_access_no_back` (/dashboard plug) and redirects to `/projects`
-  (`hooks.ex:48-51`, `maintenance_live/index.ex:24-27`, `user_auth.ex:431-435`,
-  `:514`)
+  (`hooks.ex:48-51`, `maintenance_live/index.ex:24-27`, `user_auth.ex:408-411`,
+  `:488`)
 
 **Deferred side effects**
 
@@ -178,7 +177,7 @@ reads BEAM, OS (`os_mon`, `mix.exs:65`) and Postgres statistics
 
 - `:settings_menu_items_extension` (`layout_components.ex:188-205`)
 - `Lightning.Extensions.Routing` decides whether /settings/users exists
-  (`config/config.exs:50-61`, `router.ex:340-356`); recorded on admin-users
+  (`config/config.exs:50-61`, `router.ex:388-404`); recorded on admin-users
 
 **Product limits**
 
@@ -243,7 +242,7 @@ Feature: Superuser admin space
     Then I am on "/projects"
     And I see "Sorry, you don't have access to that."
     And I do not see a "Back" button
-    # router.ex:360-361; user_auth.ex:415-418, :431-435, :514; live_helpers.ex:97-103
+    # router.ex:408-409; user_auth.ex:401-412, :488; live_helpers.ex:97-103
     # test/lightning_web/controllers/live_dashboard_test.exs:14-31 (asserts the redirect and the message, not the missing button)
 
   @S05
@@ -254,7 +253,7 @@ Feature: Superuser admin space
     Given I am a superuser
     When I visit "/dashboard"
     Then I am on "/dashboard/home"
-    # router.ex:363-369; live_dashboard_test.exs:33-47, :49-69
+    # router.ex:411-417; live_dashboard_test.exs:33-47, :49-69
 
   @S06
   Scenario: Demoting a superuser hands off to the revocation flow
@@ -287,25 +286,24 @@ Feature: Superuser admin space
 
 | What                                                                                                                                                                                                                                                                                             | Where                                                                              | Disposition |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ----------- |
-| The gate is declared per LiveView module, not on the `:settings` live_session, which mounts only `InitAssigns`; each admin LiveView has to declare the hook itself                                                                                                                               | `router.ex:268`; module lines in `reachable_when`                                  | decide      |
+| The gate is declared per LiveView module, not on the `:settings` live_session, which mounts only `InitAssigns`; each admin LiveView has to declare the hook itself                                                                                                                               | `router.ex:316`; module lines in `reachable_when`                                  | decide      |
 | MaintenanceLive.Index does not use the hook; it checks the policy itself in `mount` and in each `handle_event`, and refuses with `push_navigate` instead of `redirect`                                                                                                                           | `maintenance_live/index.ex:16-29`, `:32-66`, `:91-98`                              | decide      |
 | The hook refuses with a full `redirect`; maintenance with `push_navigate`. Both land on `/projects` with the same card; the test accepts either                                                                                                                                                  | `hooks.ex:48-51`, `maintenance_live/index.ex:24-27`, `hooks_test.exs:65-71`        | preserve    |
-| /dashboard refused over HTTP gets `:no_access_no_back` (no Back button); refused over the socket by the hook it gets `:no_access` (Back button)                                                                                                                                                  | `user_auth.ex:433`, `hooks.ex:50`                                                  | decide      |
-| `/settings/users` sits in the `:services` live_session (config-injected) while every other admin route is in `:settings`; menu links use `navigate`, so moving to or from Users is a full page load. UserLive.Index is mounted in both sessions (`/settings/users/:id/delete` is in `:settings`) | `router.ex:268-271`, `:340-356`; `config/config.exs:60`; `menu.ex:148`             | decide      |
+| /dashboard refused over HTTP gets `:no_access_no_back` (no Back button); refused over the socket by the hook it gets `:no_access` (Back button)                                                                                                                                                  | `user_auth.ex:410`, `hooks.ex:50`                                                  | decide      |
+| `/settings/users` sits in the `:services` live_session (config-injected) while every other admin route is in `:settings`; menu links use `navigate`, so moving to or from Users is a full page load. UserLive.Index is mounted in both sessions (`/settings/users/:id/delete` is in `:settings`) | `router.ex:316-319`, `:388-404`; `config/config.exs:60`; `menu.ex:148`             | decide      |
 | The settings layout defaults `side_menu_theme` to `"sudo-variant"`, so the admin sidebar and picker are coloured differently from the project sidebar (`"primary-theme"`)                                                                                                                        | `layouts.ex:11`, `:15`; `settings.html.heex:27`, `:35`; `layout_components.ex:493` | preserve    |
 | The "Authentication" item links to `/settings/authentication/new`; that route renders an empty provider form even when one exists, while `/settings/authentication` shows the existing provider and only redirects to `/new` when there is none                                                  | `settings.html.heex:55-61`; `auth_providers/index.ex:24-49`                        | decide      |
 | On `/settings/projects/:id` and its delete route the global picker marks the project being edited as the current project, because ProjectLive.Index assigns `project` and the picker reads `assigns[:project]`                                                                                   | `layout_components.ex:476`; `project_live/index.ex:61`, `:88`                      | decide      |
 | The settings layout shows info and error flashes as bottom toasts (`live_info_block`, `live_error_block`) rather than `Common.flash`, and has no `live_nav_block`                                                                                                                                | `settings.html.heex:98-102`; `live_helpers.ex:18-73`; `live.html.heex:92-96`       | preserve    |
-| /dashboard renders Phoenix LiveDashboard's own page with no app sidebar, admin menu or Back link                                                                                                                                                                                                 | `router.ex:363-369`                                                                | decide      |
-| LiveDashboard destructive actions (killing processes) are off, since `allow_destructive_actions` is not passed                                                                                                                                                                                   | `router.ex:363-369`; phoenix_live_dashboard 0.8.7 default                          | preserve    |
+| /dashboard renders Phoenix LiveDashboard's own page with no app sidebar, admin menu or Back link                                                                                                                                                                                                 | `router.ex:411-417`                                                                | decide      |
+| LiveDashboard destructive actions (killing processes) are off, since `allow_destructive_actions` is not passed                                                                                                                                                                                   | `router.ex:411-417`; phoenix_live_dashboard 0.8.7 default                          | preserve    |
 
 ### 6.3 Unreachable or dead code
 
 | What                                                                                             | Where                                       | Why unreachable                                                                                                                                                                                                                                  |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `on_mount(:ensure_admin, ...)` clause for `current_user: nil`                                    | `hooks.ex:31-38`                            | every route using the hook runs `InitAssigns` first, which halts to `/users/log_in` when there is no user (`init_assigns.ex:23-24`; `router.ex:268`, `:365-368`; `config/config.exs:51`); only the unit test reaches it (`hooks_test.exs:56-63`) |
+| `on_mount(:ensure_admin, ...)` clause for `current_user: nil`                                    | `hooks.ex:31-38`                            | every route using the hook runs `InitAssigns` first, which halts to `/users/log_in` when there is no user (`init_assigns.ex:23-24`; `router.ex:316`, `:413-416`; `config/config.exs:51`); only the unit test reaches it (`hooks_test.exs:56-63`) |
 | Non-superuser branches of `handle_event("refresh_adaptors")` and `handle_event("refresh_icons")` | `maintenance_live/index.ex:44-49`, `:60-65` | `current_user` is fixed for the socket's life and `mount` already refused a non-superuser; a role change disconnects the socket (`accounts.ex:192`, `:212-216`)                                                                                  |
-| JSON branch of `require_superuser` (403)                                                         | `user_auth.ex:424-429`                      | /dashboard pipes through `:browser`, which accepts only `html` (`router.ex:22`)                                                                                                                                                                  |
 
 ### 6.4 Performance and operational limits
 

@@ -44,7 +44,7 @@ inventory:
     - ProjectLive.Settings#save_retention_settings   # settings.ex:366-378
   js_hooks: []                                       # tab switching via TabbedContainer is in shared-project-settings-tab-chrome
   policies:
-    - Lightning.Policies.ProjectUsers (:edit_data_retention; project_users.ex:29-37, :134, :160-161; flag at settings.ex:138-144; re-checked settings.ex:371, :744-749)
+    - Lightning.Policies.ProjectUsers (:edit_data_retention; project_users.ex:29-37, :160-162, :182-192; decision.ex:59-66; flag at settings.ex:138-144; re-checked settings.ex:371, :744-749)
   workers: []                                        # the retention cleanup job reads these settings; see proposed flow flow-retention-cleanup
   api_endpoints: []
   emails:
@@ -149,7 +149,7 @@ membership (`settings.ex:371`, `:744-749`).
   period (`settings.html.heex:910-913`; variant `retention-single-option`).
 - A member who hasn't met the project's MFA requirement never reaches this page
   (shared-project-scope), and every policy check fails for them
-  (`project_users.ex:134`).
+  (`decision.ex:59-66`).
 - An admin demoted after the page mounted keeps enabled controls but is refused
   on save (`settings.ex:371`, `membership_revocation_test.exs:300-308`).
 - The email goes only to admins and owners who may receive project mail

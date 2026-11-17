@@ -9,8 +9,8 @@ trigger:
   new_route:
   old_route_disposition: unchanged
   reachable_when:
-    - the user is signed in and admitted by shared-authenticated-session (`router.ex:349`, `:services` live_session `router.ex:351-355`)
-    - the route is injected from config, not declared in the router (`config/config.exs:58-59`, `router.ex:340-356`); a deployment that drops it from `Lightning.Extensions.Routing` has no profile page
+    - the user is signed in and admitted by shared-authenticated-session (`router.ex:397`, `:services` live_session `router.ex:399-403`)
+    - the route is injected from config, not declared in the router (`config/config.exs:58-59`, `router.ex:388-404`); a deployment that drops it from `Lightning.Extensions.Routing` has no profile page
     - no role or project is required; every action applies to the signed-in user only (`edit.ex:55-59`, `components.ex:49-56`)
 
 inherits:
@@ -28,7 +28,7 @@ config_variants:
 
 inventory:
   routes:
-    - live /profile  ProfileLive.Edit :edit          # config-injected, config/config.exs:58-59; router.ex:351-355
+    - live /profile  ProfileLive.Edit :edit          # config-injected, config/config.exs:58-59; router.ex:399-403
   events:
     - ProfileLive.FormComponent#validate_basic_info   # form_component.ex:120-127
     - ProfileLive.FormComponent#update_basic_info     # form_component.ex:86-97
@@ -162,7 +162,7 @@ email lookup for uniqueness on every email validation (`user.ex:241-250`);
   (`accounts.ex:745-751`, `user_notifier.ex:49-60`); handed to
   flow-change-email-confirm
 - `disconnect` broadcast on `user_socket:<id>` and `users_live:<id>` after a
-  password change (`accounts.ex:934`, `user_auth.ex:163-166`); handed to
+  password change (`accounts.ex:934`, `user_auth.ex:164-167`); handed to
   flow-account-revocation-teardown
 - Browser redirect to `/users/token_exchange/:token` after a password change
   (`form_component.ex:71-78`), which signs this browser back in and lands on
@@ -348,7 +348,7 @@ Feature: Account details on the user profile
 | What                                                                                                                                                                                                                                                                                                       | Where                                                                                       | What a user sees                                                                                                                                                                            | Disposition                            |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | A wrong password on the email form shows "Your passwords do not match.", the copy for a mismatched new-password confirmation, because both errors use the msgid "does not match password"                                                                                                                  | `accounts.ex:853-855`; `errors.po:43-44`; asserted as-is in `profile_live_test.exs:156-168` | under "Enter password to confirm": "Your passwords do not match.", though only one password was typed                                                                                       | fix                                    |
-| After a password change the LiveView broadcasts `disconnect` to its own transport before it returns the redirect; both messages go from the same process to the transport in that order, so the transport may close before the redirect arrives, and the reconnect finds the session token already deleted | `accounts.ex:934`; `user_auth.ex:163-166`; `form_component.ex:62-78`                        | possibly the login page instead of "/projects" with "Password changed successfully."; not observable in LiveViewTest, which has no transport (`account_revocation_teardown_test.exs:12-14`) | decide (verify in a browser, then fix) |
+| After a password change the LiveView broadcasts `disconnect` to its own transport before it returns the redirect; both messages go from the same process to the transport in that order, so the transport may close before the redirect arrives, and the reconnect finds the session token already deleted | `accounts.ex:934`; `user_auth.ex:164-167`; `form_component.ex:62-78`                        | possibly the login page instead of "/projects" with "Password changed successfully."; not observable in LiveViewTest, which has no transport (`account_revocation_teardown_test.exs:12-14`) | decide (verify in a browser, then fix) |
 | The warning sent to the current address is titled "Your OpenFn email was changed" while the change is only requested and may never be confirmed                                                                                                                                                            | `user_notifier.ex:289-301`                                                                  | a recipient told their email was changed when it wasn't; belongs to flow-change-email-confirm once created                                                                                  | fix                                    |
 
 ### 6.2 Quirks and implementation details
@@ -359,7 +359,7 @@ Feature: Account details on the user profile
 | The email form checks the current password on every blur, before submit                                                                                                                         | `accounts.ex:827-836`, `:849-857`; `form_component.ex:110-117`; `form_component.html.heex:75`, `:84` | decide      |
 | A password change deletes every user token, including API tokens (`api` context), so CLI and integration tokens stop working; the page gives no warning                                         | `accounts.ex:919-930`; `user_token.ex:236-238`; `accounts_test.exs:1486-1495`                        | decide      |
 | The email change token is inserted before mail is sent and not removed if mail fails; a warning can go out with no instructions behind it                                                       | `accounts.ex:740-756`                                                                                | decide      |
-| `/profile` sits in the config-injected `:services` live_session and `/profile/:id/delete` in `:default`, so "Delete my account" and the modal's return are full page loads, not live navigation | `router.ex:351-355`, `:324`; `components.ex:92`, `:47`                                               | decide      |
+| `/profile` sits in the config-injected `:services` live_session and `/profile/:id/delete` in `:default`, so "Delete my account" and the modal's return are full page loads, not live navigation | `router.ex:399-403`, `:372`; `components.ex:92`, `:47`                                               | decide      |
 | "Save" is disabled until something valid has changed; "Update email" and "Update password" are disabled only while invalid                                                                      | `form_component.html.heex:49-52`, `:95`, `:147`                                                      | preserve    |
 | Entering the current address shows "Please change your email"                                                                                                                                   | `accounts.ex:839-847`; `errors.po:70-71`; `profile_live_test.exs:170-177`                            | preserve    |
 | A too-long password shows the untranslated "should be at most 72 character(s)", while too-short shows "Password minimum length is 12 characters."; the po entry has a stray `s` in `%{count}s`  | `errors.po:32-35`; `accounts_test.exs:1454-1463`                                                     | preserve    |
@@ -431,7 +431,7 @@ Feature: Account details on the user profile
   shared-authenticated-session): a password change here deletes every session,
   sudo, auth and API token in one transaction and broadcasts `disconnect` on
   `user_socket:<id>` and `users_live:<id>` (`accounts.ex:919-940`,
-  `user_auth.ex:163-166`); every other browser and device drops and is refused
+  `user_auth.ex:164-167`); every other browser and device drops and is refused
   on reconnect, API tokens stop working, and this browser alone is signed back
   in through `/users/token_exchange/:token` and lands on `/projects` with
   "Password changed successfully." (`form_component.ex:71-78`,
