@@ -4,7 +4,7 @@
 # file:line, --grep) go to both runs. Afterwards it writes STATUS.md.
 cd "$(dirname "$0")/../.." || exit 1
 config=test/scenarios/playwright.config.ts
-reports=scenario-reports
+reports="$(pwd)/scenario-reports"
 rm -rf $reports && mkdir -p $reports
 SCENARIO_REPORT=$reports/parallel.json npx playwright test -c $config --project=parallel --pass-with-no-tests "$@"
 parallel=$?
