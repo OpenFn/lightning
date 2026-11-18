@@ -1,0 +1,425 @@
+[
+  {
+    "description": "Superuser list of every collection on the instance: create, rename, and delete the key-value data stores that jobs can use.",
+    "id": "admin_collections",
+    "label": "Collections (admin)",
+    "module": "LightningWeb.CollectionLive.Index",
+    "path": "/settings/collections",
+    "section": "admin"
+  },
+  {
+    "description": "Confirmation dialog on the admin projects list for scheduling a project for deletion.",
+    "id": "admin_project_delete",
+    "label": "Delete project",
+    "module": "LightningWeb.ProjectLive.Index",
+    "path": "/settings/projects/:id/delete",
+    "section": "admin"
+  },
+  {
+    "description": "Superuser form for editing a project's details and user assignments.",
+    "id": "admin_project_edit",
+    "label": "Edit project",
+    "module": "LightningWeb.ProjectLive.Index",
+    "path": "/settings/projects/:id",
+    "section": "admin"
+  },
+  {
+    "description": "Superuser form for creating a project and assigning users to it with roles.",
+    "id": "admin_project_new",
+    "label": "New project",
+    "module": "LightningWeb.ProjectLive.Index",
+    "path": "/settings/projects/new",
+    "section": "admin"
+  },
+  {
+    "description": "Superuser list of every project on the instance, with links to create, edit, and delete projects.",
+    "id": "admin_projects",
+    "label": "Projects (admin)",
+    "module": "LightningWeb.ProjectLive.Index",
+    "path": "/settings/projects",
+    "section": "admin"
+  },
+  {
+    "description": "Confirmation dialog on the users list for scheduling a user account for deletion.",
+    "id": "admin_user_delete",
+    "label": "Delete user",
+    "module": "LightningWeb.UserLive.Index",
+    "path": "/settings/users/:id/delete",
+    "section": "admin"
+  },
+  {
+    "description": "Superuser form for editing an existing user account's details and role.",
+    "id": "admin_user_edit",
+    "label": "Edit user",
+    "module": "LightningWeb.UserLive.Edit",
+    "path": "/settings/users/:id",
+    "section": "admin"
+  },
+  {
+    "description": "Superuser form for creating a user account, including role (user or superuser) and scheduled deletion.",
+    "id": "admin_user_new",
+    "label": "New user",
+    "module": "LightningWeb.UserLive.Edit",
+    "path": "/settings/users/new",
+    "section": "admin"
+  },
+  {
+    "description": "Superuser list of every user account on the instance, with links to create, edit, and delete users.",
+    "id": "admin_users",
+    "label": "Users",
+    "module": "LightningWeb.UserLive.Index",
+    "path": "/settings/users",
+    "section": "admin"
+  },
+  {
+    "description": "Confirmation dialog on the API tokens page for revoking a personal access token.",
+    "id": "api_token_delete",
+    "label": "Revoke API token",
+    "module": "LightningWeb.TokensLive.Index",
+    "path": "/profile/tokens/:id/delete",
+    "section": "user"
+  },
+  {
+    "description": "List, generate, and revoke personal access tokens used to authenticate against the Lightning API.",
+    "id": "api_tokens",
+    "label": "API Tokens",
+    "module": "LightningWeb.TokensLive.Index",
+    "path": "/profile/tokens",
+    "section": "user"
+  },
+  {
+    "description": "Superuser view of the instance audit trail: who did what and when, across logins, credential changes, project changes, and more.",
+    "id": "audit_trail",
+    "label": "Audit",
+    "module": "LightningWeb.AuditLive.Index",
+    "path": "/settings/audit",
+    "section": "admin"
+  },
+  {
+    "description": "Superuser form for adding an external identity provider (OIDC) configuration.",
+    "id": "auth_provider_new",
+    "label": "New authentication provider",
+    "module": "LightningWeb.AuthProvidersLive.Index",
+    "path": "/settings/authentication/new",
+    "section": "admin"
+  },
+  {
+    "description": "Superuser configuration of an external identity provider (OIDC) for single sign-on.",
+    "id": "auth_providers",
+    "label": "Authentication",
+    "module": "LightningWeb.AuthProvidersLive.Index",
+    "path": "/settings/authentication",
+    "section": "admin"
+  },
+  {
+    "description": "View, copy, print, and regenerate the one-time backup codes used to log in when the authenticator device is unavailable. Requires re-authentication to open.",
+    "id": "backup_codes",
+    "label": "Backup codes",
+    "module": "LightningWeb.BackupCodesLive.Index",
+    "path": "/profile/auth/backup_codes",
+    "section": "user"
+  },
+  {
+    "description": "Form for editing an existing channel's configuration.",
+    "id": "channel_edit",
+    "label": "Edit channel",
+    "module": "LightningWeb.ChannelLive.Index",
+    "path": "/projects/:project_id/channels/:id/edit",
+    "section": "project"
+  },
+  {
+    "description": "The channels tab of History: a log of HTTP requests proxied through the project's channels, filterable by channel and outcome.",
+    "id": "channel_logs",
+    "label": "Channel logs",
+    "module": "LightningWeb.RunLive.Index",
+    "path": "/projects/:project_id/history/channels",
+    "section": "project"
+  },
+  {
+    "description": "Form for creating a channel: configure the destination, authentication, and request persistence policy.",
+    "id": "channel_new",
+    "label": "New channel",
+    "module": "LightningWeb.ChannelLive.Index",
+    "path": "/projects/:project_id/channels/new",
+    "section": "project"
+  },
+  {
+    "description": "Detail view of a single proxied channel request: request and response bodies, headers, timing, and outcome.",
+    "id": "channel_request",
+    "label": "Channel request",
+    "module": "LightningWeb.ChannelRequestLive.Show",
+    "path": "/projects/:project_id/history/channels/:id",
+    "section": "project"
+  },
+  {
+    "description": "Re-authenticate with a password or two-factor code before performing a sensitive action, such as viewing backup codes.",
+    "id": "confirm_access",
+    "label": "Confirm access",
+    "module": "LightningWeb.ReAuthenticateLive.New",
+    "path": "/auth/confirm_access",
+    "section": "auth"
+  },
+  {
+    "description": "Shown when an account is locked pending email confirmation. Resend the confirmation link or correct a mistyped email address.",
+    "id": "confirmation_required",
+    "label": "Email confirmation required",
+    "module": "LightningWeb.UserConfirmationRequiredLive",
+    "path": "/users/confirm-required",
+    "section": "auth"
+  },
+  {
+    "description": "List and manage the user's credentials and OAuth clients for external services: create, edit, delete, and transfer them, and control which projects can use them.",
+    "id": "credentials",
+    "label": "Credentials",
+    "module": "LightningWeb.CredentialLive.Index",
+    "path": "/credentials",
+    "section": "user"
+  },
+  {
+    "description": "View the body of a single dataclip — the JSON state passed into or produced by a step.",
+    "id": "dataclip_show",
+    "label": "Dataclip",
+    "module": "LightningWeb.DataclipLive.Show",
+    "path": "/projects/:project_id/dataclips/:id/show",
+    "section": "project"
+  },
+  {
+    "description": "Create the first superuser account on a freshly installed instance. Only available until a user exists.",
+    "id": "first_setup",
+    "label": "First setup",
+    "module": "LightningWeb.FirstSetupLive.Superuser",
+    "path": "/first_setup",
+    "section": "admin"
+  },
+  {
+    "description": "Request a password reset email by entering the account's email address.",
+    "id": "forgot_password",
+    "label": "Forgot password",
+    "module": "LightningWeb.UserResetPasswordController",
+    "path": "/users/reset_password",
+    "section": "auth"
+  },
+  {
+    "description": "Sign in to Lightning with an email and password, or via a configured external identity provider.",
+    "id": "login",
+    "label": "Log in",
+    "module": "LightningWeb.UserSessionController",
+    "path": "/users/log_in",
+    "section": "auth"
+  },
+  {
+    "description": "Superuser maintenance actions: refresh the adaptor registry and re-fetch adaptor icons on demand.",
+    "id": "maintenance",
+    "label": "Maintenance",
+    "module": "LightningWeb.MaintenanceLive.Index",
+    "path": "/settings/maintenance",
+    "section": "admin"
+  },
+  {
+    "description": "Shown when a project requires multi-factor authentication that the current user has not enabled. Explains how to set up MFA to regain access.",
+    "id": "mfa_required",
+    "label": "MFA required",
+    "module": "LightningWeb.ProjectLive.MFARequired",
+    "path": "/mfa_required",
+    "section": "auth"
+  },
+  {
+    "description": "Manage the user's own account: change name, email, and password, enable multi-factor authentication, connect GitHub, toggle experimental features, and delete the account.",
+    "id": "profile",
+    "label": "User Profile",
+    "module": "LightningWeb.ProfileLive.Edit",
+    "path": "/profile",
+    "section": "user"
+  },
+  {
+    "description": "Confirmation dialog on the profile page for permanently deleting the user's own account.",
+    "id": "profile_delete",
+    "label": "Delete account",
+    "module": "LightningWeb.ProfileLive.Edit",
+    "path": "/profile/:id/delete",
+    "section": "user"
+  },
+  {
+    "description": "List and manage the project's channels — HTTP proxy configurations that forward requests from a client to a destination. Experimental feature.",
+    "id": "project_channels",
+    "label": "Channels",
+    "module": "LightningWeb.ChannelLive.Index",
+    "path": "/projects/:project_id/channels",
+    "section": "project"
+  },
+  {
+    "description": "Confirmation dialog on project settings for scheduling the project for deletion.",
+    "id": "project_delete",
+    "label": "Delete project",
+    "module": "LightningWeb.ProjectLive.Settings",
+    "path": "/projects/:project_id/settings/delete",
+    "section": "project"
+  },
+  {
+    "description": "Search and filter past work orders and runs by status, workflow, date, and dataclip content; inspect results and retry or rerun failed work in bulk.",
+    "id": "project_history",
+    "label": "History",
+    "module": "LightningWeb.RunLive.Index",
+    "path": "/projects/:project_id/history",
+    "section": "project"
+  },
+  {
+    "description": "List and manage the project's sandboxes — isolated copies of the project for safe experimentation — and merge sandbox changes back into the parent.",
+    "id": "project_sandboxes",
+    "label": "Sandboxes",
+    "module": "LightningWeb.SandboxLive.Index",
+    "path": "/projects/:project_id/sandboxes",
+    "section": "project"
+  },
+  {
+    "description": "Project settings, organised into tabs addressed by URL hash (e.g. #vcs): setup, credentials, collections, webhook security, collaboration, security, GitHub sync, data storage, and history exports.",
+    "id": "project_settings",
+    "label": "Settings",
+    "module": "LightningWeb.ProjectLive.Settings",
+    "path": "/projects/:project_id/settings",
+    "section": "project",
+    "tabs": [
+      {
+        "description": "Edit the project (or sandbox) name and description, view the project UUID, and export a copy of the project as YAML.",
+        "hash": "project",
+        "label": "Setup"
+      },
+      {
+        "description": "Manage the OAuth 2.0 clients and credentials accessible to this project.",
+        "hash": "credentials",
+        "label": "Credentials"
+      },
+      {
+        "description": "Create, rename, and delete this project's collections — key-value data stores that jobs can read and write.",
+        "hash": "collections",
+        "label": "Collections"
+      },
+      {
+        "description": "Manage webhook authentication methods used by the webhook triggers that start workflows.",
+        "hash": "webhook_security",
+        "label": "Webhook Security"
+      },
+      {
+        "description": "View collaborators, add or remove project users, and manage failure alerts and digest email settings.",
+        "hash": "collaboration",
+        "label": "Collaboration"
+      },
+      {
+        "description": "Manage project security settings, such as requiring multi-factor authentication from all collaborators.",
+        "hash": "security",
+        "label": "Security"
+      },
+      {
+        "description": "Connect this project to a GitHub repository and manage version control sync settings.",
+        "hash": "vcs",
+        "label": "Sync to GitHub"
+      },
+      {
+        "description": "Choose how input/output data from runs is retained and manage this project's data storage policy.",
+        "hash": "data-storage",
+        "label": "Data Storage"
+      },
+      {
+        "description": "View the status of work order history exports and download completed export files.",
+        "hash": "history-exports",
+        "label": "History Exports"
+      }
+    ]
+  },
+  {
+    "description": "The project overview: lists the project's workflows with run activity and success metrics, and is where new workflows are created, and existing ones enabled, disabled, or deleted.",
+    "id": "project_workflows",
+    "label": "Workflows",
+    "module": "LightningWeb.WorkflowLive.Index",
+    "path": "/projects/:project_id/w",
+    "section": "project"
+  },
+  {
+    "description": "The landing page after login: lists the projects the user belongs to, with workflow counts and recent run activity, and is the entry point into each project.",
+    "id": "projects_dashboard",
+    "label": "Projects",
+    "module": "LightningWeb.DashboardLive.Index",
+    "path": "/projects",
+    "section": "user"
+  },
+  {
+    "description": "Create a new user account. Only available when self-signup is enabled on the instance.",
+    "id": "register",
+    "label": "Register",
+    "module": "LightningWeb.UserRegistrationController",
+    "path": "/users/register",
+    "section": "auth"
+  },
+  {
+    "description": "Request a new account-confirmation email by entering the account's email address.",
+    "id": "resend_confirmation",
+    "label": "Resend confirmation email",
+    "module": "LightningWeb.UserConfirmationController",
+    "path": "/users/confirm",
+    "section": "auth"
+  },
+  {
+    "description": "Choose a new password after following the reset link from the password reset email.",
+    "id": "reset_password",
+    "label": "Reset password",
+    "module": "LightningWeb.UserResetPasswordController",
+    "path": "/users/reset_password/:token",
+    "section": "auth"
+  },
+  {
+    "description": "Detail view of a single run: live logs, the steps it executed, and each step's input and output dataclips.",
+    "id": "run_show",
+    "label": "Run details",
+    "module": "LightningWeb.RunLive.Show",
+    "path": "/projects/:project_id/runs/:id",
+    "section": "project"
+  },
+  {
+    "description": "Form for editing a sandbox's name, color, and environment.",
+    "id": "sandbox_edit",
+    "label": "Edit sandbox",
+    "module": "LightningWeb.SandboxLive.Index",
+    "path": "/projects/:project_id/sandboxes/:id/edit",
+    "section": "project"
+  },
+  {
+    "description": "Form for creating a sandbox: an isolated copy of the project with its own name, color, and environment.",
+    "id": "sandbox_new",
+    "label": "New sandbox",
+    "module": "LightningWeb.SandboxLive.Index",
+    "path": "/projects/:project_id/sandboxes/new",
+    "section": "project"
+  },
+  {
+    "description": "Complete login by entering a time-based one-time code from an authenticator app, or a backup code.",
+    "id": "two_factor",
+    "label": "Two-factor authentication",
+    "module": "LightningWeb.UserTOTPController",
+    "path": "/users/two-factor",
+    "section": "auth"
+  },
+  {
+    "description": "The real-time collaborative editor for a workflow: build the DAG of triggers, jobs, and edges, write job code with adaptors and credentials, run work manually, and inspect runs — with live cursors of other editors.",
+    "id": "workflow_edit",
+    "label": "Workflow editor",
+    "module": "LightningWeb.WorkflowLive.Collaborate",
+    "path": "/projects/:project_id/w/:id",
+    "section": "project"
+  },
+  {
+    "description": "A health summary for a single workflow: work order outcomes, failure patterns, and run activity over a selectable time window.",
+    "id": "workflow_health",
+    "label": "Workflow health",
+    "module": "LightningWeb.WorkflowLive.Health",
+    "path": "/projects/:project_id/w/:id/health",
+    "section": "project"
+  },
+  {
+    "description": "The collaborative workflow editor opened on a brand-new workflow: name it, add a trigger, jobs, and edges, then save it into the project.",
+    "id": "workflow_new",
+    "label": "New workflow",
+    "module": "LightningWeb.WorkflowLive.Collaborate",
+    "path": "/projects/:project_id/w/new",
+    "section": "project"
+  }
+]
