@@ -22,6 +22,7 @@ import {
   deriveWorkflowChanges,
 } from '../utils/workflowDiff';
 
+import { NavigateButton } from './NavigateButton';
 import {
   StepDiffBlock,
   StructureBlock,
@@ -202,11 +203,20 @@ const MarkdownContent = ({
             // Check if this is a code block (has language class) or inline code
             const isCodeBlock = codeClassName?.startsWith('language-');
             const codeContent = String(children).replace(/\n$/, '');
+            const language = codeClassName?.replace('language-', '');
+
+            // Apollo's navigation fences render as a "Take me there" button,
+            // not code. NavigateButton parses the body itself and renders
+            // nothing for anything malformed, which also covers a fence that
+            // has only partially streamed in.
+            if (language === 'openfn-navigate') {
+              return <NavigateButton content={codeContent} />;
+            }
 
             if (isCodeBlock || (children && String(children).includes('\n'))) {
               return (
                 <CodeBlock
-                  language={codeClassName?.replace('language-', '')}
+                  language={language}
                   showAddButtons={showAddButtons ?? false}
                   isWriteDisabled={isWriteDisabled}
                 >
