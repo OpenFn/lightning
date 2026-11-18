@@ -23,6 +23,9 @@
  * object with a string `page` renders nothing and never throws.
  */
 
+import { useEffect } from 'react';
+
+import { emitTourEvent } from '../../tour/telemetry';
 import { useProject } from '../hooks/useSessionContext';
 
 interface NavigateTarget {
@@ -60,6 +63,26 @@ export const parseNavigateTarget = (content: string): NavigateTarget | null => {
   return target;
 };
 
+const telemetryFields = (target: NavigateTarget) => ({
+  page: target.page,
+  ...(target.tab !== undefined && { tab: target.tab }),
+  ...(target.element !== undefined && { element: target.element }),
+});
+
+// MessageList's markdown renderer rebuilds its component map on every render,
+// which remounts this button (new instance, fresh refs) on every streaming
+// delta or list update. A per-instance ref therefore cannot dedup
+// button_shown; track emitted targets for the lifetime of the page instead.
+const shownTargets = new Set<string>();
+
+const targetSignature = (target: NavigateTarget): string =>
+  `${target.page}|${target.tab ?? ''}|${target.element ?? ''}`;
+
+/** Test hook: forget which buttons have reported button_shown. */
+export const resetButtonShownTracking = (): void => {
+  shownTargets.clear();
+};
+
 export const NavigateButton = ({ content }: { content: string }) => {
   // Hooks run unconditionally; parsing comes after. The project can still be
   // loading, in which case the event goes out with empty params rather than
@@ -67,10 +90,24 @@ export const NavigateButton = ({ content }: { content: string }) => {
   const project = useProject();
 
   const target = parseNavigateTarget(content);
+
+  // button_shown: once per shown button. No dependency array — the fence body
+  // may still be streaming at mount, so we emit on the first render where it
+  // parses; the module-level set keeps it to one emission across the remounts
+  // described above.
+  useEffect(() => {
+    if (!target) return;
+    const signature = targetSignature(target);
+    if (shownTargets.has(signature)) return;
+    shownTargets.add(signature);
+    emitTourEvent('button_shown', telemetryFields(target));
+  });
+
   if (!target) return null;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    emitTourEvent('button_clicked', telemetryFields(target));
     document.dispatchEvent(
       new CustomEvent('lightning:start-tour', {
         detail: {

@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MessageList } from '../../../js/collaborative-editor/components/MessageList';
+import { resetButtonShownTracking } from '../../../js/collaborative-editor/components/NavigateButton';
 import { createMockAIMessage } from '../__helpers__/aiAssistantHelpers';
 
 Element.prototype.scrollIntoView = vi.fn();
@@ -42,16 +43,35 @@ const startTourEvents = () => {
   };
 };
 
+type FetchMock = ReturnType<typeof vi.fn>;
+
+/** The telemetry bodies posted to /api/tour_events, in order. */
+const tourTelemetry = (fetchMock: FetchMock): Array<Record<string, unknown>> =>
+  fetchMock.mock.calls
+    .filter(call => call[0] === '/api/tour_events')
+    .map(
+      call =>
+        JSON.parse((call[1] as RequestInit).body as string) as Record<
+          string,
+          unknown
+        >
+    );
+
 describe('MessageList openfn-navigate fences', () => {
   let tour: ReturnType<typeof startTourEvents>;
+  let fetchMock: FetchMock;
 
   beforeEach(() => {
     project = { id: 'project-123', name: 'Test Project' };
     tour = startTourEvents();
+    fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+    vi.stubGlobal('fetch', fetchMock);
+    resetButtonShownTracking();
   });
 
   afterEach(() => {
     tour.cleanup();
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
@@ -137,6 +157,69 @@ describe('MessageList openfn-navigate fences', () => {
       expect(screen.queryByTestId('navigate-button')).not.toBeInTheDocument();
       unmount();
     }
+    // No button, no telemetry.
+    expect(tourTelemetry(fetchMock)).toEqual([]);
+  });
+
+  describe('telemetry', () => {
+    it('emits button_shown once per mounted button, across re-renders', () => {
+      const messages = navigateReply(
+        '{"page": "project_settings", "tab": "vcs"}'
+      );
+      const { rerender } = render(<MessageList messages={messages} />);
+      // A new array of the same messages re-renders the same mounted button.
+      rerender(<MessageList messages={[...messages]} />);
+
+      expect(
+        tourTelemetry(fetchMock).filter(e => e.event === 'button_shown')
+      ).toEqual([
+        { event: 'button_shown', page: 'project_settings', tab: 'vcs' },
+      ]);
+    });
+
+    it('emits button_clicked (with element) before dispatching the tour event', async () => {
+      let clickedBeforeDispatch = 0;
+      const probe = () => {
+        clickedBeforeDispatch = tourTelemetry(fetchMock).filter(
+          e => e.event === 'button_clicked'
+        ).length;
+      };
+      document.addEventListener('lightning:start-tour', probe);
+
+      render(
+        <MessageList
+          messages={navigateReply(
+            '{"page": "workflow_edit", "element": "credential-picker"}'
+          )}
+        />
+      );
+      await userEvent.click(screen.getByTestId('navigate-button'));
+
+      document.removeEventListener('lightning:start-tour', probe);
+      expect(clickedBeforeDispatch).toBe(1);
+      expect(
+        tourTelemetry(fetchMock).filter(e => e.event === 'button_clicked')
+      ).toEqual([
+        {
+          event: 'button_clicked',
+          page: 'workflow_edit',
+          element: 'credential-picker',
+        },
+      ]);
+    });
+
+    it('swallows telemetry fetch failures and still dispatches the tour', async () => {
+      fetchMock.mockRejectedValue(new Error('offline'));
+
+      render(<MessageList messages={navigateReply('{"page": "dashboard"}')} />);
+      await userEvent.click(screen.getByTestId('navigate-button'));
+
+      expect(tour.events).toHaveLength(1);
+      expect(tour.events[0].detail).toEqual({
+        page: 'dashboard',
+        params: { project_id: 'project-123' },
+      });
+    });
   });
 
   it('still renders ordinary fences as code blocks', () => {

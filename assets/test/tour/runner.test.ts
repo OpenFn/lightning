@@ -6,27 +6,51 @@ const PROJECT_ID = 'b1a2c3d4-0000-0000-0000-000000000002';
 const STORAGE_KEY = 'lightning:tour';
 const ROOT_ID = 'lightning-tour-root';
 
-function mockAppMapFetch(status = 200): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockResolvedValue({
+type FetchMock = ReturnType<typeof vi.fn>;
+
+/** Serves the app map; always 204s telemetry posts to /api/tour_events. */
+function mockAppMapFetch(status = 200): FetchMock {
+  const fetchMock = vi.fn((url: RequestInfo | URL) => {
+    if (url === '/api/tour_events') {
+      return Promise.resolve({ ok: true, status: 204 } as Response);
+    }
+    return Promise.resolve({
       ok: status === 200,
       status,
       json: () => Promise.resolve({ pages: appMapPages }),
-    } as Response)
-  );
+    } as Response);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+/** The parsed bodies posted to /api/tour_events, in order. */
+function tourEvents(fetchMock: FetchMock): Array<Record<string, unknown>> {
+  return fetchMock.mock.calls
+    .filter(call => call[0] === '/api/tour_events')
+    .map(
+      call =>
+        JSON.parse((call[1] as RequestInit).body as string) as Record<
+          string,
+          unknown
+        >
+    );
 }
 
 function startTour(detail: unknown): void {
   document.dispatchEvent(new CustomEvent('lightning:start-tour', { detail }));
 }
 
+let destroyRunner: (() => void) | null = null;
+
 async function initTour(): Promise<void> {
   // The runner guards against double initialisation with module state, so get
-  // a fresh module (and a fresh guard) for every test.
+  // a fresh module (and a fresh guard) for every test; afterEach destroys it
+  // so stale instances can't react to later tests' events.
   vi.resetModules();
-  const { initTour: init } = await import('#/tour/runner');
-  init();
+  const runner = await import('#/tour/runner');
+  runner.initTour();
+  destroyRunner = runner.destroyTour;
 }
 
 describe('tour runner', () => {
@@ -41,6 +65,8 @@ describe('tour runner', () => {
   });
 
   afterEach(() => {
+    destroyRunner?.();
+    destroyRunner = null;
     document.getElementById(ROOT_ID)?.remove();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -83,7 +109,7 @@ describe('tour runner', () => {
       <nav id="side-menu">
         <a class="menu-item" href="/projects/${PROJECT_ID}/history">History</a>
       </nav>`;
-    mockAppMapFetch();
+    const fetchMock = mockAppMapFetch();
     await initTour();
 
     startTour({ page: 'project_history', params: { project_id: PROJECT_ID } });
@@ -95,6 +121,11 @@ describe('tour runner', () => {
 
     expect(document.getElementById(ROOT_ID)).toBeNull();
     expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(
+      tourEvents(fetchMock).filter(e => e.event === 'tour_abandoned')
+    ).toEqual([
+      { event: 'tour_abandoned', reason: 'escape', page: 'project_history' },
+    ]);
   });
 
   it('advances to the next step when the spotlighted element is clicked', async () => {
@@ -147,7 +178,7 @@ describe('tour runner', () => {
 
   it('shows the arrival card when the user is already on an unaddressable page', async () => {
     window.history.replaceState({}, '', '/projects/p1/w/wf-1');
-    mockAppMapFetch();
+    const fetchMock = mockAppMapFetch();
     await initTour();
 
     startTour({ page: 'workflow_edit', params: { project_id: 'p1' } });
@@ -158,6 +189,38 @@ describe('tour runner', () => {
       );
     });
     expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(
+      tourEvents(fetchMock).filter(e => e.event === 'tour_completed')
+    ).toEqual([{ event: 'tour_completed', page: 'workflow_edit' }]);
+  });
+
+  it('emits tour_started once and never again on resume', async () => {
+    document.body.innerHTML = `
+      <nav id="side-menu">
+        <a class="menu-item" href="/projects/${PROJECT_ID}/history">History</a>
+      </nav>`;
+    const fetchMock = mockAppMapFetch();
+    await initTour();
+
+    startTour({ page: 'project_history', params: { project_id: PROJECT_ID } });
+    await vi.waitFor(() => {
+      expect(document.getElementById(ROOT_ID)).toBeTruthy();
+    });
+
+    const started = () =>
+      tourEvents(fetchMock).filter(e => e.event === 'tour_started');
+    expect(started()).toEqual([
+      { event: 'tour_started', page: 'project_history', steps_total: 1 },
+    ]);
+
+    // A LiveView navigation resumes the persisted tour: no re-emission.
+    window.dispatchEvent(new Event('phx:page-loading-stop'));
+    await vi.waitFor(() => {
+      expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+        'Go to History'
+      );
+    });
+    expect(started()).toHaveLength(1);
   });
 
   it('renders an auto-dismissing notice when the tour cannot start', async () => {
@@ -185,7 +248,7 @@ describe('tour runner', () => {
       window.history.replaceState({}, '', '/projects/p1/w/wf-1');
       document.body.innerHTML = `
         <div data-tour-anchor="credential-picker">Credential</div>`;
-      mockAppMapFetch();
+      const fetchMock = mockAppMapFetch();
       await initTour();
 
       startTour({
@@ -205,12 +268,64 @@ describe('tour runner', () => {
       // Target already on screen: no prerequisite step, straight to the card.
       expect(root.textContent).not.toContain('Click here');
       expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+      // The dimming ring is decoration only.
+      expect(root.querySelector('[aria-hidden="true"]')).toBeTruthy();
 
-      // Done dismisses the spotlight.
+      const context = { page: 'workflow_edit', element: 'credential-picker' };
+      expect(
+        tourEvents(fetchMock).filter(e => e.event !== 'button_shown')
+      ).toEqual([
+        { event: 'tour_started', ...context, steps_total: 2 },
+        { event: 'spotlight_shown', ...context },
+        { event: 'tour_completed', ...context },
+      ]);
+
+      // Done dismisses the spotlight — a completion, not an abandonment.
       [...root.querySelectorAll('button')]
         .find(b => b.textContent === 'Done')!
         .click();
       expect(document.getElementById(ROOT_ID)).toBeNull();
+      expect(
+        tourEvents(fetchMock).filter(e => e.event === 'tour_abandoned')
+      ).toEqual([]);
+    });
+
+    it('renders an accessible dialog card and restores focus on Done', async () => {
+      window.history.replaceState({}, '', '/projects/p1/w/wf-1');
+      document.body.innerHTML = `
+        <button id="origin">origin</button>
+        <div data-tour-anchor="run-button">Run</div>`;
+      document.getElementById('origin')!.focus();
+      mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        page: 'workflow_edit',
+        element: 'run-button',
+        params: { project_id: 'p1' },
+      });
+      await vi.waitFor(() => {
+        expect(document.querySelector('[role="dialog"]')).toBeTruthy();
+      });
+
+      const dialog = document.querySelector('[role="dialog"]')!;
+      // Non-modal by design: the page stays interactive.
+      expect(dialog.getAttribute('aria-modal')).toBeNull();
+      const titleId = dialog.getAttribute('aria-labelledby')!;
+      const bodyId = dialog.getAttribute('aria-describedby')!;
+      expect(document.getElementById(titleId)?.textContent).toBe('Run button');
+      expect(document.getElementById(bodyId)?.textContent).toContain(
+        'Run the workflow'
+      );
+
+      const done = [...dialog.querySelectorAll('button')].find(
+        b => b.textContent === 'Done'
+      )!;
+      expect(document.activeElement).toBe(done);
+
+      done.click();
+      expect(document.getElementById(ROOT_ID)).toBeNull();
+      expect(document.activeElement).toBe(document.getElementById('origin'));
     });
 
     it('walks the requires chain from the visible prerequisite to the target', async () => {
@@ -284,7 +399,7 @@ describe('tour runner', () => {
 
     it("shows the element's hint when the anchor never appears", async () => {
       window.history.replaceState({}, '', '/projects/p1/w/wf-1');
-      mockAppMapFetch();
+      const fetchMock = mockAppMapFetch();
       await initTour();
       vi.useFakeTimers();
 
@@ -297,9 +412,18 @@ describe('tour runner', () => {
       await vi.advanceTimersByTimeAsync(0); // fetch + plan settle
       await vi.advanceTimersByTimeAsync(4500); // past the 4s spotlight window
 
-      expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+      const notice = document.querySelector('[role="status"]');
+      expect(notice?.textContent).toContain(
         'Select a step on the canvas to open its configuration panel first.'
       );
+
+      const context = { page: 'workflow_edit', element: 'credential-picker' };
+      expect(
+        tourEvents(fetchMock).filter(e => e.event !== 'tour_started')
+      ).toEqual([
+        { event: 'tour_abandoned', reason: 'timeout', ...context },
+        { event: 'notice_shown', reason: 'hint', ...context },
+      ]);
     });
 
     it('falls back to a generic notice when the element has no hint', async () => {
@@ -324,7 +448,7 @@ describe('tour runner', () => {
 
     it('shows a wrong-page notice when asked from another page', async () => {
       // Location is "/", which is not the workflow editor.
-      mockAppMapFetch();
+      const fetchMock = mockAppMapFetch();
       await initTour();
 
       startTour({
@@ -339,6 +463,14 @@ describe('tour runner', () => {
         );
       });
       expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+      expect(tourEvents(fetchMock)).toEqual([
+        {
+          event: 'notice_shown',
+          reason: 'wrong_page',
+          page: 'workflow_edit',
+          element: 'credential-picker',
+        },
+      ]);
     });
   });
 

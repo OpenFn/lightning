@@ -20,6 +20,7 @@ import type {
   Step,
   TourRequest,
 } from './plan';
+import { emitTourEvent } from './telemetry';
 
 const STORAGE_KEY = 'lightning:tour';
 const ROOT_ID = 'lightning-tour-root';
@@ -38,7 +39,51 @@ interface TourState {
   destinationPath: string;
   destinationHash?: string;
   startedAt: number;
+  /** App-map page id the tour targets, kept for telemetry context. */
+  page?: string;
+  /** Dedup flag: tour_started has been emitted for this tour, so a resume
+   * after a (live or full) navigation must not re-emit it. */
+  startedEmitted?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Telemetry
+// ---------------------------------------------------------------------------
+
+/** Context attached to tour lifecycle events. */
+interface TelemetryContext {
+  page?: string;
+  element?: string;
+}
+
+let telemetryContext: TelemetryContext = {};
+
+/** True while a tour attempt is underway and has not yet reached a terminal
+ * event; guards tour_abandoned to at most one emission per tour. */
+let tourLive = false;
+
+function emitAbandoned(reason: 'escape' | 'exit' | 'timeout' | 'error'): void {
+  if (!tourLive) return;
+  tourLive = false;
+  emitTourEvent('tour_abandoned', { reason, ...telemetryContext });
+}
+
+function emitCompleted(): void {
+  tourLive = false;
+  emitTourEvent('tour_completed', { ...telemetryContext });
+}
+
+/**
+ * The stable set of notice_shown reasons:
+ * - 'hint'         — a spotlight anchor never appeared; the element's hint
+ *                    (or the generic missing-control text) was shown
+ * - 'wrong_page'   — element guidance was requested from another page
+ * - 'unknown_page' — the plan rejected the request (unknown page, tab, or
+ *                    element id, or an unresolvable path parameter)
+ * - 'error'        — app-map fetch/payload failures, malformed event detail,
+ *                    or a dead end while continuing a tour
+ */
+type NoticeReason = 'hint' | 'wrong_page' | 'unknown_page' | 'error';
 
 // ---------------------------------------------------------------------------
 // State persistence
@@ -110,6 +155,24 @@ let activeCleanup: (() => void) | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
+/** The element focused before the tour moved focus into a card, restored when
+ * the tour UI goes away. Only set by focusPrimary (notices never move focus).
+ */
+let previousFocus: Element | null = null;
+
+/** Move focus to a card's primary button, remembering where focus came from
+ * (once per tour) so teardown can restore it. */
+function focusPrimary(button: HTMLElement): void {
+  if (previousFocus === null) previousFocus = document.activeElement;
+  button.focus();
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  );
+}
+
 const NOTICE_DURATION_MS = 6000;
 
 function getRoot(): HTMLElement {
@@ -137,10 +200,16 @@ function teardownUi(): void {
     noticeTimer = null;
   }
   document.getElementById(ROOT_ID)?.remove();
+  if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+    previousFocus.focus();
+  }
+  previousFocus = null;
 }
 
-/** End the tour entirely: UI gone, state gone. */
-function endTour(): void {
+/** End the tour entirely: UI gone, state gone. A user-initiated reason
+ * ('escape' | 'exit') emits tour_abandoned for a still-live tour. */
+function endTour(reason?: 'escape' | 'exit'): void {
+  if (reason) emitAbandoned(reason);
   teardownUi();
   clearState();
 }
@@ -180,8 +249,23 @@ function makeButton(label: string): HTMLButtonElement {
   return button;
 }
 
-function cardText(card: HTMLElement, title: string, body: string): void {
+const CARD_TITLE_ID = 'lightning-tour-card-title';
+const CARD_BODY_ID = 'lightning-tour-card-body';
+
+/**
+ * A styled tour card announced as a (non-modal) dialog: the page stays
+ * interactive by design, so aria-modal is deliberately NOT set. Only one tour
+ * card exists at a time, so the title/body ids are static.
+ */
+function dialogCard(title: string, body: string): HTMLElement {
+  const card = document.createElement('div');
+  styleCard(card);
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-labelledby', CARD_TITLE_ID);
+  card.setAttribute('aria-describedby', CARD_BODY_ID);
+
   const titleEl = document.createElement('div');
+  titleEl.id = CARD_TITLE_ID;
   titleEl.textContent = title;
   Object.assign(titleEl.style, {
     fontWeight: '600',
@@ -189,9 +273,11 @@ function cardText(card: HTMLElement, title: string, body: string): void {
     color: 'var(--color-gray-900)',
   });
   const bodyEl = document.createElement('div');
+  bodyEl.id = CARD_BODY_ID;
   bodyEl.textContent = body;
   Object.assign(bodyEl.style, { color: 'var(--color-gray-600)' });
   card.append(titleEl, bodyEl);
+  return card;
 }
 
 function positionCard(card: HTMLElement, targetRect: DOMRect): void {
@@ -231,13 +317,17 @@ function isVisible(el: Element): boolean {
  * clickable. */
 function makeRing(): HTMLElement {
   const ring = document.createElement('div');
+  ring.setAttribute('aria-hidden', 'true');
   Object.assign(ring.style, {
     position: 'fixed',
     pointerEvents: 'none',
     borderRadius: '8px',
     boxShadow: `0 0 0 3px ${RING}, 0 0 0 9999px ${DIM}`,
     zIndex: `${Z_INDEX}`,
-    transition: 'top 150ms, left 150ms, width 150ms, height 150ms',
+    // Movement easing is decoration; drop it for reduced-motion users.
+    ...(prefersReducedMotion()
+      ? {}
+      : { transition: 'top 150ms, left 150ms, width 150ms, height 150ms' }),
   });
   return ring;
 }
@@ -293,9 +383,7 @@ function renderStep(
 
   const spotlight = makeRing();
 
-  const card = document.createElement('div');
-  styleCard(card);
-  cardText(card, step.title, step.body);
+  const card = dialogCard(step.title, step.body);
 
   const footer = document.createElement('div');
   Object.assign(footer.style, {
@@ -319,11 +407,12 @@ function renderStep(
     padding: '4px 10px',
     cursor: 'pointer',
   });
-  exitButton.addEventListener('click', () => endTour());
+  exitButton.addEventListener('click', () => endTour('exit'));
   footer.append(progress, exitButton);
   card.appendChild(footer);
 
   root.append(spotlight, card);
+  focusPrimary(exitButton);
 
   const removeReposition = wireReposition(target, spotlight, card);
 
@@ -371,9 +460,7 @@ function renderSpotlight(target: Element, element: SpotlightElement): void {
 
   const ring = makeRing();
 
-  const card = document.createElement('div');
-  styleCard(card);
-  cardText(card, element.label, element.description);
+  const card = dialogCard(element.label, element.description);
 
   const footer = document.createElement('div');
   Object.assign(footer.style, {
@@ -387,8 +474,13 @@ function renderSpotlight(target: Element, element: SpotlightElement): void {
   card.appendChild(footer);
 
   root.append(ring, card);
+  focusPrimary(doneButton);
 
   activeCleanup = wireReposition(target, ring, card);
+
+  // Reaching the terminal card IS the end state (Done just dismisses it).
+  emitTourEvent('spotlight_shown', { ...telemetryContext });
+  emitCompleted();
 }
 
 /** First *visible* match for an anchor selector (anchors like canvas-step
@@ -493,7 +585,10 @@ function runChain(
     pollForAnchor(
       () => resolveDeepest(steps, index + 1),
       found => runChain(spotlight, steps, found.index, found.target),
-      () => renderNotice(missingNotice(spotlight))
+      () => {
+        emitAbandoned('timeout');
+        renderNotice(missingNotice(spotlight), 'hint');
+      }
     );
   });
 }
@@ -514,7 +609,10 @@ function startSpotlight(spotlight: Spotlight): void {
       // Slice so "n of m" counts only the steps the user actually has left.
       runChain(spotlight, sequence.slice(found.index), 0, found.target);
     },
-    () => renderNotice(missingNotice(spotlight))
+    () => {
+      emitAbandoned('timeout');
+      renderNotice(missingNotice(spotlight), 'hint');
+    }
   );
 }
 
@@ -522,14 +620,11 @@ function renderArrivalCard(arrival: Arrival): void {
   const root = getRoot();
   root.replaceChildren();
 
-  const card = document.createElement('div');
-  styleCard(card);
-  Object.assign(card.style, { right: '16px', bottom: '16px' });
-
   const title = arrival.tabLabel
     ? `${arrival.label} — ${arrival.tabLabel}`
     : arrival.label;
-  cardText(card, `You've arrived: ${title}`, arrival.description);
+  const card = dialogCard(`You've arrived: ${title}`, arrival.description);
+  Object.assign(card.style, { right: '16px', bottom: '16px' });
 
   const footer = document.createElement('div');
   Object.assign(footer.style, {
@@ -543,6 +638,7 @@ function renderArrivalCard(arrival: Arrival): void {
   card.appendChild(footer);
 
   root.appendChild(card);
+  focusPrimary(doneButton);
 }
 
 /**
@@ -550,12 +646,15 @@ function renderArrivalCard(arrival: Arrival): void {
  * auto-dismissed after a few seconds, with a close button. Lives inside the
  * single tour root so every cleanup path removes it too.
  */
-function renderNotice(message: string): void {
+function renderNotice(message: string, reason: NoticeReason): void {
+  emitTourEvent('notice_shown', { reason, ...telemetryContext });
   teardownUi();
   const root = getRoot();
 
   const card = document.createElement('div');
   styleCard(card);
+  // Polite live region: announced without stealing focus.
+  card.setAttribute('role', 'status');
   Object.assign(card.style, {
     left: '50%',
     bottom: '16px',
@@ -612,6 +711,8 @@ function arrive(state: TourState): void {
   // leave the card up until "Done", Escape, or the next navigation.
   clearState();
   renderArrivalCard(state.arrival);
+  if (state.page) telemetryContext = { page: state.page };
+  emitCompleted();
 }
 
 /** Give up on spotlighting: jump straight to the destination. */
@@ -619,7 +720,8 @@ function fallBackToDirectNavigation(state: TourState): void {
   if (!state.destinationPath) {
     console.warn('Tour ended: no destination to fall back to');
     clearState();
-    renderNotice("Couldn't continue the guided tour.");
+    emitAbandoned('timeout');
+    renderNotice("Couldn't continue the guided tour.", 'error');
     return;
   }
   teardownUi();
@@ -720,6 +822,10 @@ function resume(): void {
     teardownUi();
     return;
   }
+  // A persisted tour is live again (fresh page loads reset module state).
+  // tour_started was emitted when it began (state.startedEmitted), never here.
+  tourLive = true;
+  telemetryContext = state.page ? { page: state.page } : {};
   showCurrentStep(state);
 }
 
@@ -738,6 +844,12 @@ function isTourRequest(detail: unknown): detail is TourRequest {
 const GENERIC_NOTICE = "Couldn't start a guided tour for that page.";
 
 async function startTour(request: TourRequest): Promise<void> {
+  telemetryContext = { page: request.page };
+  if (typeof request.element === 'string') {
+    telemetryContext.element = request.element;
+  }
+  tourLive = true;
+
   let pages: unknown;
   try {
     const response = await fetch(APP_MAP_URL, {
@@ -747,18 +859,21 @@ async function startTour(request: TourRequest): Promise<void> {
       console.warn(
         `Tour aborted: ${APP_MAP_URL} responded with ${response.status}`
       );
-      renderNotice(GENERIC_NOTICE);
+      emitAbandoned('error');
+      renderNotice(GENERIC_NOTICE, 'error');
       return;
     }
     pages = ((await response.json()) as { pages?: unknown }).pages;
   } catch (error) {
     console.warn('Tour aborted: could not fetch the app map', error);
-    renderNotice(GENERIC_NOTICE);
+    emitAbandoned('error');
+    renderNotice(GENERIC_NOTICE, 'error');
     return;
   }
   if (!Array.isArray(pages)) {
     console.warn('Tour aborted: unexpected app map payload');
-    renderNotice(GENERIC_NOTICE);
+    emitAbandoned('error');
+    renderNotice(GENERIC_NOTICE, 'error');
     return;
   }
 
@@ -771,8 +886,10 @@ async function startTour(request: TourRequest): Promise<void> {
   if ('error' in plan) {
     console.warn(`Tour aborted: ${plan.error}`);
     const label = appMap.find(p => p.id === request.page)?.label;
+    emitAbandoned('error');
     renderNotice(
-      label ? `Couldn't start a guided tour for ${label}.` : GENERIC_NOTICE
+      label ? `Couldn't start a guided tour for ${label}.` : GENERIC_NOTICE,
+      'unknown_page'
     );
     return;
   }
@@ -780,9 +897,11 @@ async function startTour(request: TourRequest): Promise<void> {
   if ('wrongPage' in plan) {
     // Element guidance only applies to the page the user is on. Like the
     // error path above, this only shows a notice (any stored tour state is
-    // left alone).
+    // left alone). Not an abandonment: no tour ever began.
+    tourLive = false;
     renderNotice(
-      `That guidance is for the ${plan.pageLabel} page — ask again from there.`
+      `That guidance is for the ${plan.pageLabel} page — ask again from there.`,
+      'wrong_page'
     );
     return;
   }
@@ -791,7 +910,12 @@ async function startTour(request: TourRequest): Promise<void> {
 
   if ('spotlight' in plan) {
     // In-page highlight (with any prerequisite clicks first): no persistence —
-    // dismissed by Done, Escape, or navigating away.
+    // dismissed by Done, Escape, or navigating away. One startSpotlight call
+    // per request, so no started-dedup flag is needed here.
+    emitTourEvent('tour_started', {
+      ...telemetryContext,
+      steps_total: plan.spotlight.chain.length + 1,
+    });
     startSpotlight(plan.spotlight);
     return;
   }
@@ -800,6 +924,7 @@ async function startTour(request: TourRequest): Promise<void> {
     // The user is already on the destination page (we just can't address it
     // by params): no steps to run, show the arrival card where they stand.
     renderArrivalCard(plan.arrival);
+    emitCompleted();
     return;
   }
 
@@ -811,6 +936,8 @@ async function startTour(request: TourRequest): Promise<void> {
           arrival: plan.arrival,
           destinationPath: plan.fallbackPath,
           startedAt: Date.now(),
+          page: request.page,
+          startedEmitted: false,
         }
       : {
           steps: plan.steps,
@@ -821,7 +948,17 @@ async function startTour(request: TourRequest): Promise<void> {
             ? { destinationHash: plan.destinationHash }
             : {}),
           startedAt: Date.now(),
+          page: request.page,
+          startedEmitted: false,
         };
+  if ('steps' in plan && !state.startedEmitted) {
+    // Persisted flag: a resume after navigation must never re-emit this.
+    state.startedEmitted = true;
+    emitTourEvent('tour_started', {
+      page: request.page,
+      steps_total: plan.steps.length,
+    });
+  }
   writeState(state);
 
   if ('fallbackPath' in plan && !atDestination(state)) {
@@ -833,6 +970,7 @@ async function startTour(request: TourRequest): Promise<void> {
 }
 
 let initialized = false;
+let removeInitListeners: (() => void) | null = null;
 
 /**
  * Wire the tour engine up. Called once from app.js.
@@ -841,19 +979,22 @@ export function initTour(): void {
   if (initialized) return;
   initialized = true;
 
-  document.addEventListener('lightning:start-tour', event => {
+  const onStartTour = (event: Event) => {
     const detail = (event as CustomEvent).detail as unknown;
     if (!isTourRequest(detail)) {
       console.warn('Tour aborted: malformed lightning:start-tour detail');
-      renderNotice(GENERIC_NOTICE);
+      telemetryContext = {};
+      renderNotice(GENERIC_NOTICE, 'error');
       return;
     }
     void startTour(detail);
-  });
+  };
+  document.addEventListener('lightning:start-tour', onStartTour);
 
   // Resume across LiveView navigations and tab (hash) changes.
-  window.addEventListener('phx:page-loading-stop', resume);
-  window.addEventListener('hashchange', () => {
+  const onLoadingStop = () => resume();
+  window.addEventListener('phx:page-loading-stop', onLoadingStop);
+  const onHashChange = () => {
     // Steps advancing on a hash manage themselves; this catches arrival when
     // the user lands on the destination hash some other way.
     const state = readState();
@@ -861,18 +1002,42 @@ export function initTour(): void {
       teardownUi();
       arrive(state);
     }
-  });
+  };
+  window.addEventListener('hashchange', onHashChange);
 
-  document.addEventListener('keydown', event => {
+  // On document (not the card), so Escape works wherever focus is.
+  const onKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && document.getElementById(ROOT_ID)) {
-      endTour();
+      endTour('escape');
     }
-  });
+  };
+  document.addEventListener('keydown', onKeydown);
 
   // Resume on a fresh page load.
+  const onReady = () => resume();
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', resume, { once: true });
+    document.addEventListener('DOMContentLoaded', onReady, { once: true });
   } else {
     resume();
   }
+
+  removeInitListeners = () => {
+    document.removeEventListener('lightning:start-tour', onStartTour);
+    window.removeEventListener('phx:page-loading-stop', onLoadingStop);
+    window.removeEventListener('hashchange', onHashChange);
+    document.removeEventListener('keydown', onKeydown);
+    document.removeEventListener('DOMContentLoaded', onReady);
+  };
+}
+
+/**
+ * Undo initTour: remove the global listeners and any tour UI. Stored state is
+ * left alone (a re-init resumes it). For tests and hot reloads.
+ */
+export function destroyTour(): void {
+  if (!initialized) return;
+  initialized = false;
+  removeInitListeners?.();
+  removeInitListeners = null;
+  teardownUi();
 }
