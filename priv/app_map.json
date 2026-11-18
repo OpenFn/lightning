@@ -400,6 +400,81 @@
   },
   {
     "description": "The real-time collaborative editor for a workflow: build the DAG of triggers, jobs, and edges, write job code with adaptors and credentials, run work manually, and inspect runs — with live cursors of other editors.",
+    "elements": [
+      {
+        "description": "Open or close the AI Assistant chat panel.",
+        "id": "ai-assistant-toggle",
+        "label": "AI Assistant"
+      },
+      {
+        "description": "Change which adaptor (app connector) this step uses to talk to an external system.",
+        "hint": "Select a step on the canvas to open its configuration panel first.",
+        "id": "adaptor-picker",
+        "label": "Adaptor picker",
+        "requires": "canvas-step"
+      },
+      {
+        "description": "Choose which credential this step uses when it runs; opens the Configure connection dialog.",
+        "hint": "Select a step on the canvas to open its configuration panel first.",
+        "id": "credential-picker",
+        "label": "Credential settings",
+        "requires": "canvas-step"
+      },
+      {
+        "description": "Show documentation for this step's adaptor alongside the code editor.",
+        "hint": "Select a step and open its code editor first (the full-screen editor panel, Ctrl/Cmd+E).",
+        "id": "docs-tab",
+        "label": "Docs tab",
+        "requires": "open-editor"
+      },
+      {
+        "description": "Button in the step inspector footer that opens the full-screen code editor (IDE) for the selected step.",
+        "hint": "Select a step on the canvas first.",
+        "id": "open-editor",
+        "label": "Open code editor",
+        "requires": "canvas-step"
+      },
+      {
+        "description": "Save any pending changes and run the workflow from its trigger, or retry the loaded run.",
+        "id": "run-button",
+        "label": "Run button"
+      },
+      {
+        "description": "Save your changes as a new version of this workflow.",
+        "id": "save-workflow",
+        "label": "Save button"
+      },
+      {
+        "description": "Rename this step; the name appears on the canvas and in run history.",
+        "hint": "Select a step on the canvas to open its configuration panel first.",
+        "id": "step-name",
+        "label": "Step name",
+        "requires": "canvas-step"
+      },
+      {
+        "description": "Browse and open earlier saved versions of this workflow.",
+        "id": "version-switcher",
+        "label": "Version switcher"
+      },
+      {
+        "description": "Open a read-only YAML view of the whole workflow.",
+        "hint": "Open the workflow settings panel first (the sliders icon in the top bar).",
+        "id": "code-panel-toggle",
+        "label": "View as YAML",
+        "requires": "settings-panel-toggle"
+      },
+      {
+        "description": "Open the workflow settings panel to rename the workflow, control concurrency, and toggle log output.",
+        "id": "settings-panel-toggle",
+        "label": "Workflow settings"
+      },
+      {
+        "description": "A step (job) node on the workflow canvas; click it to open the step's configuration panel.",
+        "hint": "Add at least one step to the workflow first.",
+        "id": "canvas-step",
+        "label": "Workflow step"
+      }
+    ],
     "id": "workflow_edit",
     "label": "Workflow editor",
     "module": "LightningWeb.WorkflowLive.Collaborate",

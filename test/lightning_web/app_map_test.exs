@@ -112,6 +112,71 @@ defmodule LightningWeb.AppMapTest do
       end
     end
 
+    test "elements, where present, have unique kebab-case ids and non-empty text" do
+      for page <- AppMap.build(), elements = Map.get(page, :elements) do
+        ids = Enum.map(elements, & &1.id)
+
+        assert ids == Enum.uniq(ids),
+               "duplicate element ids on #{page.id}: #{inspect(ids -- Enum.uniq(ids))}"
+
+        for element <- elements do
+          assert element.id =~ ~r/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/,
+                 "element id #{inspect(element.id)} on #{page.id} is not kebab-case"
+
+          assert is_binary(element.label) and element.label != "",
+                 "empty label for element #{element.id} on #{page.id}"
+
+          assert is_binary(element.description) and element.description != "",
+                 "empty description for element #{element.id} on #{page.id}"
+
+          assert is_nil(element.hint) or
+                   (is_binary(element.hint) and element.hint != ""),
+                 "hint for element #{element.id} on #{page.id} must be nil or a non-empty string"
+        end
+      end
+    end
+
+    test "workflow_edit carries exactly the twelve catalogued elements" do
+      workflow_edit = AppMap.build() |> Enum.find(&(&1.id == "workflow_edit"))
+
+      assert Enum.sort(Enum.map(workflow_edit.elements, & &1.id)) == [
+               "adaptor-picker",
+               "ai-assistant-toggle",
+               "canvas-step",
+               "code-panel-toggle",
+               "credential-picker",
+               "docs-tab",
+               "open-editor",
+               "run-button",
+               "save-workflow",
+               "settings-panel-toggle",
+               "step-name",
+               "version-switcher"
+             ]
+    end
+
+    test "every element's requires references an existing element id on the same page" do
+      for page <- AppMap.build(), elements = Map.get(page, :elements) do
+        ids = MapSet.new(elements, & &1.id)
+
+        for element <- elements, requires = element.requires do
+          assert MapSet.member?(ids, requires),
+                 "element #{element.id} on #{page.id} requires #{inspect(requires)}, " <>
+                   "which is not an element id on that page"
+        end
+      end
+    end
+
+    test "requires chains contain no cycles" do
+      for page <- AppMap.build(), elements = Map.get(page, :elements) do
+        requires_by_id = Map.new(elements, &{&1.id, &1.requires})
+
+        for element <- elements do
+          walk_chain(element.id, requires_by_id, MapSet.new(), page.id)
+        end
+      end
+    end
+
     test "resolves the LiveView module, not Phoenix.LiveView.Plug" do
       history =
         AppMap.build()
@@ -141,6 +206,68 @@ defmodule LightningWeb.AppMapTest do
       end
     end
 
+    test "serialises elements sorted by label, omitting hint when nil" do
+      {:ok, decoded} = AppMap.to_json() |> Jason.encode!() |> Jason.decode()
+
+      workflow_edit = Enum.find(decoded, &(&1["id"] == "workflow_edit"))
+      elements = workflow_edit["elements"]
+
+      assert length(elements) == 12
+
+      labels = Enum.map(elements, & &1["label"])
+      assert labels == Enum.sort(labels)
+
+      for element <- elements do
+        assert %{"id" => _, "label" => _, "description" => _} = element
+
+        case element do
+          %{"hint" => hint} ->
+            assert is_binary(hint) and hint != "",
+                   "serialised hint for #{element["id"]} must be a non-empty string"
+
+          _ ->
+            :ok
+        end
+      end
+
+      # hint is omitted, not null: run-button has no hint, step-name does
+      run_button = Enum.find(elements, &(&1["id"] == "run-button"))
+      refute Map.has_key?(run_button, "hint")
+
+      step_name = Enum.find(elements, &(&1["id"] == "step-name"))
+
+      assert step_name["hint"] ==
+               "Select a step on the canvas to open its configuration panel first."
+    end
+
+    test "serialises requires only where set, never as null" do
+      {:ok, decoded} = AppMap.to_json() |> Jason.encode!() |> Jason.decode()
+
+      workflow_edit = Enum.find(decoded, &(&1["id"] == "workflow_edit"))
+      elements = workflow_edit["elements"]
+
+      for element <- elements do
+        case element do
+          %{"requires" => requires} ->
+            assert is_binary(requires) and requires != "",
+                   "serialised requires for #{element["id"]} must be a non-empty string"
+
+          _ ->
+            :ok
+        end
+      end
+
+      # requires is omitted, not null: run-button has none, step-name does
+      run_button = Enum.find(elements, &(&1["id"] == "run-button"))
+      refute Map.has_key?(run_button, "requires")
+
+      step_name = Enum.find(elements, &(&1["id"] == "step-name"))
+      assert step_name["requires"] == "canvas-step"
+
+      docs_tab = Enum.find(elements, &(&1["id"] == "docs-tab"))
+      assert docs_tab["requires"] == "open-editor"
+    end
+
     test "is deterministic and sorted by id" do
       pages = AppMap.to_json()
 
@@ -168,5 +295,20 @@ defmodule LightningWeb.AppMapTest do
                  mix lightning.gen.app_map
              """
     end
+  end
+
+  # Follows an element's `requires` chain, failing if it revisits an id.
+  defp walk_chain(nil, _requires_by_id, _visited, _page_id), do: :ok
+
+  defp walk_chain(id, requires_by_id, visited, page_id) do
+    refute MapSet.member?(visited, id),
+           "requires cycle on #{page_id} involving element #{inspect(id)}"
+
+    walk_chain(
+      Map.get(requires_by_id, id),
+      requires_by_id,
+      MapSet.put(visited, id),
+      page_id
+    )
   end
 end

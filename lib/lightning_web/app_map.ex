@@ -42,6 +42,17 @@ defmodule LightningWeb.AppMap do
     popup used by the GitHub app installation flow)
   * `/profile/auth/backup_codes/print` — a print rendition of the backup
     codes page, which is catalogued at its live route
+
+  ## Elements
+
+  A page may also catalogue `elements`: in-page controls that carry a
+  `data-tour-anchor={id}` attribute in the DOM, used for element spotlights.
+  Each element has a label and description, plus an optional `hint` — an
+  instruction shown when the element isn't currently on screen (for example,
+  "select a step first" for controls inside a step's configuration panel).
+  An element may also declare `requires` — the id of another element on the
+  same page that must be activated before this one is reachable, forming a
+  prerequisite chain.
   """
 
   @typedoc "A page entry in the app map."
@@ -54,6 +65,15 @@ defmodule LightningWeb.AppMap do
           required(:description) => String.t(),
           optional(:tabs) => [
             %{hash: String.t(), label: String.t(), description: String.t()}
+          ],
+          optional(:elements) => [
+            %{
+              id: String.t(),
+              label: String.t(),
+              description: String.t(),
+              hint: String.t() | nil,
+              requires: String.t() | nil
+            }
           ]
         }
 
@@ -153,6 +173,103 @@ defmodule LightningWeb.AppMap do
       label: "History Exports",
       description:
         "View the status of work order history exports and download completed export files."
+    }
+  ]
+
+  @workflow_edit_elements [
+    %{
+      id: "run-button",
+      label: "Run button",
+      description:
+        "Save any pending changes and run the workflow from its trigger, or retry the loaded run.",
+      hint: nil,
+      requires: nil
+    },
+    %{
+      id: "save-workflow",
+      label: "Save button",
+      description: "Save your changes as a new version of this workflow.",
+      hint: nil,
+      requires: nil
+    },
+    %{
+      id: "settings-panel-toggle",
+      label: "Workflow settings",
+      description:
+        "Open the workflow settings panel to rename the workflow, control concurrency, and toggle log output.",
+      hint: nil,
+      requires: nil
+    },
+    %{
+      id: "ai-assistant-toggle",
+      label: "AI Assistant",
+      description: "Open or close the AI Assistant chat panel.",
+      hint: nil,
+      requires: nil
+    },
+    %{
+      id: "version-switcher",
+      label: "Version switcher",
+      description: "Browse and open earlier saved versions of this workflow.",
+      hint: nil,
+      requires: nil
+    },
+    %{
+      id: "canvas-step",
+      label: "Workflow step",
+      description:
+        "A step (job) node on the workflow canvas; click it to open the step's configuration panel.",
+      hint: "Add at least one step to the workflow first.",
+      requires: nil
+    },
+    %{
+      id: "open-editor",
+      label: "Open code editor",
+      description:
+        "Button in the step inspector footer that opens the full-screen code editor (IDE) for the selected step.",
+      hint: "Select a step on the canvas first.",
+      requires: "canvas-step"
+    },
+    %{
+      id: "step-name",
+      label: "Step name",
+      description:
+        "Rename this step; the name appears on the canvas and in run history.",
+      hint: "Select a step on the canvas to open its configuration panel first.",
+      requires: "canvas-step"
+    },
+    %{
+      id: "adaptor-picker",
+      label: "Adaptor picker",
+      description:
+        "Change which adaptor (app connector) this step uses to talk to an external system.",
+      hint: "Select a step on the canvas to open its configuration panel first.",
+      requires: "canvas-step"
+    },
+    %{
+      id: "credential-picker",
+      label: "Credential settings",
+      description:
+        "Choose which credential this step uses when it runs; opens the Configure connection dialog.",
+      hint: "Select a step on the canvas to open its configuration panel first.",
+      requires: "canvas-step"
+    },
+    %{
+      id: "code-panel-toggle",
+      label: "View as YAML",
+      description: "Open a read-only YAML view of the whole workflow.",
+      hint:
+        "Open the workflow settings panel first (the sliders icon in the top bar).",
+      requires: "settings-panel-toggle"
+    },
+    %{
+      id: "docs-tab",
+      label: "Docs tab",
+      description:
+        "Show documentation for this step's adaptor alongside the code editor.",
+      hint:
+        "Select a step and open its code editor first (the full-screen editor panel, Ctrl/Cmd+E).",
+      requires: "open-editor"
     }
   ]
 
@@ -396,7 +513,8 @@ defmodule LightningWeb.AppMap do
       label: "Workflow editor",
       section: "project",
       description:
-        "The real-time collaborative editor for a workflow: build the DAG of triggers, jobs, and edges, write job code with adaptors and credentials, run work manually, and inspect runs — with live cursors of other editors."
+        "The real-time collaborative editor for a workflow: build the DAG of triggers, jobs, and edges, write job code with adaptors and credentials, run work manually, and inspect runs — with live cursors of other editors.",
+      elements: @workflow_edit_elements
     },
     "/projects/:project_id/w/:id/health" => %{
       id: "workflow_health",
@@ -558,7 +676,8 @@ defmodule LightningWeb.AppMap do
   @doc """
   The app map as a deterministic JSON-encodable structure: a list of
   string-keyed maps sorted by id, with `tabs` present only where a page
-  has sub-tabs.
+  has sub-tabs and `elements` (sorted by label, `hint` and `requires`
+  omitted when nil) present only where a page has catalogued elements.
   """
   @spec to_json() :: [%{String.t() => term()}]
   def to_json do
@@ -569,9 +688,24 @@ defmodule LightningWeb.AppMap do
           {"tabs",
            Enum.map(tabs, &Map.new(&1, fn {k, v} -> {to_string(k), v} end))}
 
+        {:elements, elements} ->
+          {"elements", elements_to_json(elements)}
+
         {key, value} ->
           {to_string(key), value}
       end)
+    end)
+  end
+
+  defp elements_to_json(elements) do
+    elements
+    |> Enum.sort_by(& &1.label)
+    |> Enum.map(fn element ->
+      element
+      |> Map.reject(fn {key, value} ->
+        key in [:hint, :requires] and is_nil(value)
+      end)
+      |> Map.new(fn {k, v} -> {to_string(k), v} end)
     end)
   end
 
