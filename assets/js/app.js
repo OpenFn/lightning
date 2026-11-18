@@ -33,6 +33,7 @@ import topbar from '../vendor/topbar.cjs';
 
 import * as Hooks from './hooks';
 import LogViewer from './log-viewer';
+import { initTour } from './tour';
 
 enableMapSet();
 const sentry = Sentry.init({
@@ -128,6 +129,10 @@ window.addEventListener('phx:page-loading-stop', () => {
   topBarScheduled = 0;
   topbar.hide();
 });
+
+// Guided tours (spotlight walkthroughs started via the
+// `lightning:start-tour` CustomEvent; see assets/js/tour/).
+initTour();
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();
