@@ -8,7 +8,31 @@ defmodule Lightning.AiAssistant.AppMap do
   the web module — keeps the core→web layering intact; the committed JSON is
   the contract between the layers, and a staleness test in
   `test/lightning_web/app_map_test.exs` keeps it in sync with its source.
+
+  ## Permission-aware filtering
+
+  `fetch_for/1` returns the map filtered for a given user. The only
+  *instance-wide* view restriction in the app is the admin space: every
+  `"section": "admin"` page is gated by
+  `LightningWeb.Hooks.on_mount(:ensure_admin)` (or, for
+  `MaintenanceLive.Index`, the same check inline in `mount/3`), both of which
+  call `Lightning.Policies.Users.authorize(:access_admin_space, user, _)` —
+  i.e. `user.role == :superuser`. No other page is view-restricted at the
+  user level:
+
+  * `"section": "project"` pages are gated per project by
+    `LightningWeb.Hooks.on_mount(:project_scope)` →
+    `Lightning.Policies.ProjectUsers` `:access_project`, which any membership
+    role (including `viewer`) satisfies. The one stricter mount —
+    `/projects/:project_id/w/new` requires `:create_workflow` — depends on the
+    user's role *in that project*, so it cannot be decided on this
+    project-agnostic map and is left in.
+  * `"section": "user"` and `"section": "auth"` pages are open to any
+    authenticated (resp. unauthenticated) user.
   """
+
+  alias Lightning.Accounts.User
+  alias Lightning.Policies.Permissions
 
   require Logger
 
@@ -32,6 +56,38 @@ defmodule Lightning.AiAssistant.AppMap do
 
       app_map ->
         app_map
+    end
+  end
+
+  @doc """
+  The app map filtered to the pages `user` may actually open.
+
+  Pages with `"section": "admin"` are dropped unless the user may access the
+  admin space (`Lightning.Policies.Users` `:access_admin_space`, i.e. a
+  superuser). No other section carries an instance-wide view restriction —
+  see the moduledoc. Returns `nil` when the artifact is unavailable, like
+  `fetch/0`.
+  """
+  @spec fetch_for(User.t()) :: [map()] | nil
+  def fetch_for(%User{} = user) do
+    case fetch() do
+      nil -> nil
+      pages -> filter_for(pages, user)
+    end
+  end
+
+  # The same policy check as LightningWeb.Hooks.on_mount(:ensure_admin), which
+  # gates every admin-section page.
+  defp filter_for(pages, user) do
+    if Permissions.can?(
+         Lightning.Policies.Users,
+         :access_admin_space,
+         user,
+         {}
+       ) do
+      pages
+    else
+      Enum.reject(pages, &(&1["section"] == "admin"))
     end
   end
 

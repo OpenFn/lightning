@@ -13,7 +13,7 @@ defmodule LightningWeb.API.AppMapControllerTest do
     end
   end
 
-  describe "index" do
+  describe "index as a regular user" do
     setup [:register_and_log_in_user]
 
     test "returns the app map pages", %{conn: conn} do
@@ -29,6 +29,30 @@ defmodule LightningWeb.API.AppMapControllerTest do
         assert is_binary(path) and path != ""
         assert is_binary(description) and description != ""
       end
+    end
+
+    test "omits admin-section pages", %{conn: conn} do
+      conn = get(conn, ~p"/api/app_map")
+
+      assert %{"pages" => [_ | _] = pages} = json_response(conn, 200)
+
+      refute Enum.any?(pages, &(&1["section"] == "admin"))
+      assert Enum.any?(pages, &(&1["section"] == "project"))
+      assert Enum.any?(pages, &(&1["section"] == "user"))
+    end
+  end
+
+  describe "index as a superuser" do
+    setup [:register_and_log_in_superuser]
+
+    test "includes admin-section pages", %{conn: conn} do
+      conn = get(conn, ~p"/api/app_map")
+
+      assert %{"pages" => [_ | _] = pages} = json_response(conn, 200)
+
+      assert Enum.any?(pages, &(&1["section"] == "admin"))
+      assert Enum.any?(pages, &(&1["section"] == "project"))
+      assert Enum.any?(pages, &(&1["section"] == "user"))
     end
   end
 end

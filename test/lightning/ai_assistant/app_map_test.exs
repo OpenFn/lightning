@@ -3,6 +3,7 @@ defmodule Lightning.AiAssistant.AppMapTest do
 
   import ExUnit.CaptureLog
 
+  alias Lightning.Accounts.User
   alias Lightning.AiAssistant.AppMap
 
   describe "load/1" do
@@ -63,6 +64,34 @@ defmodule Lightning.AiAssistant.AppMapTest do
       # memoized: a second call returns the identical term
       assert AppMap.fetch() == pages
       assert :persistent_term.get({AppMap, :app_map}) == pages
+    end
+  end
+
+  describe "fetch_for/1" do
+    # The policy (Lightning.Policies.Users :access_admin_space) decides on
+    # the role field alone, so bare structs suffice — no database.
+    test "a superuser gets the full map, admin pages included" do
+      superuser = %User{id: Ecto.UUID.generate(), role: :superuser}
+
+      pages = AppMap.fetch_for(superuser)
+
+      assert pages == AppMap.fetch()
+      assert Enum.any?(pages, &(&1["section"] == "admin"))
+    end
+
+    test "a regular user gets the map without admin pages" do
+      user = %User{id: Ecto.UUID.generate(), role: :user}
+
+      pages = AppMap.fetch_for(user)
+
+      refute Enum.any?(pages, &(&1["section"] == "admin"))
+
+      # every non-admin page survives, untouched
+      assert pages ==
+               Enum.reject(AppMap.fetch(), &(&1["section"] == "admin"))
+
+      assert Enum.any?(pages, &(&1["section"] == "project"))
+      assert Enum.any?(pages, &(&1["section"] == "user"))
     end
   end
 end

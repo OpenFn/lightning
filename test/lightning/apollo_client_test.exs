@@ -356,6 +356,46 @@ defmodule Lightning.ApolloClientTest do
 
       {:ok, _} = ApolloClient.global_chat_stream("hi")
     end
+
+    test "filters admin pages from the app map for a non-superuser" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        app_map = Jason.decode!(env.body)["app_map"]
+
+        assert is_list(app_map) and app_map != []
+        refute Enum.any?(app_map, &(&1["section"] == "admin"))
+        assert Enum.any?(app_map, &(&1["section"] == "project"))
+        assert Enum.any?(app_map, &(&1["section"] == "user"))
+
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      # The admin-space policy decides on the role field alone, so a bare
+      # struct suffices — no database.
+      user = %Lightning.Accounts.User{id: Ecto.UUID.generate(), role: :user}
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi", user: user)
+    end
+
+    test "keeps admin pages in the app map for a superuser" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        app_map = Jason.decode!(env.body)["app_map"]
+
+        assert Enum.any?(app_map, &(&1["section"] == "admin"))
+
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      superuser = %Lightning.Accounts.User{
+        id: Ecto.UUID.generate(),
+        role: :superuser
+      }
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi", user: superuser)
+    end
   end
 
   # Private helper function to stub Apollo configuration

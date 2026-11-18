@@ -982,6 +982,10 @@ defmodule Lightning.AiAssistant do
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
+    # Preloaded here so apollo_meta/1 reuses it, and passed down so the
+    # payload's app_map is filtered to the pages this user may open.
+    session = Repo.preload(session, :user)
+
     {meta, metrics_opt_in} = apollo_meta(session)
 
     case ApolloClient.global_chat_stream(content,
@@ -990,7 +994,8 @@ defmodule Lightning.AiAssistant do
            history: history,
            meta: meta,
            metrics_opt_in: metrics_opt_in,
-           attachments: attachments
+           attachments: attachments,
+           user: session.user
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->

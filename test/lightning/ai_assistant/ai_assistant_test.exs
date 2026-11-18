@@ -3120,6 +3120,40 @@ defmodule Lightning.AiAssistantTest do
       :ok
     end
 
+    test "sends the app map filtered for the session's user", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # setup's user is a regular (non-superuser) account, so the payload's
+      # app_map must carry no admin-section pages.
+      assert user.role == :user
+
+      session = global_session_with_pending_message(user, project, workflow)
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post} = env, _opts ->
+        app_map = Jason.decode!(env.body)["app_map"]
+
+        assert is_list(app_map) and app_map != []
+        refute Enum.any?(app_map, &(&1["section"] == "admin"))
+        assert Enum.any?(app_map, &(&1["section"] == "project"))
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [
+             %{
+               event: "complete",
+               data: Jason.encode!(%{"response" => "ok", "attachments" => []})
+             }
+           ]
+         }}
+      end)
+
+      assert {:ok, _session} =
+               AiAssistant.query_global_stream(session, "where are things?")
+    end
+
     test "reports an oversized attachment with the checkbox to untick", %{
       user: user,
       project: project,

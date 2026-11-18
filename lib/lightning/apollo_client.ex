@@ -152,11 +152,14 @@ defmodule Lightning.ApolloClient do
       on the Apollo side. Omitted from the wire payload when not supplied.
     - `:attachments` - Run context the user chose to send, as a list of
       `%{"type" => type, "content" => content}` maps (default: `[]`)
+    - `:user` - The `%Lightning.Accounts.User{}` the session belongs to
+      (optional)
 
   The payload also carries `app_map` — the catalog of user-facing pages from
   `priv/app_map.json` (see `Lightning.AiAssistant.AppMap`) — so the assistant
-  can tell users where things are. The key is omitted when the artifact
-  cannot be loaded.
+  can tell users where things are. When `:user` is given the map is filtered
+  to the pages that user may open (`AppMap.fetch_for/1`); without it the full
+  map is sent. The key is omitted when the artifact cannot be loaded.
   """
   @spec global_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def global_chat_stream(content, opts \\ []) do
@@ -166,6 +169,7 @@ defmodule Lightning.ApolloClient do
     meta = Keyword.get(opts, :meta)
     metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
     attachments = Keyword.get(opts, :attachments, [])
+    user = Keyword.get(opts, :user)
 
     payload =
       %{
@@ -177,7 +181,7 @@ defmodule Lightning.ApolloClient do
         "meta" => meta,
         "metrics_opt_in" => metrics_opt_in,
         "attachments" => attachments,
-        "app_map" => Lightning.AiAssistant.AppMap.fetch(),
+        "app_map" => app_map(user),
         "options" => %{"stream" => true}
       }
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
@@ -190,6 +194,11 @@ defmodule Lightning.ApolloClient do
       opts: [adapter: [response: :stream]]
     )
   end
+
+  defp app_map(nil), do: Lightning.AiAssistant.AppMap.fetch()
+
+  defp app_map(%Lightning.Accounts.User{} = user),
+    do: Lightning.AiAssistant.AppMap.fetch_for(user)
 
   defp stream_client do
     client_params = [
