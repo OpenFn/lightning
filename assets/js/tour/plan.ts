@@ -46,6 +46,9 @@ export interface TourRequest {
   /** App-map element id to spotlight. Only meaningful when the user is
    * already on the requested page — element requests never navigate. */
   element?: string;
+  /** Runner-only: drive the tour automatically (clicks happen for the user).
+   * Planning ignores it. */
+  autopilot?: boolean;
   params: { project_id?: string };
 }
 
@@ -55,6 +58,9 @@ export interface ElementStep {
   selector: string;
   title: string;
   body: string;
+  /** Short name of what is being activated (page label, tab label, …), used
+   * by autopilot's "Opening: {label}" card phrasing. */
+  label?: string;
   /** 'click' → advance when the element is clicked; 'hash:<h>' → advance when
    * the URL hash becomes #<h> (covers clicking the tab link too). */
   advanceOn: 'click' | `hash:${string}`;
@@ -191,6 +197,7 @@ function tabStep(tab: AppMapTab): ElementStep {
     selector: `#${tab.hash}-tab`,
     title: `Open the "${tab.label}" tab`,
     body: `Click the "${tab.label}" tab.`,
+    label: tab.label,
     advanceOn: `hash:${tab.hash}`,
     expectNavigation: false,
   };
@@ -205,6 +212,7 @@ function sidebarStep(
     selector: `#side-menu a[href="${resolvedSidebarPath}"]`,
     title: `Go to ${sidebarPage.label}`,
     body: `Click "${sidebarPage.label}" in the sidebar.`,
+    label: sidebarPage.label,
     advanceOn: 'click',
     expectNavigation: true,
   };
@@ -278,6 +286,7 @@ function planUserSection(
       selector: '#user-menu-trigger',
       title: 'Open your user menu',
       body: 'Click your name at the bottom of the sidebar.',
+      label: 'your user menu',
       advanceOn: 'click',
       expectNavigation: false,
     },
@@ -286,6 +295,7 @@ function planUserSection(
       selector: `[role="menu"] a[href="${destinationPath}"]`,
       title: `Go to ${destination.label}`,
       body: `Click "${destination.label}" in the menu.`,
+      label: destination.label,
       advanceOn: 'click',
       expectNavigation: true,
     },

@@ -2,17 +2,21 @@
  * NavigateButton - "Take me there" action for AI assistant replies
  *
  * Apollo can end a reply with a fenced code block tagged `openfn-navigate`
- * whose body is JSON like `{"page": "project_settings", "tab": "vcs"}` or
- * `{"page": "workflow_edit", "element": "credential-picker"}`.
+ * whose body is JSON like `{"page": "project_settings", "tab": "vcs"}`,
+ * `{"page": "workflow_edit", "element": "credential-picker"}`, or a
+ * multi-stop grand tour `{"tour": ["project_workflows", "project_history"]}`.
  * MessageList routes that fence here instead of rendering a code block.
  *
  * Clicking the button dispatches the frozen `lightning:start-tour` contract
- * on `document`; a global tour module listens for it:
+ * on `document` (shift/alt-click adds `autopilot: true`); a global tour
+ * module listens for it:
  *
  * ```js
  * document.dispatchEvent(new CustomEvent('lightning:start-tour', {
  *   detail: {
- *     page: string, tab?: string, element?: string,
+ *     page: string, tab?: string, element?: string,   // single destination…
+ *     tour?: string[],                                // …or a grand tour
+ *     autopilot?: boolean,
  *     params: { project_id?: string }
  *   }
  * }))
@@ -30,17 +34,20 @@ import { useProject } from '../hooks/useSessionContext';
 
 interface NavigateTarget {
   /** App-map page id, e.g. "project_settings" */
-  page: string;
+  page?: string;
   /** Optional settings-tab hash, e.g. "vcs" */
   tab?: string;
   /** Optional app-map element id to spotlight, e.g. "credential-picker" */
   element?: string;
+  /** Multi-stop grand tour: an ordered list of app-map page ids. */
+  tour?: string[];
 }
 
 /**
  * Parse an `openfn-navigate` fence body. Returns null for anything that is
- * not an object with a string `page` — including partially-streamed JSON.
- * Non-string `tab` or `element` values are dropped, not errors.
+ * not an object with a string `page` or a `tour` array of page-id strings —
+ * including partially-streamed JSON. Non-string `tab` / `element` values and
+ * malformed `tour` arrays are dropped, not errors.
  */
 export const parseNavigateTarget = (content: string): NavigateTarget | null => {
   let parsed: unknown;
@@ -54,7 +61,16 @@ export const parseNavigateTarget = (content: string): NavigateTarget | null => {
     return null;
   }
 
-  const { page, tab, element } = parsed as Record<string, unknown>;
+  const { page, tab, element, tour } = parsed as Record<string, unknown>;
+
+  if (
+    Array.isArray(tour) &&
+    tour.length > 0 &&
+    tour.every(id => typeof id === 'string' && id.length > 0)
+  ) {
+    return { tour: tour as string[] };
+  }
+
   if (typeof page !== 'string' || page.length === 0) return null;
 
   const target: NavigateTarget = { page };
@@ -63,11 +79,14 @@ export const parseNavigateTarget = (content: string): NavigateTarget | null => {
   return target;
 };
 
-const telemetryFields = (target: NavigateTarget) => ({
-  page: target.page,
-  ...(target.tab !== undefined && { tab: target.tab }),
-  ...(target.element !== undefined && { element: target.element }),
-});
+const telemetryFields = (target: NavigateTarget) =>
+  target.tour
+    ? { page: target.tour.join(',') }
+    : {
+        ...(target.page !== undefined && { page: target.page }),
+        ...(target.tab !== undefined && { tab: target.tab }),
+        ...(target.element !== undefined && { element: target.element }),
+      };
 
 // MessageList's markdown renderer rebuilds its component map on every render,
 // which remounts this button (new instance, fresh refs) on every streaming
@@ -76,7 +95,9 @@ const telemetryFields = (target: NavigateTarget) => ({
 const shownTargets = new Set<string>();
 
 const targetSignature = (target: NavigateTarget): string =>
-  `${target.page}|${target.tab ?? ''}|${target.element ?? ''}`;
+  target.tour
+    ? `tour:${target.tour.join(',')}`
+    : `${target.page ?? ''}|${target.tab ?? ''}|${target.element ?? ''}`;
 
 /** Test hook: forget which buttons have reported button_shown. */
 export const resetButtonShownTracking = (): void => {
@@ -108,16 +129,22 @@ export const NavigateButton = ({ content }: { content: string }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     emitTourEvent('button_clicked', telemetryFields(target));
-    document.dispatchEvent(
-      new CustomEvent('lightning:start-tour', {
-        detail: {
+    // Shift- or alt-click puts the tour on autopilot: it drives the clicks.
+    const autopilot = e.shiftKey || e.altKey;
+    const detail = target.tour
+      ? {
+          tour: target.tour,
+          ...(autopilot && { autopilot: true }),
+          params: project?.id ? { project_id: project.id } : {},
+        }
+      : {
           page: target.page,
           ...(target.tab !== undefined && { tab: target.tab }),
           ...(target.element !== undefined && { element: target.element }),
+          ...(autopilot && { autopilot: true }),
           params: project?.id ? { project_id: project.id } : {},
-        },
-      })
-    );
+        };
+    document.dispatchEvent(new CustomEvent('lightning:start-tour', { detail }));
   };
 
   return (
@@ -125,10 +152,11 @@ export const NavigateButton = ({ content }: { content: string }) => {
       type="button"
       data-testid="navigate-button"
       onClick={handleClick}
+      title="Shift-click: let it drive"
       className="inline-flex items-center gap-1 rounded-md px-2 py-1 my-1 text-xs font-medium transition-all duration-300 ease-in-out bg-slate-300 text-white hover:bg-primary-600 hover:scale-105"
     >
       <span className="hero-map-pin-micro h-3.5 w-3.5" aria-hidden="true" />
-      Take me there
+      {target.tour ? 'Start the tour' : 'Take me there'}
     </button>
   );
 };

@@ -29,6 +29,12 @@ const POLL_INTERVAL_MS = 150;
 const POLL_TIMEOUT_MS = 8000;
 // Element spotlights have no navigation to fall back to, so give up sooner.
 const SPOTLIGHT_POLL_TIMEOUT_MS = 4000;
+/** How long autopilot lets the audience read a card before it clicks. Kept
+ * under prefers-reduced-motion too: the pause is comprehension, not
+ * decoration. */
+const AUTOPILOT_PAUSE_MS = 1200;
+/** Grand tours are capped at this many stops (Apollo's contract says 2-6). */
+const MAX_TOUR_STOPS = 6;
 const MAX_STATE_AGE_MS = 10 * 60 * 1000;
 const Z_INDEX = 10050; // above the app chrome (user menu panel is z-9999)
 
@@ -44,6 +50,16 @@ interface TourState {
   /** Dedup flag: tour_started has been emitted for this tour, so a resume
    * after a (live or full) navigation must not re-emit it. */
   startedEmitted?: boolean;
+  /** Autopilot drives the clicks itself; persisted so cross-page tours stay
+   * on autopilot after navigation. */
+  autopilot?: boolean;
+  /** Grand tour: the ordered page ids being visited… */
+  stops?: string[];
+  /** …and which of them this state's plan is heading to. */
+  stopIndex?: number;
+  /** The request params, kept so later stops can be planned after navigation.
+   */
+  params?: TourRequest['params'];
 }
 
 // ---------------------------------------------------------------------------
@@ -154,6 +170,29 @@ let repositionScheduled = false;
 let activeCleanup: (() => void) | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
+let autopilotTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Autopilot's "let them read it, then act" pause. At most one pending action;
+ * every teardown path cancels it, so Escape/Exit abort instantly. */
+function scheduleAutopilot(action: () => void): void {
+  if (autopilotTimer !== null) clearTimeout(autopilotTimer);
+  autopilotTimer = setTimeout(() => {
+    autopilotTimer = null;
+    action();
+  }, AUTOPILOT_PAUSE_MS);
+}
+
+/** Click a spotlit element the way a user would (works for SVG targets too).
+ */
+function autopilotClick(target: Element): void {
+  if (target instanceof HTMLElement) {
+    target.click();
+  } else {
+    target.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true })
+    );
+  }
+}
 
 /** The element focused before the tour moved focus into a card, restored when
  * the tour UI goes away. Only set by focusPrimary (notices never move focus).
@@ -198,6 +237,10 @@ function teardownUi(): void {
   if (noticeTimer !== null) {
     clearTimeout(noticeTimer);
     noticeTimer = null;
+  }
+  if (autopilotTimer !== null) {
+    clearTimeout(autopilotTimer);
+    autopilotTimer = null;
   }
   document.getElementById(ROOT_ID)?.remove();
   if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
@@ -376,14 +419,19 @@ function renderStep(
   step: ElementStep,
   stepNumber: number,
   stepCount: number,
-  onAdvance: () => void
+  onAdvance: () => void,
+  autopilot = false
 ): void {
   const root = getRoot();
   root.replaceChildren();
 
   const spotlight = makeRing();
 
-  const card = dialogCard(step.title, step.body);
+  // Autopilot drives the click itself, so the card narrates instead of
+  // instructing.
+  const card = autopilot
+    ? dialogCard(`Opening: ${step.label ?? step.title}`, step.body)
+    : dialogCard(step.title, step.body);
 
   const footer = document.createElement('div');
   Object.assign(footer.style, {
@@ -447,6 +495,12 @@ function renderStep(
   }
 
   activeCleanup = removeListeners;
+
+  if (autopilot) {
+    // The programmatic click flows through the same advance listeners as a
+    // real one, so everything downstream behaves exactly as today.
+    scheduleAutopilot(() => autopilotClick(target));
+  }
 }
 
 /**
@@ -561,12 +615,15 @@ function runChain(
   spotlight: Spotlight,
   steps: SpotlightElement[],
   index: number,
-  target: Element
+  target: Element,
+  autopilot: boolean
 ): void {
   const member = steps[index];
   if (!member) return;
 
   if (index === steps.length - 1) {
+    // Terminal target card. Never auto-clicked, even on autopilot: this is
+    // the "here it is" end state.
     renderSpotlight(target, spotlight.target);
     return;
   }
@@ -576,21 +633,30 @@ function runChain(
     selector: member.selector,
     title: `Click here: ${member.label}`,
     body: member.description,
+    label: member.label,
     advanceOn: 'click',
     expectNavigation: false,
   };
-  renderStep(target, step, index + 1, steps.length, () => {
-    // Drop the old ring while the next anchor renders.
-    getRoot().replaceChildren();
-    pollForAnchor(
-      () => resolveDeepest(steps, index + 1),
-      found => runChain(spotlight, steps, found.index, found.target),
-      () => {
-        emitAbandoned('timeout');
-        renderNotice(missingNotice(spotlight), 'hint');
-      }
-    );
-  });
+  renderStep(
+    target,
+    step,
+    index + 1,
+    steps.length,
+    () => {
+      // Drop the old ring while the next anchor renders.
+      getRoot().replaceChildren();
+      pollForAnchor(
+        () => resolveDeepest(steps, index + 1),
+        found =>
+          runChain(spotlight, steps, found.index, found.target, autopilot),
+        () => {
+          emitAbandoned('timeout');
+          renderNotice(missingNotice(spotlight), 'hint');
+        }
+      );
+    },
+    autopilot
+  );
 }
 
 /**
@@ -600,14 +666,20 @@ function runChain(
  * If nothing in the chain is on screen, show the target's hint (or a generic
  * notice).
  */
-function startSpotlight(spotlight: Spotlight): void {
+function startSpotlight(spotlight: Spotlight, autopilot: boolean): void {
   const sequence = [...spotlight.chain, spotlight.target];
 
   pollForAnchor(
     () => resolveDeepest(sequence, 0),
     found => {
       // Slice so "n of m" counts only the steps the user actually has left.
-      runChain(spotlight, sequence.slice(found.index), 0, found.target);
+      runChain(
+        spotlight,
+        sequence.slice(found.index),
+        0,
+        found.target,
+        autopilot
+      );
     },
     () => {
       emitAbandoned('timeout');
@@ -710,9 +782,66 @@ function arrive(state: TourState): void {
   // Clear the stored state now so a reload doesn't resurrect the card, but
   // leave the card up until "Done", Escape, or the next navigation.
   clearState();
-  renderArrivalCard(state.arrival);
   if (state.page) telemetryContext = { page: state.page };
+
+  const { stops, stopIndex } = state;
+  if (
+    Array.isArray(stops) &&
+    typeof stopIndex === 'number' &&
+    stopIndex < stops.length - 1
+  ) {
+    // Mid grand-tour: the card advances to the next stop instead of closing,
+    // and completion is only emitted at the final stop.
+    renderStopArrivalCard(state, stops, stopIndex);
+    return;
+  }
+
+  renderArrivalCard(state.arrival);
   emitCompleted();
+}
+
+/** The arrival card for a non-final grand-tour stop: same card, but the
+ * primary action continues to the next stop (Escape/Exit still end it all).
+ */
+function renderStopArrivalCard(
+  state: TourState,
+  stops: string[],
+  stopIndex: number
+): void {
+  const root = getRoot();
+  root.replaceChildren();
+
+  const card = dialogCard(
+    `You've arrived: ${state.arrival.label}`,
+    state.arrival.description
+  );
+  Object.assign(card.style, { right: '16px', bottom: '16px' });
+
+  const footer = document.createElement('div');
+  Object.assign(footer.style, {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    marginTop: '12px',
+  });
+  const nextButton = makeButton(
+    `Next stop (${stopIndex + 2} of ${stops.length}) →`
+  );
+  const goNext = () => {
+    void continueGrandTour({
+      stops,
+      stopIndex: stopIndex + 1,
+      params: state.params ?? {},
+      autopilot: state.autopilot === true,
+    });
+  };
+  nextButton.addEventListener('click', goNext);
+  footer.appendChild(nextButton);
+  card.appendChild(footer);
+
+  root.appendChild(card);
+  focusPrimary(nextButton);
+
+  if (state.autopilot) scheduleAutopilot(goNext);
 }
 
 /** Give up on spotlighting: jump straight to the destination. */
@@ -791,8 +920,13 @@ function showCurrentStep(state: TourState): void {
         activeCleanup();
         activeCleanup = null;
       }
-      renderStep(target, step, stepNumber, elementSteps.length, () =>
-        advance(state)
+      renderStep(
+        target,
+        step,
+        stepNumber,
+        elementSteps.length,
+        () => advance(state),
+        state.autopilot === true
       );
       return true;
     }
@@ -833,24 +967,39 @@ function resume(): void {
 // Start
 // ---------------------------------------------------------------------------
 
-function isTourRequest(detail: unknown): detail is TourRequest {
+/**
+ * The full lightning:start-tour event detail: a single page/element request,
+ * or a multi-stop grand tour (`tour`), optionally on autopilot.
+ */
+interface StartTourDetail {
+  page?: string;
+  tab?: string;
+  element?: string;
+  tour?: string[];
+  autopilot?: boolean;
+  params?: TourRequest['params'];
+}
+
+function isValidTourArray(tour: unknown): tour is string[] {
   return (
-    typeof detail === 'object' &&
-    detail !== null &&
-    typeof (detail as TourRequest).page === 'string'
+    Array.isArray(tour) &&
+    tour.length > 0 &&
+    tour.every(id => typeof id === 'string' && id.length > 0)
   );
+}
+
+function isStartTourDetail(detail: unknown): detail is StartTourDetail {
+  if (typeof detail !== 'object' || detail === null) return false;
+  const d = detail as StartTourDetail;
+  return typeof d.page === 'string' || isValidTourArray(d.tour);
 }
 
 const GENERIC_NOTICE = "Couldn't start a guided tour for that page.";
 
-async function startTour(request: TourRequest): Promise<void> {
-  telemetryContext = { page: request.page };
-  if (typeof request.element === 'string') {
-    telemetryContext.element = request.element;
-  }
-  tourLive = true;
-
-  let pages: unknown;
+/** Fetch and loosely validate the app map; null (with a console warning) on
+ * any failure. Trust the server's shape beyond "pages is an array";
+ * buildTourPlan only fails soft on malformed entries. */
+async function fetchAppMap(): Promise<AppMapPage[] | null> {
   try {
     const response = await fetch(APP_MAP_URL, {
       headers: { accept: 'application/json' },
@@ -859,27 +1008,178 @@ async function startTour(request: TourRequest): Promise<void> {
       console.warn(
         `Tour aborted: ${APP_MAP_URL} responded with ${response.status}`
       );
-      emitAbandoned('error');
-      renderNotice(GENERIC_NOTICE, 'error');
-      return;
+      return null;
     }
-    pages = ((await response.json()) as { pages?: unknown }).pages;
+    const pages = ((await response.json()) as { pages?: unknown }).pages;
+    if (!Array.isArray(pages)) {
+      console.warn('Tour aborted: unexpected app map payload');
+      return null;
+    }
+    return pages as AppMapPage[];
   } catch (error) {
     console.warn('Tour aborted: could not fetch the app map', error);
+    return null;
+  }
+}
+
+/** What a grand tour carries from stop to stop. */
+interface GrandTourContext {
+  stops: string[];
+  stopIndex: number;
+  params: TourRequest['params'];
+  autopilot: boolean;
+}
+
+/** Plan and run one grand-tour stop with the ordinary page machinery. */
+function runStop(appMap: AppMapPage[], ctx: GrandTourContext): void {
+  const { stops, stopIndex, params, autopilot } = ctx;
+  const page = stops[stopIndex];
+  if (!page) {
+    endTour();
+    return;
+  }
+
+  telemetryContext = { page };
+  const plan = buildTourPlan(
+    appMap,
+    { page, params },
+    { currentPath: window.location.pathname }
+  );
+
+  // Page-only requests can only yield steps/fallback/alreadyHere/error, and
+  // the stops were validated at start — but a stop whose plannability relied
+  // on the then-current path can stop planning after navigation. Skip it.
+  if ('error' in plan || 'wrongPage' in plan || 'spotlight' in plan) {
+    if (stopIndex < stops.length - 1) {
+      runStop(appMap, { ...ctx, stopIndex: stopIndex + 1 });
+    } else {
+      emitAbandoned('error');
+      renderNotice(GENERIC_NOTICE, 'error');
+    }
+    return;
+  }
+
+  const grandFields = {
+    page,
+    startedEmitted: true, // the grand tour emitted its own tour_started
+    stops,
+    stopIndex,
+    params,
+    ...(autopilot ? { autopilot: true } : {}),
+  };
+
+  if ('alreadyHere' in plan) {
+    arrive({
+      steps: [],
+      index: 0,
+      arrival: plan.arrival,
+      destinationPath: window.location.pathname,
+      startedAt: Date.now(),
+      ...grandFields,
+    });
+    return;
+  }
+
+  const state: TourState = {
+    steps: 'steps' in plan ? plan.steps : [],
+    index: 0,
+    arrival: plan.arrival,
+    destinationPath: 'steps' in plan ? plan.destinationPath : plan.fallbackPath,
+    ...('steps' in plan && plan.destinationHash !== undefined
+      ? { destinationHash: plan.destinationHash }
+      : {}),
+    startedAt: Date.now(),
+    ...grandFields,
+  };
+  writeState(state);
+
+  if ('fallbackPath' in plan && !atDestination(state)) {
+    window.location.assign(plan.fallbackPath);
+    return;
+  }
+
+  showCurrentStep(state);
+}
+
+/** Continue a grand tour from a stop's arrival card ("Next stop" / autopilot).
+ */
+async function continueGrandTour(ctx: GrandTourContext): Promise<void> {
+  const appMap = await fetchAppMap();
+  if (!appMap) {
     emitAbandoned('error');
     renderNotice(GENERIC_NOTICE, 'error');
     return;
   }
-  if (!Array.isArray(pages)) {
-    console.warn('Tour aborted: unexpected app map payload');
+  runStop(appMap, ctx);
+}
+
+function startGrandTour(appMap: AppMapPage[], detail: StartTourDetail): void {
+  const params = detail.params ?? {};
+  const autopilot = detail.autopilot === true;
+
+  // Keep only stops the planner can actually route right now.
+  const stops = (detail.tour ?? []).slice(0, MAX_TOUR_STOPS).filter(id => {
+    const plan = buildTourPlan(
+      appMap,
+      { page: id, params },
+      { currentPath: window.location.pathname }
+    );
+    return !('error' in plan);
+  });
+
+  if (stops.length === 0) {
+    console.warn('Tour aborted: no tourable stops in the requested tour');
+    emitAbandoned('error');
+    renderNotice(GENERIC_NOTICE, 'unknown_page');
+    return;
+  }
+
+  endTour(); // Replace any tour already in progress.
+
+  if (stops.length === 1) {
+    // Degenerate tour: run the one valid stop as a plain single-page tour.
+    void startTour({
+      page: stops[0] as string,
+      params,
+      ...(autopilot ? { autopilot: true } : {}),
+    });
+    return;
+  }
+
+  telemetryContext = { page: stops.join(',') };
+  emitTourEvent('tour_started', {
+    page: stops.join(','),
+    steps_total: stops.length,
+  });
+  runStop(appMap, { stops, stopIndex: 0, params, autopilot });
+}
+
+async function startTour(detail: StartTourDetail): Promise<void> {
+  telemetryContext = {};
+  if (isValidTourArray(detail.tour)) {
+    telemetryContext.page = detail.tour.join(',');
+  } else if (typeof detail.page === 'string') {
+    telemetryContext.page = detail.page;
+  }
+  if (typeof detail.element === 'string') {
+    telemetryContext.element = detail.element;
+  }
+  tourLive = true;
+
+  const appMap = await fetchAppMap();
+  if (!appMap) {
     emitAbandoned('error');
     renderNotice(GENERIC_NOTICE, 'error');
     return;
   }
 
-  // Trust the server's shape beyond "it's an array"; buildTourPlan only fails
-  // soft (unknown page id / unresolved path) on malformed entries.
-  const appMap = pages as AppMapPage[];
+  if (isValidTourArray(detail.tour)) {
+    startGrandTour(appMap, detail);
+    return;
+  }
+
+  // The isStartTourDetail guard ensures `page` is a string here.
+  const request = detail as TourRequest;
   const plan = buildTourPlan(appMap, request, {
     currentPath: window.location.pathname,
   });
@@ -916,7 +1216,7 @@ async function startTour(request: TourRequest): Promise<void> {
       ...telemetryContext,
       steps_total: plan.spotlight.chain.length + 1,
     });
-    startSpotlight(plan.spotlight);
+    startSpotlight(plan.spotlight, request.autopilot === true);
     return;
   }
 
@@ -938,6 +1238,7 @@ async function startTour(request: TourRequest): Promise<void> {
           startedAt: Date.now(),
           page: request.page,
           startedEmitted: false,
+          ...(request.autopilot === true ? { autopilot: true } : {}),
         }
       : {
           steps: plan.steps,
@@ -950,6 +1251,7 @@ async function startTour(request: TourRequest): Promise<void> {
           startedAt: Date.now(),
           page: request.page,
           startedEmitted: false,
+          ...(request.autopilot === true ? { autopilot: true } : {}),
         };
   if ('steps' in plan && !state.startedEmitted) {
     // Persisted flag: a resume after navigation must never re-emit this.
@@ -981,7 +1283,7 @@ export function initTour(): void {
 
   const onStartTour = (event: Event) => {
     const detail = (event as CustomEvent).detail as unknown;
-    if (!isTourRequest(detail)) {
+    if (!isStartTourDetail(detail)) {
       console.warn('Tour aborted: malformed lightning:start-tour detail');
       telemetryContext = {};
       renderNotice(GENERIC_NOTICE, 'error');

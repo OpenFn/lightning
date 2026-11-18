@@ -8,7 +8,7 @@
  * is routine), and ordinary fences still rendering as code blocks.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -159,6 +159,73 @@ describe('MessageList openfn-navigate fences', () => {
     }
     // No button, no telemetry.
     expect(tourTelemetry(fetchMock)).toEqual([]);
+  });
+
+  describe('grand tours and autopilot', () => {
+    it('renders Start the tour for a tour fence and dispatches the tour detail', async () => {
+      render(
+        <MessageList
+          messages={navigateReply(
+            '{"tour": ["project_workflows", "project_history"]}'
+          )}
+        />
+      );
+
+      const button = screen.getByTestId('navigate-button');
+      expect(button).toHaveTextContent('Start the tour');
+      expect(button).toHaveAttribute('title', 'Shift-click: let it drive');
+
+      await userEvent.click(button);
+
+      expect(tour.events[0].detail).toEqual({
+        tour: ['project_workflows', 'project_history'],
+        params: { project_id: 'project-123' },
+      });
+    });
+
+    it('ignores malformed tour arrays', () => {
+      const bodies = [
+        '{"tour": []}',
+        '{"tour": ["project_history", 5]}',
+        '{"tour": "project_history"}',
+      ];
+      for (const body of bodies) {
+        const { unmount } = render(
+          <MessageList messages={navigateReply(body)} />
+        );
+        expect(screen.queryByTestId('navigate-button')).not.toBeInTheDocument();
+        unmount();
+      }
+    });
+
+    it('falls back to page when tour is malformed but page is present', () => {
+      render(
+        <MessageList
+          messages={navigateReply(
+            '{"tour": "nope", "page": "project_history"}'
+          )}
+        />
+      );
+      expect(screen.getByTestId('navigate-button')).toHaveTextContent(
+        'Take me there'
+      );
+    });
+
+    it('shift-click sets autopilot on the dispatched detail', () => {
+      render(
+        <MessageList messages={navigateReply('{"page": "project_history"}')} />
+      );
+
+      fireEvent.click(screen.getByTestId('navigate-button'), {
+        shiftKey: true,
+      });
+
+      expect(tour.events[0].detail).toEqual({
+        page: 'project_history',
+        autopilot: true,
+        params: { project_id: 'project-123' },
+      });
+    });
   });
 
   describe('telemetry', () => {

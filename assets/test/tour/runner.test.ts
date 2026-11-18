@@ -474,6 +474,255 @@ describe('tour runner', () => {
     });
   });
 
+  describe('grand tours', () => {
+    const sideMenu = `
+      <nav id="side-menu">
+        <a href="/projects/${PROJECT_ID}/w">Workflows</a>
+        <a href="/projects/${PROJECT_ID}/history">History</a>
+      </nav>`;
+
+    it('runs stops sequentially with a Next stop button, persisting across navigation', async () => {
+      window.history.replaceState({}, '', `/projects/${PROJECT_ID}/w`);
+      document.body.innerHTML = sideMenu;
+      const fetchMock = mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        tour: ['project_workflows', 'project_history'],
+        params: { project_id: PROJECT_ID },
+      });
+
+      // Stop 1 is the current page: its arrival card shows with Next stop.
+      const root = () => document.getElementById(ROOT_ID);
+      await vi.waitFor(() => {
+        expect(root()?.textContent).toContain("You've arrived: Workflows");
+      });
+      expect(root()!.textContent).toContain('Next stop (2 of 2) →');
+      expect(
+        tourEvents(fetchMock).filter(e => e.event === 'tour_started')
+      ).toEqual([
+        {
+          event: 'tour_started',
+          page: 'project_workflows,project_history',
+          steps_total: 2,
+        },
+      ]);
+      // A mid-tour arrival is not a completion.
+      expect(
+        tourEvents(fetchMock).filter(e => e.event === 'tour_completed')
+      ).toEqual([]);
+
+      [...root()!.querySelectorAll('button')]
+        .find(b => b.textContent?.startsWith('Next stop'))!
+        .click();
+
+      await vi.waitFor(() => {
+        expect(root()?.textContent).toContain('Go to History');
+      });
+      const state = JSON.parse(
+        sessionStorage.getItem(STORAGE_KEY) ?? 'null'
+      ) as { stops: string[]; stopIndex: number; page: string };
+      expect(state).toMatchObject({
+        stops: ['project_workflows', 'project_history'],
+        stopIndex: 1,
+        page: 'project_history',
+      });
+
+      // The user clicks the sidebar link; "LiveView" navigates.
+      document
+        .querySelector<HTMLElement>(
+          `#side-menu a[href="/projects/${PROJECT_ID}/history"]`
+        )!
+        .click();
+      window.history.replaceState({}, '', `/projects/${PROJECT_ID}/history`);
+      window.dispatchEvent(new Event('phx:page-loading-stop'));
+
+      await vi.waitFor(() => {
+        expect(root()?.textContent).toContain("You've arrived: History");
+      });
+      expect(root()!.textContent).toContain('Done');
+      expect(root()!.textContent).not.toContain('Next stop');
+      expect(
+        tourEvents(fetchMock).filter(e => e.event === 'tour_completed')
+      ).toEqual([{ event: 'tour_completed', page: 'project_history' }]);
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('ends the whole tour on Escape at a stop arrival card', async () => {
+      window.history.replaceState({}, '', `/projects/${PROJECT_ID}/w`);
+      document.body.innerHTML = sideMenu;
+      const fetchMock = mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        tour: ['project_workflows', 'project_history'],
+        params: { project_id: PROJECT_ID },
+      });
+      await vi.waitFor(() => {
+        expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+          'Next stop'
+        );
+      });
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      expect(document.getElementById(ROOT_ID)).toBeNull();
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+      expect(
+        tourEvents(fetchMock).filter(e => e.event === 'tour_abandoned')
+      ).toEqual([
+        {
+          event: 'tour_abandoned',
+          reason: 'escape',
+          page: 'project_workflows',
+        },
+      ]);
+    });
+
+    it('drops untourable stops and tours the rest', async () => {
+      window.history.replaceState({}, '', `/projects/${PROJECT_ID}/w`);
+      document.body.innerHTML = sideMenu;
+      const fetchMock = mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        tour: ['bogus_page', 'project_workflows', 'project_history'],
+        params: { project_id: PROJECT_ID },
+      });
+
+      await vi.waitFor(() => {
+        expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+          'Next stop (2 of 2) →'
+        );
+      });
+      expect(
+        tourEvents(fetchMock).filter(e => e.event === 'tour_started')
+      ).toEqual([
+        {
+          event: 'tour_started',
+          page: 'project_workflows,project_history',
+          steps_total: 2,
+        },
+      ]);
+    });
+
+    it('falls back to a single-page tour when only one stop is valid', async () => {
+      document.body.innerHTML = sideMenu;
+      const fetchMock = mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        tour: ['bogus_page', 'project_history'],
+        params: { project_id: PROJECT_ID },
+      });
+
+      await vi.waitFor(() => {
+        expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+          'Go to History'
+        );
+      });
+      expect(
+        tourEvents(fetchMock).filter(e => e.event === 'tour_started')
+      ).toEqual([
+        { event: 'tour_started', page: 'project_history', steps_total: 1 },
+      ]);
+    });
+  });
+
+  describe('autopilot', () => {
+    it('narrates with Opening cards and clicks each step after the pause', async () => {
+      document.body.innerHTML = `
+        <button id="user-menu-trigger">Me</button>
+        <div role="menu">
+          <a role="menuitem" href="/credentials">Credentials</a>
+        </div>`;
+      mockAppMapFetch();
+      await initTour();
+      vi.useFakeTimers();
+
+      startTour({ page: 'credentials', params: {}, autopilot: true });
+      await vi.advanceTimersByTimeAsync(0);
+
+      const root = () => document.getElementById(ROOT_ID);
+      expect(root()?.textContent).toContain('Opening: your user menu');
+
+      // Nothing happens until the comprehension pause elapses…
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(root()?.textContent).toContain('Opening: your user menu');
+
+      // …then autopilot clicks the trigger and the next step renders.
+      await vi.advanceTimersByTimeAsync(300);
+      expect(root()?.textContent).toContain('Opening: Credentials');
+      const state = JSON.parse(
+        sessionStorage.getItem(STORAGE_KEY) ?? 'null'
+      ) as { index: number; autopilot?: boolean };
+      expect(state).toMatchObject({ index: 1, autopilot: true });
+    });
+
+    it('Escape aborts instantly, cancelling the pending click', async () => {
+      document.body.innerHTML = `
+        <button id="user-menu-trigger">Me</button>
+        <div role="menu">
+          <a role="menuitem" href="/credentials">Credentials</a>
+        </div>`;
+      mockAppMapFetch();
+      await initTour();
+      vi.useFakeTimers();
+
+      startTour({ page: 'credentials', params: {}, autopilot: true });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+        'Opening: your user menu'
+      );
+
+      const clicks = vi.fn();
+      document
+        .getElementById('user-menu-trigger')!
+        .addEventListener('click', clicks);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(clicks).not.toHaveBeenCalled();
+      expect(document.getElementById(ROOT_ID)).toBeNull();
+    });
+
+    it('auto-clicks chain prerequisites but never the terminal target', async () => {
+      window.history.replaceState({}, '', '/projects/p1/w/wf-1');
+      document.body.innerHTML = `
+        <div data-tour-anchor="canvas-step">Step</div>`;
+      mockAppMapFetch();
+      await initTour();
+      vi.useFakeTimers();
+
+      startTour({
+        page: 'workflow_edit',
+        element: 'credential-picker',
+        params: { project_id: 'p1' },
+        autopilot: true,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+
+      const root = () => document.getElementById(ROOT_ID);
+      expect(root()?.textContent).toContain('Opening: Workflow step');
+
+      // Reveal the picker (as clicking the node would) before autopilot acts.
+      const picker = document.createElement('div');
+      picker.setAttribute('data-tour-anchor', 'credential-picker');
+      document.body.appendChild(picker);
+      const pickerClicks = vi.fn();
+      picker.addEventListener('click', pickerClicks);
+
+      await vi.advanceTimersByTimeAsync(1300); // autopilot clicks canvas-step
+      expect(root()?.textContent).toContain('Credential picker');
+      expect(root()?.textContent).toContain('Done');
+
+      // The terminal card is the end state: it stays, unclicked.
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(pickerClicks).not.toHaveBeenCalled();
+      expect(root()?.textContent).toContain('Credential picker');
+    });
+  });
+
   it('discards stale state on resume', async () => {
     sessionStorage.setItem(
       STORAGE_KEY,
