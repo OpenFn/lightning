@@ -141,6 +141,8 @@ defmodule LightningWeb.Router do
 
     get "/app_map", API.AppMapController, :index
 
+    post "/tour_events", API.TourEventsController, :create
+
     get "/projects/:project_id/workflows/:workflow_id/health/outcomes",
         API.WorkflowHealthController,
         :outcomes

@@ -93,6 +93,13 @@ defmodule LightningWeb.Telemetry do
         measurement: :duration,
         unit: {:native, :millisecond},
         description: "Time required for history page load"
+      ),
+      counter("lightning.ui.tour.count",
+        event_name: [:lightning, :ui, :tour],
+        measurement: :count,
+        tags: [:event, :page],
+        description:
+          "Tour telemetry events reported by the frontend via POST /api/tour_events"
       )
     ]
   end
