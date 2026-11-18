@@ -18,6 +18,12 @@ interface NewRunButtonProps {
   variant?: 'primary' | 'secondary';
   forRetry?: boolean;
   enabledTooltip?: React.ReactNode;
+  /**
+   * Rendered as `data-tour-anchor` on the primary run button so the guided
+   * tour runner can spotlight it. Set only on one instance per screen —
+   * anchors must be unique in the DOM.
+   */
+  tourAnchor?: string;
 }
 
 /**
@@ -43,6 +49,7 @@ export function NewRunButton({
   variant = 'primary',
   forRetry = false,
   enabledTooltip,
+  tourAnchor,
 }: NewRunButtonProps) {
   const { canRun, tooltipMessage } = useCanRun({ forRetry });
   const { canRun: canRunFresh, tooltipMessage: freshTooltipMessage } =
@@ -73,7 +80,12 @@ export function NewRunButton({
     return (
       <Tooltip content={tooltip} side={tooltipSide}>
         <span className="inline-block">
-          <Button variant={variant} onClick={onClick} disabled={isDisabled}>
+          <Button
+            variant={variant}
+            onClick={onClick}
+            disabled={isDisabled}
+            data-tour-anchor={tourAnchor}
+          >
             <span className="flex items-center gap-1">
               {icon}
               {label}
@@ -89,6 +101,7 @@ export function NewRunButton({
       <Tooltip content={tooltip} side={tooltipSide}>
         <button
           type="button"
+          data-tour-anchor={tourAnchor}
           className={`rounded-l-md text-sm font-semibold shadow-xs
           phx-submit-loading:opacity-75 cursor-pointer
           disabled:cursor-not-allowed px-3 py-2

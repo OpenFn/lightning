@@ -102,6 +102,7 @@ export function SaveButton({
             <span className="inline-block">
               <Button
                 data-testid="save-workflow-button"
+                data-tour-anchor="save-workflow"
                 className="phx-submit-loading:opacity-75 cursor-pointer
                   focus:ring-transparent"
                 onClick={onClick}
@@ -134,6 +135,7 @@ export function SaveButton({
           <span className="inline-block">
             <Button
               data-testid="save-workflow-button"
+              data-tour-anchor="save-workflow"
               className="rounded-r-none phx-submit-loading:opacity-75
                 cursor-pointer focus:ring-transparent"
               onClick={onClick}
@@ -711,6 +713,7 @@ export function Header({
               <div>
                 <button
                   type="button"
+                  data-tour-anchor="settings-panel-toggle"
                   onClick={() => {
                     const currentPanel = params.panel;
                     updateSearchParams({
@@ -866,6 +869,7 @@ export function Header({
                 workflowId &&
                 (firstTriggerId || (isRetryable && experimentalFeatures)) && (
                   <NewRunButton
+                    tourAnchor="run-button"
                     onClick={() => {
                       void (isRetryable
                         ? handleRetryClick()

@@ -21,6 +21,12 @@ type BaseNodeProps = NodeProps<NodeData> & {
   sublabel?: string;
   toolbar?: any;
   errors?: any;
+  /**
+   * Rendered as `data-tour-anchor` on the clickable node body so the guided
+   * tour runner can spotlight it. Opt-in per node type (jobs pass it,
+   * triggers/placeholders don't); the tour runner uses the first match.
+   */
+  tourAnchor?: string;
 };
 
 type ErrorObject = {
@@ -91,6 +97,7 @@ const Node = ({
 
   errors,
   type,
+  tourAnchor,
 }: BaseNodeProps) => {
   const isTriggerNode = type === 'trigger';
   const runData = data?.runData as RunStep | undefined;
@@ -126,7 +133,10 @@ const Node = ({
       data-active-drop-target={data.isActiveDropTarget ? 'true' : undefined}
       data-drop-target-error={data.dropTargetError || undefined}
     >
-      <div className="flex flex-row cursor-pointer">
+      <div
+        className="flex flex-row cursor-pointer"
+        data-tour-anchor={tourAnchor}
+      >
         <div className="relative">
           {targetPosition && (
             <>

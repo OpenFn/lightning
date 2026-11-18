@@ -27,6 +27,15 @@ interface AdaptorDisplayProps {
   size?: AdaptorDisplaySize;
   /** Whether the workflow is read-only (hides Edit/Change buttons) */
   isReadOnly?: boolean;
+  /**
+   * Rendered as `data-tour-anchor` on the change-adaptor button so the guided
+   * tour runner can spotlight it. AdaptorDisplay is rendered in several
+   * places (inspector, IDE header), so the anchor is opt-in per call site —
+   * anchors must be unique in the DOM.
+   */
+  changeAdaptorTourAnchor?: string;
+  /** Rendered as `data-tour-anchor` on the Edit/Connect button. See above. */
+  editTourAnchor?: string;
 }
 
 /**
@@ -65,6 +74,8 @@ export function AdaptorDisplay({
   onChangeAdaptor,
   size = 'md',
   isReadOnly = false,
+  changeAdaptorTourAnchor,
+  editTourAnchor,
 }: AdaptorDisplayProps) {
   const { findCredentialById } = useCredentialQueries();
 
@@ -182,6 +193,7 @@ export function AdaptorDisplay({
         {onChangeAdaptor && !isReadOnly ? (
           <button
             type="button"
+            data-tour-anchor={changeAdaptorTourAnchor}
             onClick={onChangeAdaptor}
             className={`flex items-center gap-2 ${config.adaptorButton} border border-gray-300 bg-white rounded-md font-medium text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors`}
             aria-label="Change adaptor"
@@ -263,6 +275,7 @@ export function AdaptorDisplay({
       {onEdit && !isReadOnly && (
         <button
           type="button"
+          data-tour-anchor={editTourAnchor}
           onClick={onEdit}
           className={cn(
             config.editButton,

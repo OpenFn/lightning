@@ -103,6 +103,7 @@ export function JobInspector({
             <span className="inline-block">
               <Button
                 aria-label="Code"
+                data-tour-anchor="open-editor"
                 variant="secondary"
                 onClick={() => updateSearchParams({ panel: 'editor' })}
                 disabled={isIDEOpen}

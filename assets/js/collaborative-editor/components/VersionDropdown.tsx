@@ -162,6 +162,9 @@ export function VersionDropdown({
         )}
         aria-expanded={isOpen}
         aria-haspopup="true"
+        // Shares the id with SnapshotVersionDropdown: the editor renders
+        // exactly one of the two pickers at a time.
+        data-tour-anchor="version-switcher"
       >
         <span>{currentVersionDisplay}</span>
         <span

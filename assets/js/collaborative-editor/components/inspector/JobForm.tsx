@@ -329,7 +329,13 @@ export function JobForm({ job }: JobFormProps) {
       {/* Job Name Field */}
       <div className="col-span-6">
         <form.AppField name="name">
-          {field => <field.TextField label="Job Name" disabled={isReadOnly} />}
+          {field => (
+            <field.TextField
+              label="Job Name"
+              disabled={isReadOnly}
+              tourAnchor="step-name"
+            />
+          )}
         </form.AppField>
       </div>
 
@@ -355,6 +361,8 @@ export function JobForm({ job }: JobFormProps) {
           onChangeAdaptor={handleOpenAdaptorPickerDirect}
           size="sm"
           isReadOnly={isReadOnly}
+          changeAdaptorTourAnchor="adaptor-picker"
+          editTourAnchor="credential-picker"
         />
       </div>
 

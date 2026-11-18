@@ -36,6 +36,7 @@ const JobNode = ({
       isConnectable={true}
       targetPosition={targetPosition}
       sourcePosition={sourcePosition}
+      tourAnchor="canvas-step"
       // allowSource
       toolbar={toolbar}
       errors={props.data?.errors}

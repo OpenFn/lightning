@@ -43,6 +43,7 @@ export function AIButton({
     <Tooltip content={tooltipContent} side="bottom">
       <button
         type="button"
+        data-tour-anchor="ai-assistant-toggle"
         onClick={handleClick}
         disabled={disabled}
         className={cn(

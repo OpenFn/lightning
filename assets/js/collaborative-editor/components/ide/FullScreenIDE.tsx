@@ -867,6 +867,7 @@ export function FullScreenIDE({
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => handleDocsTabChange('docs')}
+                data-tour-anchor="docs-tab"
                 className={cn(
                   'flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors',
                   selectedDocsTab === 'docs' && !isDocsCollapsed

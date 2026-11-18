@@ -117,6 +117,7 @@ export function WorkflowSettings() {
           onClick={handleViewAsYAML}
           className="text-sm text-indigo-600 hover:text-indigo-500"
           id="view-workflow-as-yaml-link"
+          data-tour-anchor="code-panel-toggle"
         >
           View your workflow as YAML code
         </button>

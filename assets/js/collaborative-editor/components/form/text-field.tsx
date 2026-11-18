@@ -6,10 +6,17 @@ export function TextField({
   label,
   disabled = false,
   placeholder,
+  tourAnchor,
 }: {
   label: string;
   disabled?: boolean;
   placeholder?: string;
+  /**
+   * Rendered as `data-tour-anchor` on the input so the guided tour runner
+   * can spotlight it. Anchors must be unique in the DOM, so set it per call
+   * site rather than per field type.
+   */
+  tourAnchor?: string;
 }) {
   const field = useFieldContext<string>();
   return (
@@ -22,6 +29,7 @@ export function TextField({
         disabled={disabled}
         placeholder={placeholder}
         autoComplete="off"
+        data-tour-anchor={tourAnchor}
         className={INPUT_CLASSES}
       />
     </FormField>

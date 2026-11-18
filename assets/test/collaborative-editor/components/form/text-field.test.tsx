@@ -55,4 +55,20 @@ describe('TextField', () => {
     const input = screen.getByLabelText('Name') as HTMLInputElement;
     expect(input.value).toBe('hello');
   });
+
+  it('renders data-tour-anchor on the input when tourAnchor is set', () => {
+    function AnchoredForm() {
+      const form = useAppForm({ defaultValues: { name: '' } });
+      return (
+        <form.AppField name="name">
+          {field => <field.TextField label="Name" tourAnchor="step-name" />}
+        </form.AppField>
+      );
+    }
+
+    render(<AnchoredForm />);
+
+    const input = screen.getByLabelText('Name');
+    expect(input).toHaveAttribute('data-tour-anchor', 'step-name');
+  });
 });
