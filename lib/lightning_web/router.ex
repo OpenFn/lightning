@@ -139,6 +139,8 @@ defmodule LightningWeb.Router do
 
     get "/ai_assistant/sessions", API.AiAssistantController, :list_sessions
 
+    get "/app_map", API.AppMapController, :index
+
     get "/projects/:project_id/workflows/:workflow_id/health/outcomes",
         API.WorkflowHealthController,
         :outcomes
