@@ -2,7 +2,8 @@
  * NavigateButton - "Take me there" action for AI assistant replies
  *
  * Apollo can end a reply with a fenced code block tagged `openfn-navigate`
- * whose body is JSON like `{"page": "project_settings", "tab": "vcs"}`.
+ * whose body is JSON like `{"page": "project_settings", "tab": "vcs"}` or
+ * `{"page": "workflow_edit", "element": "credential-picker"}`.
  * MessageList routes that fence here instead of rendering a code block.
  *
  * Clicking the button dispatches the frozen `lightning:start-tour` contract
@@ -10,7 +11,10 @@
  *
  * ```js
  * document.dispatchEvent(new CustomEvent('lightning:start-tour', {
- *   detail: { page: string, tab?: string, params: { project_id: string } }
+ *   detail: {
+ *     page: string, tab?: string, element?: string,
+ *     params: { project_id?: string }
+ *   }
  * }))
  * ```
  *
@@ -26,11 +30,14 @@ interface NavigateTarget {
   page: string;
   /** Optional settings-tab hash, e.g. "vcs" */
   tab?: string;
+  /** Optional app-map element id to spotlight, e.g. "credential-picker" */
+  element?: string;
 }
 
 /**
  * Parse an `openfn-navigate` fence body. Returns null for anything that is
  * not an object with a string `page` — including partially-streamed JSON.
+ * Non-string `tab` or `element` values are dropped, not errors.
  */
 export const parseNavigateTarget = (content: string): NavigateTarget | null => {
   let parsed: unknown;
@@ -44,10 +51,13 @@ export const parseNavigateTarget = (content: string): NavigateTarget | null => {
     return null;
   }
 
-  const { page, tab } = parsed as Record<string, unknown>;
+  const { page, tab, element } = parsed as Record<string, unknown>;
   if (typeof page !== 'string' || page.length === 0) return null;
 
-  return typeof tab === 'string' ? { page, tab } : { page };
+  const target: NavigateTarget = { page };
+  if (typeof tab === 'string') target.tab = tab;
+  if (typeof element === 'string') target.element = element;
+  return target;
 };
 
 export const NavigateButton = ({ content }: { content: string }) => {
@@ -66,6 +76,7 @@ export const NavigateButton = ({ content }: { content: string }) => {
         detail: {
           page: target.page,
           ...(target.tab !== undefined && { tab: target.tab }),
+          ...(target.element !== undefined && { element: target.element }),
           params: project?.id ? { project_id: project.id } : {},
         },
       })

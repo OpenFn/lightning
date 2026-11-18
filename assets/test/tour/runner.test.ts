@@ -180,6 +180,168 @@ describe('tour runner', () => {
     expect(document.getElementById(ROOT_ID)).toBeNull();
   });
 
+  describe('element spotlights', () => {
+    it('spotlights the anchor with a card and Done button, persisting nothing', async () => {
+      window.history.replaceState({}, '', '/projects/p1/w/wf-1');
+      document.body.innerHTML = `
+        <div data-tour-anchor="credential-picker">Credential</div>`;
+      mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        page: 'workflow_edit',
+        element: 'credential-picker',
+        params: { project_id: 'p1' },
+      });
+
+      await vi.waitFor(() => {
+        expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+          'Credential picker'
+        );
+      });
+      const root = document.getElementById(ROOT_ID)!;
+      expect(root.textContent).toContain('saved credential');
+      expect(root.textContent).toContain('Done');
+      // Target already on screen: no prerequisite step, straight to the card.
+      expect(root.textContent).not.toContain('Click here');
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+
+      // Done dismisses the spotlight.
+      [...root.querySelectorAll('button')]
+        .find(b => b.textContent === 'Done')!
+        .click();
+      expect(document.getElementById(ROOT_ID)).toBeNull();
+    });
+
+    it('walks the requires chain from the visible prerequisite to the target', async () => {
+      window.history.replaceState({}, '', '/projects/p1/w/wf-1');
+      // Only the prerequisite (a canvas node) is on screen; the picker lives
+      // in the panel that clicking the node opens.
+      document.body.innerHTML = `
+        <div data-tour-anchor="canvas-step">Step A</div>
+        <div data-tour-anchor="canvas-step">Step B</div>`;
+      mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        page: 'workflow_edit',
+        element: 'credential-picker',
+        params: { project_id: 'p1' },
+      });
+
+      await vi.waitFor(() => {
+        expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+          'Click here: Workflow step'
+        );
+      });
+      const root = document.getElementById(ROOT_ID)!;
+      expect(root.textContent).toContain('1 of 2');
+      expect(root.textContent).not.toContain('Done');
+
+      // Clicking the node "opens" the panel, revealing the picker anchor.
+      (
+        document.querySelector(
+          '[data-tour-anchor="canvas-step"]'
+        ) as HTMLElement
+      ).click();
+      const picker = document.createElement('div');
+      picker.setAttribute('data-tour-anchor', 'credential-picker');
+      picker.textContent = 'Picker';
+      document.body.appendChild(picker);
+
+      await vi.waitFor(() => {
+        expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+          'Credential picker'
+        );
+      });
+      expect(document.getElementById(ROOT_ID)!.textContent).toContain('Done');
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('cleans up mid-chain on Escape', async () => {
+      window.history.replaceState({}, '', '/projects/p1/w/wf-1');
+      document.body.innerHTML = `
+        <div data-tour-anchor="canvas-step">Step</div>`;
+      mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        page: 'workflow_edit',
+        element: 'credential-picker',
+        params: { project_id: 'p1' },
+      });
+      await vi.waitFor(() => {
+        expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+          'Click here: Workflow step'
+        );
+      });
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      expect(document.getElementById(ROOT_ID)).toBeNull();
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it("shows the element's hint when the anchor never appears", async () => {
+      window.history.replaceState({}, '', '/projects/p1/w/wf-1');
+      mockAppMapFetch();
+      await initTour();
+      vi.useFakeTimers();
+
+      startTour({
+        page: 'workflow_edit',
+        element: 'credential-picker',
+        params: { project_id: 'p1' },
+      });
+
+      await vi.advanceTimersByTimeAsync(0); // fetch + plan settle
+      await vi.advanceTimersByTimeAsync(4500); // past the 4s spotlight window
+
+      expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+        'Select a step on the canvas to open its configuration panel first.'
+      );
+    });
+
+    it('falls back to a generic notice when the element has no hint', async () => {
+      window.history.replaceState({}, '', '/projects/p1/w/wf-1');
+      mockAppMapFetch();
+      await initTour();
+      vi.useFakeTimers();
+
+      startTour({
+        page: 'workflow_edit',
+        element: 'run-button',
+        params: { project_id: 'p1' },
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(4500);
+
+      expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+        "Couldn't find that control on this page."
+      );
+    });
+
+    it('shows a wrong-page notice when asked from another page', async () => {
+      // Location is "/", which is not the workflow editor.
+      mockAppMapFetch();
+      await initTour();
+
+      startTour({
+        page: 'workflow_edit',
+        element: 'credential-picker',
+        params: { project_id: 'p1' },
+      });
+
+      await vi.waitFor(() => {
+        expect(document.getElementById(ROOT_ID)?.textContent).toContain(
+          'That guidance is for the Workflow editor page — ask again from there.'
+        );
+      });
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+  });
+
   it('discards stale state on resume', async () => {
     sessionStorage.setItem(
       STORAGE_KEY,

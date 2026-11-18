@@ -15,6 +15,8 @@ import type {
   AppMapPage,
   Arrival,
   ElementStep,
+  Spotlight,
+  SpotlightElement,
   Step,
   TourRequest,
 } from './plan';
@@ -24,6 +26,8 @@ const ROOT_ID = 'lightning-tour-root';
 const APP_MAP_URL = '/api/app_map';
 const POLL_INTERVAL_MS = 150;
 const POLL_TIMEOUT_MS = 8000;
+// Element spotlights have no navigation to fall back to, so give up sooner.
+const SPOTLIGHT_POLL_TIMEOUT_MS = 4000;
 const MAX_STATE_AGE_MS = 10 * 60 * 1000;
 const Z_INDEX = 10050; // above the app chrome (user menu panel is z-9999)
 
@@ -222,6 +226,56 @@ function isVisible(el: Element): boolean {
   return el.getClientRects().length > 0;
 }
 
+/** The spotlight ring: a transparent box over the target whose huge
+ * box-shadow dims everything else. pointer-events: none so the target stays
+ * clickable. */
+function makeRing(): HTMLElement {
+  const ring = document.createElement('div');
+  Object.assign(ring.style, {
+    position: 'fixed',
+    pointerEvents: 'none',
+    borderRadius: '8px',
+    boxShadow: `0 0 0 3px ${RING}, 0 0 0 9999px ${DIM}`,
+    zIndex: `${Z_INDEX}`,
+    transition: 'top 150ms, left 150ms, width 150ms, height 150ms',
+  });
+  return ring;
+}
+
+/** Position the ring and card over the target now, and keep them there on
+ * scroll/resize (rAF-throttled). Returns the listener-removal function. */
+function wireReposition(
+  target: Element,
+  ring: HTMLElement,
+  card: HTMLElement
+): () => void {
+  const reposition = () => {
+    const rect = target.getBoundingClientRect();
+    ring.style.top = `${rect.top - SPOTLIGHT_PADDING}px`;
+    ring.style.left = `${rect.left - SPOTLIGHT_PADDING}px`;
+    ring.style.width = `${rect.width + SPOTLIGHT_PADDING * 2}px`;
+    ring.style.height = `${rect.height + SPOTLIGHT_PADDING * 2}px`;
+    positionCard(card, rect);
+  };
+  reposition();
+
+  const scheduleReposition = () => {
+    if (repositionScheduled) return;
+    repositionScheduled = true;
+    requestAnimationFrame(() => {
+      repositionScheduled = false;
+      reposition();
+    });
+  };
+
+  window.addEventListener('scroll', scheduleReposition, true);
+  window.addEventListener('resize', scheduleReposition);
+  return () => {
+    window.removeEventListener('scroll', scheduleReposition, true);
+    window.removeEventListener('resize', scheduleReposition);
+  };
+}
+
 /**
  * Render the spotlight + info card for one element step. Returns a cleanup
  * function; registers reposition handlers (rAF-throttled) and the advance
@@ -237,17 +291,7 @@ function renderStep(
   const root = getRoot();
   root.replaceChildren();
 
-  // Spotlight: a transparent box over the target whose huge box-shadow dims
-  // everything else. pointer-events: none so the target stays clickable.
-  const spotlight = document.createElement('div');
-  Object.assign(spotlight.style, {
-    position: 'fixed',
-    pointerEvents: 'none',
-    borderRadius: '8px',
-    boxShadow: `0 0 0 3px ${RING}, 0 0 0 9999px ${DIM}`,
-    zIndex: `${Z_INDEX}`,
-    transition: 'top 150ms, left 150ms, width 150ms, height 150ms',
-  });
+  const spotlight = makeRing();
 
   const card = document.createElement('div');
   styleCard(card);
@@ -281,24 +325,7 @@ function renderStep(
 
   root.append(spotlight, card);
 
-  const reposition = () => {
-    const rect = target.getBoundingClientRect();
-    spotlight.style.top = `${rect.top - SPOTLIGHT_PADDING}px`;
-    spotlight.style.left = `${rect.left - SPOTLIGHT_PADDING}px`;
-    spotlight.style.width = `${rect.width + SPOTLIGHT_PADDING * 2}px`;
-    spotlight.style.height = `${rect.height + SPOTLIGHT_PADDING * 2}px`;
-    positionCard(card, rect);
-  };
-  reposition();
-
-  const scheduleReposition = () => {
-    if (repositionScheduled) return;
-    repositionScheduled = true;
-    requestAnimationFrame(() => {
-      repositionScheduled = false;
-      reposition();
-    });
-  };
+  const removeReposition = wireReposition(target, spotlight, card);
 
   // Advance listener. For clicks, listen in the capture phase on the document
   // so we still catch the click if LiveView morphs the element under us.
@@ -323,17 +350,172 @@ function renderStep(
   } else {
     window.addEventListener('hashchange', onHashChange);
   }
-  window.addEventListener('scroll', scheduleReposition, true);
-  window.addEventListener('resize', scheduleReposition);
 
   function removeListeners(): void {
     document.removeEventListener('click', onDocumentClick, true);
     window.removeEventListener('hashchange', onHashChange);
-    window.removeEventListener('scroll', scheduleReposition, true);
-    window.removeEventListener('resize', scheduleReposition);
+    removeReposition();
   }
 
   activeCleanup = removeListeners;
+}
+
+/**
+ * Render the terminal "here it is" spotlight for an element request: ring +
+ * card with the element's label, description, and a Done button. Nothing is
+ * persisted; Done, Escape, or navigating away dismisses it.
+ */
+function renderSpotlight(target: Element, element: SpotlightElement): void {
+  const root = getRoot();
+  root.replaceChildren();
+
+  const ring = makeRing();
+
+  const card = document.createElement('div');
+  styleCard(card);
+  cardText(card, element.label, element.description);
+
+  const footer = document.createElement('div');
+  Object.assign(footer.style, {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    marginTop: '12px',
+  });
+  const doneButton = makeButton('Done');
+  doneButton.addEventListener('click', () => endTour());
+  footer.appendChild(doneButton);
+  card.appendChild(footer);
+
+  root.append(ring, card);
+
+  activeCleanup = wireReposition(target, ring, card);
+}
+
+/** First *visible* match for an anchor selector (anchors like canvas-step
+ * can appear on several nodes — the first on-screen one wins). */
+function findAnchor(selector: string): Element | null {
+  for (const el of Array.from(document.querySelectorAll(selector))) {
+    if (isVisible(el)) return el;
+  }
+  return null;
+}
+
+interface ChainPosition {
+  index: number;
+  target: Element;
+}
+
+/** The deepest member of the spotlight sequence (prerequisites then target)
+ * whose anchor is on screen, searching no earlier than `minIndex`. */
+function resolveDeepest(
+  sequence: SpotlightElement[],
+  minIndex: number
+): ChainPosition | null {
+  for (let i = sequence.length - 1; i >= minIndex; i -= 1) {
+    const member = sequence[i];
+    if (!member) continue;
+    const target = findAnchor(member.selector);
+    if (target) return { index: i, target };
+  }
+  return null;
+}
+
+/** Poll (briefly) until `resolve` finds an anchor, on the shared pollTimer so
+ * every teardown path cancels it. */
+function pollForAnchor(
+  resolve: () => ChainPosition | null,
+  onFound: (found: ChainPosition) => void,
+  onTimeout: () => void
+): void {
+  const deadline = Date.now() + SPOTLIGHT_POLL_TIMEOUT_MS;
+
+  const attempt = (): boolean => {
+    const found = resolve();
+    if (!found) return false;
+    if (pollTimer !== null) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    onFound(found);
+    return true;
+  };
+
+  if (attempt()) return;
+
+  pollTimer = setInterval(() => {
+    if (attempt()) return;
+    if (Date.now() >= deadline) {
+      if (pollTimer !== null) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      onTimeout();
+    }
+  }, POLL_INTERVAL_MS);
+}
+
+function missingNotice(spotlight: Spotlight): string {
+  return spotlight.target.hint ?? "Couldn't find that control on this page.";
+}
+
+/**
+ * Run the in-page spotlight sequence from `index`: prerequisite members get a
+ * "Click here" card that advances on click (no navigation), the last member —
+ * always the target — gets the terminal Done card. After each click we poll
+ * for the *deepest* next anchor, so a click that reveals several chain
+ * members at once skips the redundant ones.
+ */
+function runChain(
+  spotlight: Spotlight,
+  steps: SpotlightElement[],
+  index: number,
+  target: Element
+): void {
+  const member = steps[index];
+  if (!member) return;
+
+  if (index === steps.length - 1) {
+    renderSpotlight(target, spotlight.target);
+    return;
+  }
+
+  const step: ElementStep = {
+    type: 'element',
+    selector: member.selector,
+    title: `Click here: ${member.label}`,
+    body: member.description,
+    advanceOn: 'click',
+    expectNavigation: false,
+  };
+  renderStep(target, step, index + 1, steps.length, () => {
+    // Drop the old ring while the next anchor renders.
+    getRoot().replaceChildren();
+    pollForAnchor(
+      () => resolveDeepest(steps, index + 1),
+      found => runChain(spotlight, steps, found.index, found.target),
+      () => renderNotice(missingNotice(spotlight))
+    );
+  });
+}
+
+/**
+ * Entry point for an element request: if the target's anchor is already on
+ * screen, spotlight it directly; otherwise start from the deepest prerequisite
+ * whose anchor is present and walk the user through the clicks in between.
+ * If nothing in the chain is on screen, show the target's hint (or a generic
+ * notice).
+ */
+function startSpotlight(spotlight: Spotlight): void {
+  const sequence = [...spotlight.chain, spotlight.target];
+
+  pollForAnchor(
+    () => resolveDeepest(sequence, 0),
+    found => {
+      // Slice so "n of m" counts only the steps the user actually has left.
+      runChain(spotlight, sequence.slice(found.index), 0, found.target);
+    },
+    () => renderNotice(missingNotice(spotlight))
+  );
 }
 
 function renderArrivalCard(arrival: Arrival): void {
@@ -595,7 +777,24 @@ async function startTour(request: TourRequest): Promise<void> {
     return;
   }
 
+  if ('wrongPage' in plan) {
+    // Element guidance only applies to the page the user is on. Like the
+    // error path above, this only shows a notice (any stored tour state is
+    // left alone).
+    renderNotice(
+      `That guidance is for the ${plan.pageLabel} page — ask again from there.`
+    );
+    return;
+  }
+
   endTour(); // Replace any tour already in progress.
+
+  if ('spotlight' in plan) {
+    // In-page highlight (with any prerequisite clicks first): no persistence —
+    // dismissed by Done, Escape, or navigating away.
+    startSpotlight(plan.spotlight);
+    return;
+  }
 
   if ('alreadyHere' in plan) {
     // The user is already on the destination page (we just can't address it

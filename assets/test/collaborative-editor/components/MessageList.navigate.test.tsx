@@ -87,6 +87,40 @@ describe('MessageList openfn-navigate fences', () => {
     });
   });
 
+  it('includes element in the event detail when the fence names one', async () => {
+    render(
+      <MessageList
+        messages={navigateReply(
+          '{"page": "workflow_edit", "element": "credential-picker"}'
+        )}
+      />
+    );
+
+    await userEvent.click(screen.getByTestId('navigate-button'));
+
+    expect(tour.events).toHaveLength(1);
+    expect(tour.events[0].detail).toEqual({
+      page: 'workflow_edit',
+      element: 'credential-picker',
+      params: { project_id: 'project-123' },
+    });
+  });
+
+  it('drops a non-string element but still dispatches the tour', async () => {
+    render(
+      <MessageList
+        messages={navigateReply('{"page": "workflow_edit", "element": 42}')}
+      />
+    );
+
+    await userEvent.click(screen.getByTestId('navigate-button'));
+
+    expect(tour.events[0].detail).toEqual({
+      page: 'workflow_edit',
+      params: { project_id: 'project-123' },
+    });
+  });
+
   it('renders nothing for malformed or incomplete fence bodies', () => {
     const bodies = [
       '{"page": "project_set', // mid-stream truncation

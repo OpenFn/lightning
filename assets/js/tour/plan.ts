@@ -15,6 +15,20 @@ export interface AppMapTab {
   description: string;
 }
 
+/** A spotlightable control on a page. The target carries
+ * `data-tour-anchor="<id>"` in the DOM. */
+export interface AppMapElement {
+  id: string;
+  label: string;
+  description: string;
+  /** Instruction for when the element is not currently on screen (e.g. it
+   * lives in a panel the user must open first). May be null or absent. */
+  hint?: string | null;
+  /** Id of another element on the SAME page that must be activated first
+   * (e.g. a panel toggle). Chains may nest. */
+  requires?: string | null;
+}
+
 export interface AppMapPage {
   id: string;
   path: string;
@@ -23,11 +37,15 @@ export interface AppMapPage {
   section: AppMapSection;
   description: string;
   tabs?: AppMapTab[];
+  elements?: AppMapElement[];
 }
 
 export interface TourRequest {
   page: string;
   tab?: string;
+  /** App-map element id to spotlight. Only meaningful when the user is
+   * already on the requested page — element requests never navigate. */
+  element?: string;
   params: { project_id?: string };
 }
 
@@ -60,6 +78,24 @@ export interface Arrival {
   tabLabel?: string;
 }
 
+/** One spotlightable element, resolved for the runner: the anchor selector
+ * and the card copy, plus the not-on-screen hint when the app map has one. */
+export interface SpotlightElement {
+  selector: string;
+  label: string;
+  description: string;
+  hint?: string;
+}
+
+/** What the runner highlights for an element request: the prerequisite
+ * elements to activate first (outermost first, often empty) and the final
+ * target. The runner skips prerequisites whose anchors are already on
+ * screen. */
+export interface Spotlight {
+  chain: SpotlightElement[];
+  target: SpotlightElement;
+}
+
 export type TourPlan =
   | {
       steps: Step[];
@@ -69,6 +105,8 @@ export type TourPlan =
     }
   | { fallbackPath: string; arrival: Arrival }
   | { alreadyHere: true; arrival: Arrival }
+  | { wrongPage: true; pageLabel: string }
+  | { spotlight: Spotlight }
   | { error: string };
 
 export interface TourPlanOptions {
@@ -256,6 +294,79 @@ function planUserSection(
   return { steps, arrival, destinationPath };
 }
 
+/** How many `requires` hops we will follow before giving up. */
+const MAX_REQUIRES_DEPTH = 4;
+
+function toSpotlightElement(element: AppMapElement): SpotlightElement {
+  const spotlit: SpotlightElement = {
+    selector: `[data-tour-anchor="${element.id}"]`,
+    label: element.label,
+    description: element.description,
+  };
+  if (typeof element.hint === 'string' && element.hint.length > 0) {
+    spotlit.hint = element.hint;
+  }
+  return spotlit;
+}
+
+/**
+ * Walk the target's `requires` chain, outermost prerequisite first. Guarded
+ * against cycles and capped at MAX_REQUIRES_DEPTH hops; a `requires` naming
+ * an unknown element id is treated as absent (the chain stops there).
+ */
+function requiresChain(
+  page: AppMapPage,
+  target: AppMapElement
+): AppMapElement[] {
+  const chain: AppMapElement[] = [];
+  const seen = new Set<string>([target.id]);
+  let current = target;
+  while (chain.length < MAX_REQUIRES_DEPTH) {
+    const requiredId = current.requires;
+    if (typeof requiredId !== 'string' || seen.has(requiredId)) break;
+    const required = page.elements?.find(e => e.id === requiredId);
+    if (!required) break;
+    chain.unshift(required);
+    seen.add(requiredId);
+    current = required;
+  }
+  return chain;
+}
+
+/**
+ * Plan an element request: spotlight a control on the page the user is
+ * already on. Element requests never produce navigation steps — if the
+ * current path does not match the page's pattern, the answer is "ask again
+ * from there".
+ */
+function planElement(
+  destination: AppMapPage,
+  elementId: string,
+  params: TourRequest['params'],
+  currentPath: string | undefined
+): TourPlan {
+  const element = destination.elements?.find(e => e.id === elementId);
+  if (!element) {
+    return {
+      error: `Unknown element "${elementId}" on page "${destination.id}"`,
+    };
+  }
+
+  // Match the partially-substituted pattern (like the alreadyHere check), so
+  // any params we did substitute must agree with the current path.
+  const resolved = resolvePath(destination.path, params);
+  if (!currentPath || !matchesPathPattern(resolved.path, currentPath)) {
+    return { wrongPage: true, pageLabel: destination.label };
+  }
+
+  return {
+    spotlight: {
+      chain: requiresChain(destination, element).map(toSpotlightElement),
+      target: toSpotlightElement(element),
+    },
+  };
+}
+
 /**
  * Build a tour plan.
  *
@@ -267,8 +378,13 @@ function planUserSection(
  * - `{alreadyHere, arrival}` — the destination has params we cannot fill in,
  *   but `options.currentPath` already matches its pattern: the user is on the
  *   page, so show the arrival card where they stand;
- * - `{error}` — the request cannot be satisfied (unknown page/tab, or a path
- *   parameter we cannot fill in).
+ * - `{spotlight}` — an element request and the user is on the page: highlight
+ *   the control where they stand, walking its `requires` prerequisites first
+ *   when the control is not yet on screen;
+ * - `{wrongPage, pageLabel}` — an element request from some other page: tell
+ *   the user to ask again from the right one;
+ * - `{error}` — the request cannot be satisfied (unknown page/tab/element, or
+ *   a path parameter we cannot fill in).
  */
 export function buildTourPlan(
   pages: AppMapPage[],
@@ -278,6 +394,18 @@ export function buildTourPlan(
   const destination = pages.find(p => p.id === request.page);
   if (!destination) {
     return { error: `Unknown app-map page id "${request.page}"` };
+  }
+
+  // Element requests take a separate, navigation-free path. A non-string
+  // `element` on a forged event is treated as absent (same rule as the
+  // NavigateButton fence parser).
+  if (typeof request.element === 'string') {
+    return planElement(
+      destination,
+      request.element,
+      request.params ?? {},
+      options.currentPath
+    );
   }
 
   let tab: AppMapTab | undefined;

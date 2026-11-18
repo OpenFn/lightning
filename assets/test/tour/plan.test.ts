@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildTourPlan, matchesPathPattern } from '#/tour/plan';
-import type { Step, TourPlan } from '#/tour/plan';
+import type { AppMapPage, Step, TourPlan } from '#/tour/plan';
 
 import { appMapPages } from './fixtures';
 
@@ -335,6 +335,223 @@ describe('buildTourPlan', () => {
       );
 
       expect('steps' in plan).toBe(true);
+    });
+  });
+
+  describe('element requests', () => {
+    const onEditorPage = {
+      currentPath: `/projects/${PROJECT_ID}/w/wf-123`,
+    };
+
+    it('returns a spotlight when the current path matches the page', () => {
+      const plan = buildTourPlan(
+        appMapPages,
+        {
+          page: 'workflow_edit',
+          element: 'credential-picker',
+          params: { project_id: PROJECT_ID },
+        },
+        onEditorPage
+      );
+
+      expect(plan).toEqual({
+        spotlight: {
+          chain: [
+            {
+              selector: '[data-tour-anchor="canvas-step"]',
+              label: 'Workflow step',
+              description: expect.stringContaining('job step node'),
+            },
+          ],
+          target: {
+            selector: '[data-tour-anchor="credential-picker"]',
+            label: 'Credential picker',
+            description: expect.stringContaining('saved credential'),
+            hint: 'Select a step on the canvas to open its configuration panel first.',
+          },
+        },
+      });
+    });
+
+    it('omits hint and plans an empty chain when the element has neither', () => {
+      const plan = buildTourPlan(
+        appMapPages,
+        { page: 'workflow_edit', element: 'run-button', params: {} },
+        onEditorPage
+      );
+
+      expect(plan).toEqual({
+        spotlight: {
+          chain: [],
+          target: {
+            selector: '[data-tour-anchor="run-button"]',
+            label: 'Run button',
+            description: expect.stringContaining('Run the workflow'),
+          },
+        },
+      });
+      expect(
+        'hint' in (plan as { spotlight: { target: object } }).spotlight.target
+      ).toBe(false);
+    });
+
+    it('walks nested requires into an outermost-first chain', () => {
+      const plan = buildTourPlan(
+        appMapPages,
+        { page: 'workflow_edit', element: 'docs-tab', params: {} },
+        onEditorPage
+      );
+
+      expect(plan).toEqual({
+        spotlight: {
+          chain: [
+            expect.objectContaining({
+              selector: '[data-tour-anchor="canvas-step"]',
+            }),
+            expect.objectContaining({
+              selector: '[data-tour-anchor="open-editor"]',
+            }),
+          ],
+          target: expect.objectContaining({
+            selector: '[data-tour-anchor="docs-tab"]',
+            label: 'Docs tab',
+          }),
+        },
+      });
+    });
+
+    describe('requires-chain guards', () => {
+      const guardPage: AppMapPage = {
+        id: 'guard_page',
+        label: 'Guard page',
+        module: 'X',
+        path: '/guard',
+        section: 'user',
+        description: 'Inline fixture for requires-chain edge cases.',
+        elements: [
+          { id: 'a', label: 'A', description: 'a.', requires: 'b' },
+          { id: 'b', label: 'B', description: 'b.', requires: 'a' },
+          { id: 'ghostly', label: 'G', description: 'g.', requires: 'ghost' },
+          { id: 'd1', label: 'D1', description: 'd.', requires: 'd2' },
+          { id: 'd2', label: 'D2', description: 'd.', requires: 'd3' },
+          { id: 'd3', label: 'D3', description: 'd.', requires: 'd4' },
+          { id: 'd4', label: 'D4', description: 'd.', requires: 'd5' },
+          { id: 'd5', label: 'D5', description: 'd.', requires: 'd6' },
+          { id: 'd6', label: 'D6', description: 'd.' },
+        ],
+      };
+
+      const chainOf = (plan: TourPlan): string[] => {
+        if (!('spotlight' in plan)) {
+          throw new Error(`expected a spotlight, got ${JSON.stringify(plan)}`);
+        }
+        return plan.spotlight.chain.map(e => e.selector);
+      };
+
+      const guardRequest = (element: string): TourPlan =>
+        buildTourPlan(
+          [guardPage],
+          { page: 'guard_page', element, params: {} },
+          { currentPath: '/guard' }
+        );
+
+      it('stops a cyclic requires chain instead of looping', () => {
+        expect(chainOf(guardRequest('a'))).toEqual(['[data-tour-anchor="b"]']);
+      });
+
+      it('treats an unknown requires id as absent', () => {
+        expect(chainOf(guardRequest('ghostly'))).toEqual([]);
+      });
+
+      it('caps the chain depth', () => {
+        expect(chainOf(guardRequest('d1'))).toEqual([
+          '[data-tour-anchor="d5"]',
+          '[data-tour-anchor="d4"]',
+          '[data-tour-anchor="d3"]',
+          '[data-tour-anchor="d2"]',
+        ]);
+      });
+    });
+
+    it('errors on an unknown element id', () => {
+      const plan = buildTourPlan(
+        appMapPages,
+        { page: 'workflow_edit', element: 'nope', params: {} },
+        onEditorPage
+      );
+
+      expect(plan).toEqual({
+        error: 'Unknown element "nope" on page "workflow_edit"',
+      });
+    });
+
+    it('errors on an element request for a page without elements', () => {
+      const plan = buildTourPlan(
+        appMapPages,
+        {
+          page: 'project_history',
+          element: 'credential-picker',
+          params: { project_id: PROJECT_ID },
+        },
+        { currentPath: `/projects/${PROJECT_ID}/history` }
+      );
+
+      expect(plan).toEqual({
+        error: 'Unknown element "credential-picker" on page "project_history"',
+      });
+    });
+
+    it('returns wrongPage when the current path does not match the page', () => {
+      const plan = buildTourPlan(
+        appMapPages,
+        {
+          page: 'workflow_edit',
+          element: 'credential-picker',
+          params: { project_id: PROJECT_ID },
+        },
+        { currentPath: `/projects/${PROJECT_ID}/history` }
+      );
+
+      expect(plan).toEqual({ wrongPage: true, pageLabel: 'Workflow editor' });
+    });
+
+    it('returns wrongPage for a matching path shape in another project', () => {
+      const plan = buildTourPlan(
+        appMapPages,
+        {
+          page: 'workflow_edit',
+          element: 'credential-picker',
+          params: { project_id: PROJECT_ID },
+        },
+        { currentPath: '/projects/other-project/w/wf-123' }
+      );
+
+      expect(plan).toEqual({ wrongPage: true, pageLabel: 'Workflow editor' });
+    });
+
+    it('returns wrongPage when no current path is supplied', () => {
+      const plan = buildTourPlan(appMapPages, {
+        page: 'workflow_edit',
+        element: 'credential-picker',
+        params: {},
+      });
+
+      expect(plan).toEqual({ wrongPage: true, pageLabel: 'Workflow editor' });
+    });
+
+    it('does not change page navigation when no element is requested', () => {
+      // workflow_edit now carries elements; a plain page request still plans
+      // exactly as before (alreadyHere via the unresolvable-path route).
+      const plan = buildTourPlan(
+        appMapPages,
+        { page: 'workflow_edit', params: { project_id: PROJECT_ID } },
+        onEditorPage
+      );
+
+      expect(plan).toEqual({
+        alreadyHere: true,
+        arrival: expect.objectContaining({ label: 'Workflow editor' }),
+      });
     });
   });
 

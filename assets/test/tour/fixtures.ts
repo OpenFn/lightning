@@ -22,6 +22,42 @@ export const appMapPages: AppMapPage[] = [
     module: 'LightningWeb.WorkflowLive.Collaborate',
     path: '/projects/:project_id/w/:id',
     section: 'project',
+    elements: [
+      {
+        description:
+          'A job step node on the workflow diagram; click it to open its configuration panel.',
+        id: 'canvas-step',
+        label: 'Workflow step',
+      },
+      {
+        description:
+          'Choose which saved credential the selected step uses to authenticate against the external system it talks to.',
+        hint: 'Select a step on the canvas to open its configuration panel first.',
+        id: 'credential-picker',
+        label: 'Credential picker',
+        requires: 'canvas-step',
+      },
+      {
+        description:
+          'Opens the full-screen editor for the selected step, with code, docs, and run panels.',
+        id: 'open-editor',
+        label: 'Open editor',
+        requires: 'canvas-step',
+      },
+      {
+        description:
+          "Adaptor function documentation for the selected step's adaptor.",
+        id: 'docs-tab',
+        label: 'Docs tab',
+        requires: 'open-editor',
+      },
+      {
+        description:
+          'Run the workflow manually from here, using a custom or existing input.',
+        id: 'run-button',
+        label: 'Run button',
+      },
+    ],
   },
   {
     description:
