@@ -152,6 +152,11 @@ defmodule Lightning.ApolloClient do
       on the Apollo side. Omitted from the wire payload when not supplied.
     - `:attachments` - Run context the user chose to send, as a list of
       `%{"type" => type, "content" => content}` maps (default: `[]`)
+
+  The payload also carries `app_map` — the catalog of user-facing pages from
+  `priv/app_map.json` (see `Lightning.AiAssistant.AppMap`) — so the assistant
+  can tell users where things are. The key is omitted when the artifact
+  cannot be loaded.
   """
   @spec global_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def global_chat_stream(content, opts \\ []) do
@@ -172,6 +177,7 @@ defmodule Lightning.ApolloClient do
         "meta" => meta,
         "metrics_opt_in" => metrics_opt_in,
         "attachments" => attachments,
+        "app_map" => Lightning.AiAssistant.AppMap.fetch(),
         "options" => %{"stream" => true}
       }
       |> Enum.reject(fn {_, v} -> is_nil(v) end)

@@ -335,6 +335,27 @@ defmodule Lightning.ApolloClientTest do
 
       {:ok, _} = ApolloClient.global_chat_stream("hi")
     end
+
+    test "sends the app map as a list of pages" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        app_map = Jason.decode!(env.body)["app_map"]
+
+        assert is_list(app_map) and app_map != []
+
+        for page <- app_map do
+          assert %{"id" => id, "path" => path, "description" => description} =
+                   page
+
+          assert is_binary(id) and is_binary(path) and is_binary(description)
+        end
+
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi")
+    end
   end
 
   # Private helper function to stub Apollo configuration
