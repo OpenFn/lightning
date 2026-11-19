@@ -2,59 +2,51 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
   @moduledoc """
   End-to-end guard on what actually leaves the instance in a span.
 
-  Two independent mechanisms are under test here:
+  Three mechanisms are under test here:
 
-    1. `Lightning.OpenTelemetry.RedactingProcessor`, which rewrites the
-       request-derived attributes at span *start*: `url.path`, `url.query`,
-       and every attribute that can hold an address — `client.address`,
-       `network.peer.address` and `server.address`.
+    1. `Lightning.OpenTelemetry.FilteringExporter`, which wraps the real traces
+       exporter and rewrites every finished span before it is handed on. On
+       the way out it keeps only allowlisted attributes, blanks the status
+       description, and drops links. It runs at export rather than at span
+       start because a span processor cannot see a span's final state:
+       `on_end/2` returns a boolean rather than a span, so attributes set
+       after a span starts, the status and links were all out of a
+       processor's reach.
     2. `event_count_limit: 0`, which stops any span event being recorded at
-       all. This is what keeps `exception.message` out of traces. A span
-       processor cannot touch a span after it starts — `on_end/2` returns a
-       boolean, not a span, per the `:otel_span_processor` behaviour — so
-       redaction is structurally incapable of reaching an exception event,
-       which is added mid-span by `otel_span:record_exception/6`. Suppressing
-       events is.
+       all. This is what keeps `exception.message` out of traces.
+    3. The bootstrap raise on the two OS variables that would undo the first
+       two: `OTEL_TRACES_EXPORTER` replaces the wrapping exporter, and
+       `OTEL_SPAN_EVENT_COUNT_LIMIT` restores events. This file only asserts
+       they are absent from the environment it runs in; the raise itself is
+       tested in `test/lightning/config/bootstrap_test.exs`.
 
-  Every test ends in the same sweep over each string the exported span
-  carries: the string canary, the two IP canaries, and then any token that
-  `:inet` will parse as an address, of either family. That last sweep needs
-  nothing planted in it, which is the point — it covers the loopback peer
-  address, which this test does not get to choose, and an address reaching a
-  field nobody has thought about yet. It parses rather than matching a shape
-  because a regex loose enough to catch IPv6 also catches things like a
-  `12:34:56` timestamp, while `1.11.0` from a user agent has the shape of
-  nothing at all.
+  Every test ends in the same checks over the exported span. Every attribute
+  key must be on the allowlist, and none of the known-sensitive keys may
+  appear. Then a sweep runs over every string the span carries: the string
+  canary, the two IP canaries, and then any token that `:inet` will parse as
+  an address, of either family. That last sweep needs nothing planted in it,
+  which is the point. It covers the loopback peer address, which this test
+  does not get to choose, and an address reaching a field nobody has thought
+  about yet. It parses rather than matching a shape because a regex loose
+  enough to catch IPv6 also catches things like a `12:34:56` timestamp, while
+  `1.11.0` from a user agent has the shape of nothing at all.
+
+  Only cowboy's handler is attached, so Phoenix's `http.route` never reaches
+  these HTTP spans. Attributes set after span start are covered instead by a
+  span built by hand, which is what that handler amounts to: a
+  `set_attributes/2` on a span that has already started.
 
   Where a comment here describes a dependency's behaviour, it was read from
   opentelemetry 1.7.0, opentelemetry_cowboy 1.0.0 and otel_http 0.2.0. They
   name the handler or function responsible rather than a line, so a bump that
   moves code leaves them standing; one that reworks these paths will not.
-
-  Known gap, deliberately not closed here: a span's `status` *description* is
-  a separate field from its attributes and its events, so neither mechanism
-  above reaches it. Redaction rewrites attributes, and a description is not an
-  event. Two things write one:
-
-    * cowboy itself, on the two paths where a request ends without a response
-      of its own: a `[cowboy, request, stop]` with no response status, and a
-      `[cowboy, request, early_error]`. Both pass cowboy's reason term
-      straight through. Those reasons describe the protocol rather than the
-      request, and this file drives neither path: a handled exception arrives
-      as `[cowboy, request, exception]`, which sets an empty description.
-    * `OpentelemetryEcto`, which puts `Exception.message/1` of the driver
-      error in. For Postgrex that message carries the `detail` field, which
-      names column values: the email address a unique violation collided on,
-      say. Only reachable with `TRACING_ECTO_ENABLED`, which is off by
-      default.
-
-  The sweep below covers `status` for both, so switching Ecto spans on in this
-  test's config is the change that would surface the second.
   """
   use ExUnit.Case, async: false
 
   require Record
   require OpenTelemetry.Tracer
+
+  alias Lightning.OpenTelemetry.FilteringExporter
 
   @span_fields Record.extract(
                  :span,
@@ -67,6 +59,39 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     Record.extract(
       :span_limits,
       from_lib: "opentelemetry/include/otel_span.hrl"
+    )
+  )
+
+  # The SDK's own state, read back so that `setup_all` can check the pipeline
+  # actually running rather than the configuration it was given. Both are
+  # private records; `_build/test/lib/opentelemetry/src` symlinks to `deps/`,
+  # so `from_lib` reaches them.
+  #
+  # Extracting from a module rather than a header means `epp` parses the whole
+  # module and every record use in it is expanded. These modules
+  # `-include("otel_span.hrl")`, which lives in `include/`, not beside them
+  # in `src/`. rebar3 adds that directory when it compiles them; nothing adds
+  # it here, so it is passed explicitly. `Record.extract/2` hands options
+  # other than `:from`/`:from_lib` to `:epp.parse_file/2`.
+  @otel_includes [Path.join(:code.lib_dir(:opentelemetry), "include")]
+
+  Record.defrecordp(
+    :tracer_server_state,
+    :state,
+    Record.extract(
+      :state,
+      from_lib: "opentelemetry/src/otel_tracer_server.erl",
+      includes: @otel_includes
+    )
+  )
+
+  Record.defrecordp(
+    :batch_processor_data,
+    :data,
+    Record.extract(
+      :data,
+      from_lib: "opentelemetry/src/otel_batch_processor.erl",
+      includes: @otel_includes
     )
   )
 
@@ -87,20 +112,50 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
   # `server.port` can act as the control for `server.address`.
   @forwarded_port 8443
 
+  # The OS variables the SDK reads that can undo a data protection. Mirrors
+  # the list in `Lightning.Config.Bootstrap`; see the bootstrap tests for the
+  # raise.
+  @bypass_vars ~w(OTEL_TRACES_EXPORTER OTEL_SPAN_EVENT_COUNT_LIMIT)
+
+  # Keys that must never be exported, listed independently of the
+  # allowlist. The allowlist check alone would pass if one of these were
+  # added to the allowlist itself; this list is what makes that a red test
+  # rather than a quiet widening.
+  @denied [
+    :"url.path",
+    :"url.query",
+    :"client.address",
+    :"client.port",
+    :"network.peer.address",
+    :"network.peer.port",
+    :"server.address",
+    :"network.local.address",
+    :"network.local.port",
+    :"network.transport",
+    :"user_agent.original",
+    :"db.url",
+    :"db.statement"
+  ]
+
   @otel_modules [:opentelemetry_cowboy]
 
   import Mox
 
   setup_all do
-    # Do we have processors configured
-    assert Application.get_env(:opentelemetry, :processors),
-           "no :processors configured - nothing to test"
+    # Neither bypass may be in the environment this suite runs in. Bootstrap
+    # would have refused to boot with tracing on, but the suite normally runs
+    # with tracing off, so that raise does not reach here. And an OS value
+    # would beat every `put_env` override below.
+    for var <- @bypass_vars do
+      assert System.get_env(var) == nil,
+             "#{var} is set in the environment - unset it to run this file"
+    end
 
-    # At the time of writing, OpenTelemetry overrides the processors
-    # with whatever is set in :span_processor. This is an early-warning that
-    # our redaction filter is not going to be having any effect.
-    refute Application.get_env(:opentelemetry, :span_processor),
-           "span processor overrides :processors"
+    # The exporter that bootstrap configured, before this file overrides it:
+    # the filter wrapping the real OTLP exporter. If this fails, the
+    # override below would be testing a wiring production does not have.
+    assert {FilteringExporter, %{exporter: {:opentelemetry_exporter, _}}} =
+             Application.get_env(:opentelemetry, :traces_exporter)
 
     # The application-env half of the event suppression. Checked separately
     # from the effective limit below so that a removal from
@@ -111,14 +166,20 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     # Settings to enable tracing that is observable in the test.
     #
+    # The exporter override keeps the filter and swaps only what it wraps. A
+    # bare `{:otel_exporter_pid, ...}` here would replace the filter, and
+    # this file would be testing an unfiltered pipeline.
+    #
     # Deliberately absent: event_count_limit and attribute_value_length_limit.
-    # Those are the settings under test, so they have to arrive from the real
+    # Those are settings under test, so they have to arrive from the real
     # configuration rather than from here.
     overrides =
       [
         sdk_disabled: false,
         sampler: :always_on,
-        traces_exporter: {:otel_exporter_pid, :otel_canary_collector},
+        traces_exporter:
+          {FilteringExporter,
+           %{exporter: {:otel_exporter_pid, :otel_canary_collector}}},
         bsp_scheduled_delay_ms: 50
       ]
 
@@ -135,12 +196,12 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     {:ok, _} = Application.ensure_all_started(:opentelemetry)
 
-    # The *effective* limits, read back after the SDK has started. This is the
-    # assertion that carries the weight, because the OS environment wins over
-    # application config in this SDK an exported OTEL_SPAN_EVENT_COUNT_LIMIT
-    # silently restores exception events, and
-    # OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT would truncate the canary and
-    # turn every sweep below into a vacuous pass.
+    assert_exporting_through_filter()
+
+    # The *effective* limits, read back after the SDK has started.
+    # OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT is not a bypass - it can only
+    # shorten values - but it would truncate a canary and turn every sweep
+    # below into a vacuous pass.
     assert span_limits(
              attribute_value_length_limit: :infinity,
              event_count_limit: 0
@@ -185,15 +246,23 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     assert {:ok, %Finch.Response{status: 200}} = response
 
-    assert_receive {:span, span_rec(kind: :server, attributes: attrs)}, 2_000
+    assert_receive {:span, span_rec(kind: :server, attributes: attrs) = span},
+                   2_000
 
+    # Positive controls: attributes that survive the allowlist. They
+    # straddle the span lifecycle - method at request start, status at
+    # request stop - so together they prove the span started, ended and was
+    # exported through the filter. Without them, every absence assertion in
+    # this file is also satisfied by a span with no attributes at all.
     assert %{
              "http.request.method": :GET,
              "http.response.status_code": 200
            } = :otel_attributes.map(attrs)
+
+    refute_leaks_in(span)
   end
 
-  test "confirm that traces are exported with redaction", %{port: port} do
+  test "a request's path and query string are not exported", %{port: port} do
     response =
       Finch.build(
         :get,
@@ -203,24 +272,19 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     assert {:ok, %Finch.Response{status: 200}} = response
 
-    assert_receive {:span,
-                    span_rec(
-                      kind: :server,
-                      attributes: attrs,
-                      status: status,
-                      events: events
-                    )},
+    assert_receive {:span, span_rec(kind: :server, attributes: attrs) = span},
                    2_000
 
     otel_attrs = :otel_attributes.map(attrs)
 
-    # Confirm that the span has contents
-    assert %{"url.path": "[redacted]", "url.query": "[redacted]"} = otel_attrs
+    # The control: the span is populated, so the absences below are the
+    # filter's doing rather than an empty span's.
+    assert %{"http.request.method": :GET} = otel_attrs
 
-    # Confirm that no attributes were dropped, i.e. this is not a partial export
-    assert :otel_attributes.dropped(attrs) == 0
+    refute Map.has_key?(otel_attrs, :"url.path")
+    refute Map.has_key?(otel_attrs, :"url.query")
 
-    refute_leaks_in(otel_attrs, status, events)
+    refute_leaks_in(span)
   end
 
   test "a caller's IPv4 address does not leave in a span", %{port: port} do
@@ -238,60 +302,41 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     assert {:ok, %Finch.Response{status: 200}} = response
 
-    assert_receive {:span,
-                    span_rec(
-                      kind: :server,
-                      attributes: attrs,
-                      status: status,
-                      events: events
-                    )},
+    assert_receive {:span, span_rec(kind: :server, attributes: attrs) = span},
                    2_000
 
     otel_attrs = :otel_attributes.map(attrs)
 
     # The control, and the only reason `x-forwarded-proto` is sent at all.
     #
-    # Redaction erases provenance: once `client.address` reads "[redacted]",
-    # the span no longer says whether it held the address from our header or
-    # the socket peer that cowboy's `extract_client_address/2` falls back to
-    # when no forwarded header parses. A header name this test got wrong would
+    # The filter erases provenance: once `client.address` is absent, the span
+    # no longer says whether cowboy took the address from our header or from
+    # the socket peer that `extract_client_address/2` falls back to when no
+    # forwarded header parses. A header name this test got wrong would
     # therefore look exactly like a pass, and the canary would be proving
     # nothing.
     #
     # `url.scheme` comes from the sibling forwarded header through the same
-    # `otel_http` extraction, in cowboy's `extract_scheme/2`, and is not
-    # redacted - it is `http` or `https` and carries no caller data. An
+    # `otel_http` extraction, in cowboy's `extract_scheme/2`, and is
+    # allowlisted - it is `http` or `https` and carries no caller data. An
     # `https` here, on a request actually made over `http`, is what proves the
     # forwarded headers this test sends are reaching the instrumentation.
     assert %{"url.scheme": :https} = otel_attrs
 
-    # Both address attributes cowboy sets at span start: `client.address` is
-    # the forwarded address, `network.peer.address` is always the real socket
-    # peer, whatever a header claims. The keys
-    # have to still be there - an absent key would satisfy the sweep below
-    # while saying nothing about redaction.
-    assert %{
-             "client.address": "[redacted]",
-             "network.peer.address": "[redacted]"
-           } = otel_attrs
+    # `server.port` falls out of the same parse of the forwarded host as
+    # `server.address`, and is allowlisted, so it is the control for that
+    # half: the forwarded port arriving proves the header was read and its
+    # address dropped, rather than the header having been ignored.
+    assert %{"server.port": @forwarded_port} = otel_attrs
 
-    # `server.address` is the instance's own address rather than the caller's,
-    # but cowboy's `extract_server_address/2` reads it from a header the
-    # caller supplies, so an IP in it is an IP a caller chose - which is why
-    # it is redacted too, and why the canary above is sent as the forwarded
-    # host as well as the forwarded client.
-    #
-    # `server.port` falls out of the same parse and is not redacted, so it is
-    # the control for this half: the forwarded port arriving proves the header
-    # was read and its address scrubbed, rather than the header having been
-    # ignored and the real host left to stand.
-    assert %{"server.address": "[redacted]", "server.port": @forwarded_port} =
-             otel_attrs
+    # All three address attributes cowboy sets at span start: the forwarded
+    # client, the real socket peer, and our own address as the caller named
+    # it in the forwarded host.
+    refute Map.has_key?(otel_attrs, :"client.address")
+    refute Map.has_key?(otel_attrs, :"network.peer.address")
+    refute Map.has_key?(otel_attrs, :"server.address")
 
-    # Confirm that no attributes were dropped, i.e. this is not a partial export
-    assert :otel_attributes.dropped(attrs) == 0
-
-    refute_leaks_in(otel_attrs, status, events)
+    refute_leaks_in(span)
   end
 
   test "a caller's IPv6 address does not leave in a span", %{port: port} do
@@ -302,7 +347,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     # the clause that parses one matches on the two empty leading segments the
     # quotes produce, and a bare or merely bracketed address falls through to
     # `{undefined, undefined}`. That is also the trap in this test - an
-    # unparsed address sends cowboy back to the socket peer, which is redacted
+    # unparsed address sends cowboy back to the socket peer, which is dropped
     # too, so a mangled header here passes while proving nothing. `proto`
     # below is the guard against the header as a whole being wrong; nothing
     # can vouch for the `for` directive alone.
@@ -321,13 +366,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     assert {:ok, %Finch.Response{status: 200}} = response
 
-    assert_receive {:span,
-                    span_rec(
-                      kind: :server,
-                      attributes: attrs,
-                      status: status,
-                      events: events
-                    )},
+    assert_receive {:span, span_rec(kind: :server, attributes: attrs) = span},
                    2_000
 
     otel_attrs = :otel_attributes.map(attrs)
@@ -336,20 +375,15 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     # header this time.
     assert %{"url.scheme": :https} = otel_attrs
 
-    # What this test adds is reach, not a second redaction path: the processor
-    # rewrites by attribute *key*, so the family of the value never enters
-    # into it. What the family does change is everything around that - whether
-    # the sweep below can recognise an address at all, and whether some
-    # downstream renders one into a field redaction cannot reach.
-    assert %{
-             "client.address": "[redacted]",
-             "network.peer.address": "[redacted]"
-           } = otel_attrs
+    # What this test adds is reach, not a second filtering path: the filter
+    # works by attribute *key*, so the family of the value never enters into
+    # it. What the family does change is everything around that - whether the
+    # sweep below can recognise an address at all, and whether some
+    # downstream renders one into a field the filter does not reach.
+    refute Map.has_key?(otel_attrs, :"client.address")
+    refute Map.has_key?(otel_attrs, :"network.peer.address")
 
-    # Confirm that no attributes were dropped, i.e. this is not a partial export
-    assert :otel_attributes.dropped(attrs) == 0
-
-    refute_leaks_in(otel_attrs, status, events)
+    refute_leaks_in(span)
   end
 
   test "a request that produces an error does not leak the canary", %{
@@ -366,7 +400,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
           {"content-type", "application/x-nope"},
           # The address rides along on the provocation too: the exception path
           # is where a request's data is most likely to be re-rendered into
-          # somewhere attribute redaction cannot reach.
+          # somewhere the filter does not reach.
           {"x-forwarded-for", @canary_ipv4}
         ],
         "body_text"
@@ -376,17 +410,11 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     assert {:ok, %Finch.Response{status: 403}} = response
 
     assert_receive {:span,
-                    span_rec(
-                      kind: :server,
-                      attributes: attrs,
-                      status: status,
-                      events: events
-                    )},
+                    span_rec(kind: :server, attributes: attrs, events: events) =
+                      span},
                    2_000
 
     otel_attrs = :otel_attributes.map(attrs)
-
-    assert %{"url.path": "[redacted]", "url.query": "[redacted]"} = otel_attrs
 
     # Pin the provocation. Cowboy's exception handler sets `error.type` to the
     # bare exception struct module rather than a formatted string, so this is
@@ -394,6 +422,9 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     # a future change that raises something else — or nothing — leaves the
     # assertions below green while testing nothing: a request that never raised
     # has no exception event to suppress either.
+    #
+    # `error.type` is set after the span starts, so this is also an
+    # allowlisted late attribute surviving the filter end to end.
     assert %{"error.type": Plug.CSRFProtection.InvalidCSRFTokenError} =
              otel_attrs
 
@@ -418,7 +449,110 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     assert :otel_events.dropped(events) > 0,
            "no event was offered - this test is not exercising suppression"
 
-    refute_leaks_in(otel_attrs, status, events)
+    refute_leaks_in(span)
+  end
+
+  test "a caller's traceparent is not exported as a link", %{port: port} do
+    injected_trace_id = "decafbaddecafbaddecafbaddecafbad"
+
+    response =
+      Finch.build(
+        :get,
+        "http://localhost:#{port}/health_check",
+        [{"traceparent", "00-#{injected_trace_id}-1111111111111111-01"}]
+      )
+      |> Finch.request(Lightning.Finch)
+
+    assert {:ok, %Finch.Response{status: 200}} = response
+
+    assert_receive {:span,
+                    span_rec(
+                      kind: :server,
+                      trace_id: trace_id,
+                      parent_span_id: parent_span_id,
+                      links: links
+                    ) = span},
+                   2_000
+
+    # `public_endpoint: true` in force: the caller's context did not become
+    # the parent, so the span is a fresh root on a trace of our own.
+    assert parent_span_id == :undefined
+    refute trace_id == String.to_integer(injected_trace_id, 16)
+
+    # With `public_endpoint: true`, cowboy records the caller's context as a
+    # link instead, so the link's trace and span ids are the caller's choice.
+    # The filter drops links.
+    #
+    # Once the link is dropped, nothing in the exported span can prove the
+    # header was parsed. The evidence is this test's red state against code
+    # that does not drop links: it fails on this assertion, with the link
+    # present.
+    assert :otel_links.list(links) == [],
+           "a link was exported - a caller can choose its trace id"
+
+    refute_leaks_in(span)
+  end
+
+  test "attributes set after a span starts are filtered too" do
+    # `on_start` redaction could never reach these: Phoenix's `http.route`,
+    # cowboy's response status and `error.type`, and anything Lightning's own
+    # code adds with `set_attributes/2`. This is the case the move to the
+    # exporter exists for.
+    span_ctx = OpenTelemetry.Tracer.start_span(:canary_late_attributes)
+
+    OpenTelemetry.Span.set_attributes(span_ctx, %{
+      # Allowlisted, so it must survive: the control.
+      "http.route": "/canary/:id",
+      # Not allowlisted: an attribute nobody has reviewed yet.
+      "lightning.canary": @canary,
+      # Denied, and set late, as a careless handler might.
+      "client.address": @canary_ipv4
+    })
+
+    :otel_span.end_span(span_ctx)
+
+    assert_receive {:span,
+                    span_rec(name: :canary_late_attributes, attributes: attrs) =
+                      span},
+                   2_000
+
+    otel_attrs = :otel_attributes.map(attrs)
+
+    assert %{"http.route": "/canary/:id"} = otel_attrs
+    refute Map.has_key?(otel_attrs, :"lightning.canary")
+    refute Map.has_key?(otel_attrs, :"client.address")
+
+    refute_leaks_in(span)
+  end
+
+  test "a span's status description does not leave the instance" do
+    # OpentelemetryEcto puts the driver's error message in the status, and for
+    # Postgrex that carries the `detail` field - the value a unique violation
+    # collided on, say. Cowboy puts its reason term there on the two paths
+    # where a request ends without a response. A span built by hand is the
+    # stand-in for both: neither is reachable from this file without
+    # switching on Ecto spans or breaking a connection mid-request.
+    span_ctx = OpenTelemetry.Tracer.start_span(:canary_status)
+
+    OpenTelemetry.Span.set_status(
+      span_ctx,
+      :opentelemetry.status(
+        :error,
+        "duplicate key #{@canary} from #{@canary_ipv4} and [#{@canary_ipv6}]"
+      )
+    )
+
+    :otel_span.end_span(span_ctx)
+
+    assert_receive {:span,
+                    span_rec(name: :canary_status, status: status) = span},
+                   2_000
+
+    # The code survives - a trace still says the span failed - and only the
+    # description is blanked.
+    assert {:status, :error, ""} = status
+
+    refute_leaks_in(span)
   end
 
   test "no caller of record_exception can attach an event to a span" do
@@ -456,12 +590,8 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     :otel_span.end_span(span_ctx)
 
     assert_receive {:span,
-                    span_rec(
-                      name: :canary_record_exception,
-                      attributes: attrs,
-                      status: status,
-                      events: events
-                    )},
+                    span_rec(name: :canary_record_exception, events: events) =
+                      span},
                    2_000
 
     assert :otel_events.list(events) == [],
@@ -470,10 +600,67 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     assert :otel_events.dropped(events) > 0,
            "no event was offered - this test is not exercising suppression"
 
-    refute_leaks_in(:otel_attributes.map(attrs), status, events)
+    refute_leaks_in(span)
   end
 
-  defp refute_leaks_in(attrs_map, status, events) do
+  # The exporter the running batch processor holds, as opposed to the one the
+  # application env asks for. Two things separate them. The SDK merges OS
+  # variables over the app env when it starts. And an exporter whose `init/1`
+  # raises or returns `:ignore` leaves the processor holding `undefined`, with
+  # span inserts switched off. That fails every test below as an
+  # `assert_receive` timeout that names no cause.
+  #
+  # The processor is found through the global tracer provider's list of
+  # processors it started, which records the name each one registered under.
+  # That avoids hardcoding `otel_batch_processor_global`, a name that exists
+  # only because of the SDK's deprecated single-processor `set_exporter` hack.
+  #
+  # A batch processor's state-enter callback initialises its exporter before
+  # the process handles any message, so this is safe to call as soon as
+  # `ensure_all_started` returns.
+  defp assert_exporting_through_filter do
+    tracer_server_state(processors: processors) =
+      :sys.get_state(:otel_tracer_provider_global)
+
+    assert [{:otel_batch_processor, %{reg_name: reg_name}}] = processors
+
+    {_state_name,
+     batch_processor_data(exporter_config: config, exporter: exporter)} =
+      :sys.get_state(reg_name)
+
+    # What was asked for, after the OS-env merge.
+    assert {FilteringExporter,
+            %{exporter: {:otel_exporter_pid, :otel_canary_collector}}} = config
+
+    # What `otel_exporter:init/1` made of it: `{Module, State}`, where the
+    # filter's state is the inner exporter and that exporter's own state.
+    assert match?(
+             {FilteringExporter, {:otel_exporter_pid, :otel_canary_collector}},
+             exporter
+           ),
+           "the batch processor is not exporting through FilteringExporter: " <>
+             inspect(exporter)
+  end
+
+  # Every exported span gets the same treatment, whatever the test asserted
+  # first.
+  #
+  # There is deliberately no `:otel_attributes.dropped/1 == 0` check. The
+  # filter rebuilds the attribute record, which resets the counter, so the
+  # check would always pass. And an attribute dropped at the count limit is
+  # not exported, so it cannot leak.
+  defp refute_leaks_in(
+         span_rec(
+           attributes: attrs,
+           status: status,
+           events: events,
+           links: links
+         )
+       ) do
+    attrs_map = :otel_attributes.map(attrs)
+
+    assert_only_allowed(attrs_map)
+
     for {key, value} <- attrs_map,
         scanned <- scannable(key) ++ scannable(value) do
       refute_leak(scanned, "attribute #{inspect(key)} => #{inspect(value)}")
@@ -485,11 +672,34 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
       refute_leak(scanned, "span status: #{inspect(status)}")
     end
 
-    recorded = :otel_events.list(events)
+    recorded_events = :otel_events.list(events)
 
-    for scanned <- terms(recorded) do
-      refute_leak(scanned, "span events: #{inspect(recorded)}")
+    for scanned <- terms(recorded_events) do
+      refute_leak(scanned, "span events: #{inspect(recorded_events)}")
     end
+
+    recorded_links = :otel_links.list(links)
+
+    for scanned <- terms(recorded_links) do
+      refute_leak(scanned, "span links: #{inspect(recorded_links)}")
+    end
+  end
+
+  # Two checks, against two independent lists. The allowlist comes from the
+  # filter itself, so this proves the wiring; its contents are pinned by
+  # `filtering_exporter_test.exs`. The denied list lives here, so widening the
+  # allowlist to cover one of its keys fails this file as well.
+  defp assert_only_allowed(attrs_map) do
+    allowed = FilteringExporter.allowed_attributes()
+
+    outside =
+      attrs_map |> Map.keys() |> Enum.reject(&(&1 in allowed)) |> Enum.sort()
+
+    assert outside == [], "attributes outside the allowlist: #{inspect(outside)}"
+
+    denied = attrs_map |> Map.keys() |> Enum.filter(&(&1 in @denied))
+
+    assert denied == [], "denied attributes exported: #{inspect(denied)}"
   end
 
   # The sweeps, run over every string the span carries. The canary checks are
@@ -538,6 +748,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
       &((Function.info(&1.function, :module) |> elem(1)) in @otel_modules)
     )
     |> Enum.map(& &1.id)
+    |> Enum.uniq()
   end
 
   # Attribute values get the strict treatment: an unrecognised value type is a
@@ -560,10 +771,10 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     flunk("unhandled attribute value type: #{inspect(value)}")
   end
 
-  # Statuses and events are arbitrary nested terms — records, which are tuples,
-  # holding further records — so this walk is tolerant where `scannable/1` is
-  # strict: the goal is to reach every string in the structure, not to
-  # enumerate the shapes it can take.
+  # Statuses, events and links are arbitrary nested terms — records, which
+  # are tuples, holding further records — so this walk is tolerant where
+  # `scannable/1` is strict: the goal is to reach every string in the
+  # structure, not to enumerate the shapes it can take.
   defp terms(term) when is_binary(term), do: [term]
   defp terms(term) when is_atom(term), do: [Atom.to_string(term)]
   defp terms(term) when is_tuple(term), do: term |> Tuple.to_list() |> terms()
