@@ -256,4 +256,50 @@ defmodule Lightning.Configtest do
       end
     end
   end
+
+  describe "open telemetry functionality" do
+    test "indicates if open telemetry is enabled" do
+      prev = Application.get_env(:lightning, :otel)
+
+      try do
+        Application.put_env(:lightning, :otel, enabled: true)
+        assert API.otel_enabled?() == true
+
+        Application.put_env(:lightning, :otel, enabled: false)
+        assert API.otel_enabled?() == false
+
+        Application.put_env(:lightning, :otel, [])
+        assert API.otel_enabled?() == false
+
+        Application.delete_env(:lightning, :otel)
+        assert API.otel_enabled?() == false
+      after
+        if prev,
+          do: Application.put_env(:lightning, :otel, prev),
+          else: Application.delete_env(:lightning, :otel)
+      end
+    end
+
+    test "indicates if open telemetry is enabled for Ecto" do
+      prev = Application.get_env(:lightning, :otel)
+
+      try do
+        Application.put_env(:lightning, :otel, ecto_enabled: true)
+        assert API.otel_ecto_enabled?() == true
+
+        Application.put_env(:lightning, :otel, ecto_enabled: false)
+        assert API.otel_ecto_enabled?() == false
+
+        Application.put_env(:lightning, :otel, [])
+        assert API.otel_ecto_enabled?() == false
+
+        Application.delete_env(:lightning, :otel)
+        assert API.otel_ecto_enabled?() == false
+      after
+        if prev,
+          do: Application.put_env(:lightning, :otel, prev),
+          else: Application.delete_env(:lightning, :otel)
+      end
+    end
+  end
 end

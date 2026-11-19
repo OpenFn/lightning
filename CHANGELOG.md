@@ -55,6 +55,9 @@ and this project adheres to
   [SERVICE_ACCOUNTS.md](SERVICE_ACCOUNTS.md) walks through setting up the
   service account and using it to create the first superuser and project on a
   new instance. [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- Initial implementation of OpenTelemetry, with an emphasis on security over
+  observability. Future iterations will address extending observability.
+  [#4892](https://github.com/OpenFn/lightning/issues/4892)
 
 ### Changed
 
