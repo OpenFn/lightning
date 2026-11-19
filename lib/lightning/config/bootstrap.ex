@@ -1327,10 +1327,12 @@ defmodule Lightning.Config.Bootstrap do
     config :opentelemetry,
       sdk_disabled: disabled?,
       processors: [
-        {Lightning.OpenTelemetry.RedactingProcessor, %{}},
         {:otel_batch_processor, %{}}
       ],
-      traces_exporter: :otlp,
+      traces_exporter: {
+        Lightning.OpenTelemetry.FilteringExporter,
+        %{exporter: {:opentelemetry_exporter, %{}}}
+      },
       sampler: {:parent_based, %{root: {:trace_id_ratio_based, 0.05}}},
       resource: %{
         service: %{
