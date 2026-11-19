@@ -105,6 +105,7 @@ and this project adheres to
 - The AI Assistant panel no longer runs off the right edge of the screen on
   smaller laptops, and the workflow editor's header and job editor toolbar no
   longer overlap when the panel is open.
+  [#5285](https://github.com/OpenFn/lightning/pull/5285)
 
 ### Security
 
