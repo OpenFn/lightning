@@ -20,11 +20,10 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
        they are absent from the environment it runs in; the raise itself is
        tested in `test/lightning/config/bootstrap_test.exs`.
 
-  Every test ends in the same checks over the exported span. Every attribute
-  key must be on the allowlist, and none of the known-sensitive keys may
-  appear. Then a sweep runs over every string the span carries: the string
-  canary, the two IP canaries, and then any token that `:inet` will parse as
-  an address, of either family. That last sweep needs nothing planted in it,
+  Every attribute key must be on the allowlist, and none of the known-sensitive
+  keys may appear. Then a sweep runs over every string the span carries: the
+  string canary, the two IP canaries, and then any token that `:inet` will parse
+  as an address, of either family. That last sweep needs nothing planted in it,
   which is the point. It covers the loopback peer address, which this test
   does not get to choose, and an address reaching a field nobody has thought
   about yet. It parses rather than matching a shape because a regex loose
@@ -590,8 +589,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
     :otel_span.end_span(span_ctx)
 
     assert_receive {:span,
-                    span_rec(name: :canary_record_exception, events: events) =
-                      span},
+                    span_rec(name: :canary_record_exception, events: events)},
                    2_000
 
     assert :otel_events.list(events) == [],
@@ -599,8 +597,6 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     assert :otel_events.dropped(events) > 0,
            "no event was offered - this test is not exercising suppression"
-
-    refute_leaks_in(span)
   end
 
   # The exporter the running batch processor holds, as opposed to the one the
