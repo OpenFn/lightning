@@ -830,11 +830,12 @@ export function FullScreenIDE({
 
       {/* IDE Heading Bar */}
       <div className="flex-none bg-white border-b border-gray-200">
-        <div className="flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+        {/* Wraps instead of overlapping when the AI panel leaves it narrow. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 flex-[1_1_30rem] min-w-0">
             {/* Job Selector - show when workflow loaded, even if no job selected */}
             {workflow && (
-              <div className="shrink-0">
+              <div className="flex-[1_1_5rem] min-w-0 max-w-max">
                 <JobSelector
                   currentJob={currentJob}
                   jobs={sortedJobs}
@@ -894,7 +895,7 @@ export function FullScreenIDE({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
             {/* History button - always visible, disabled during submitting/processing */}
             <Tooltip
               content={<ShortcutKeys keys={['mod', 'h']} />}
