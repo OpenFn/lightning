@@ -25,8 +25,10 @@ export function JobSelector({ currentJob, jobs, onChange }: JobSelectorProps) {
   return (
     <Listbox value={currentJob} onChange={onChange}>
       <div className="relative">
-        <ListboxButton className="flex items-center font-medium text-sm text-gray-500 hover:text-gray-700 cursor-pointer">
-          <span>{currentJob?.name || 'Select a job'}</span>
+        <ListboxButton className="flex max-w-full items-center font-medium text-sm text-gray-500 hover:text-gray-700 cursor-pointer">
+          <span className="truncate" title={currentJob?.name}>
+            {currentJob?.name || 'Select a job'}
+          </span>
           <span className="hero-chevron-up-down w-4 h-4 ml-1 flex-shrink-0" />
         </ListboxButton>
         <ListboxOptions

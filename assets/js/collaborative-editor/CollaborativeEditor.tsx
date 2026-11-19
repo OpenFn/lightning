@@ -490,23 +490,27 @@ export const CollaborativeEditor: WithActionProps<
                           firstTriggerIdFallback: firstTriggerId,
                         })}
                       />
-                      <div className="flex-1 min-h-0 overflow-hidden relative">
-                        <LoadingBoundary>
-                          <div className="h-full w-full">
-                            <WorkflowEditor
-                              parentProjectId={rootProjectId}
-                              parentProjectName={rootProjectName}
-                            />
-                          </div>
-                        </LoadingBoundary>
+                      {/* The panel sits below the header so the header keeps
+                          the full width on narrow screens. */}
+                      <div className="flex-1 min-h-0 flex">
+                        <div className="flex-1 min-w-0 overflow-hidden relative">
+                          <LoadingBoundary>
+                            <div className="h-full w-full">
+                              <WorkflowEditor
+                                parentProjectId={rootProjectId}
+                                parentProjectName={rootProjectName}
+                              />
+                            </div>
+                          </LoadingBoundary>
+                          <LandingScreenWrapper
+                            aiAssistantEnabled={aiAssistantEnabled}
+                          />
+                        </div>
+                        <AIAssistantPanelWrapper
+                          aiAssistantEnabled={aiAssistantEnabled}
+                        />
                       </div>
-                      <LandingScreenWrapper
-                        aiAssistantEnabled={aiAssistantEnabled}
-                      />
                     </div>
-                    <AIAssistantPanelWrapper
-                      aiAssistantEnabled={aiAssistantEnabled}
-                    />
                   </MonacoRefProvider>
                 </CredentialModalProvider>
               </LiveViewActionsProvider>
