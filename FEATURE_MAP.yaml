@@ -39,8 +39,8 @@ scenarios:
   auth.sudo_expired: Action needs recent re-authentication and actor has none
   # State of the target
   project.sandbox: Target project is a sandbox (has a parent)
-  workflow.live: Workflow is live (triggers enabled; read-only in a root project)
-  workflow.draft: Workflow is a draft (triggers disabled)
+  workflow.live: Workflow is live
+  trigger.disabled: The trigger is turned off
   workflow.concurrent_edit: Another user saved since the actor loaded it
   record.missing: Target record does not exist
   record.scheduled_for_deletion: Target record is scheduled for deletion
@@ -115,7 +115,7 @@ areas:
         version: v2.x
         scenarios: [instance.feature_off, record.scheduled_for_deletion]
         requirements:
-          - Matches an existing account by verified email; never creates one
+          - Matches an existing account by email; never creates one
       - id: ACCESS-05
         story: User can reset a forgotten password
         version: v2.x
@@ -190,7 +190,6 @@ areas:
         scenarios: [actor.superuser]
         requirements:
           - Account is disabled and its sessions and tokens revoked at once; it is purged later with its credentials
-          - Users who created runs stay disabled and are never purged
       - id: PROFILE-13
         story: User can opt in to experimental features
         version: v2.x
@@ -288,14 +287,12 @@ areas:
           - Deletion is scheduled; collaborators lose access and the project's triggers stop at once
           - Every collaborator is emailed
           - Purging removes its sandboxes, workflows and history
-          - Deleting a sandbox is immediate and takes its own sandboxes with it
       - id: PROJECT-05
         story: Admin can require multi-factor authentication for a project
         version: v2.x
         scenarios: [project.sandbox]
         requirements:
           - Collaborators without MFA are kept out until they set it up
-          - Sandboxes inherit the setting from their parent
       - id: PROJECT-06
         story: Admin can allow or deny support-user access to a project
         version: v2.x
@@ -308,7 +305,6 @@ areas:
         requirements:
           - Separate periods for history and for input/output data, including keeping no data
           - Data older than the period is erased
-          - Admins are emailed when it changes
       - id: PROJECT-09
         story: Viewer can turn failure alerts on or off for themselves in a project
         version: v2.x
@@ -451,8 +447,6 @@ areas:
       - id: WORKFLOW-02
         story: Editor can create a blank workflow
         version: v2.x
-        requirements:
-          - Starts as a draft with triggers off
       - id: WORKFLOW-03
         story: Editor can create a workflow from a template
         version: v2.x
@@ -466,7 +460,7 @@ areas:
         version: v2.x
         scenarios: [workflow.live]
         requirements:
-          - Opens read-only, with a warning, for viewers and for live workflows
+          - Opens read-only for viewers
           - Shows who else is editing
       - id: WORKFLOW-06
         story: Editor can add a job
@@ -563,14 +557,14 @@ areas:
       - id: RUN-01
         story: Webhook caller can start a workflow by sending a request
         version: v2.x
-        scenarios: [workflow.draft, webhook.auth_failed]
+        scenarios: [trigger.disabled, webhook.auth_failed]
         requirements:
           - Creates a work order and a run with the request body as input
           - Refused requests create no run
       - id: RUN-02
         story: System can start a workflow on its cron schedule
         version: v2.x
-        scenarios: [workflow.draft]
+        scenarios: [trigger.disabled]
         requirements:
           - Input is the final state of the last successful run
       - id: RUN-03
@@ -737,17 +731,18 @@ areas:
           - Needs editor on the target
           - Choose which workflows, credentials and collections to bring across
           - Warns when the target changed since the sandbox was made
-          - The sandbox is deleted afterwards
+          - The sandbox is scheduled for deletion afterwards
       - id: SANDBOX-06
         story: Editor can open a live workflow for editing in a sandbox
         version: v2.x
-        requirements:
-          - Creates a new sandbox
       - id: SANDBOX-07
         story: Editor can promote a workflow from a sandbox to its parent
         version: v2.x
         requirements:
           - Records a release on the parent workflow
+      - id: SANDBOX-08
+        story: Admin can restore a sandbox scheduled for deletion
+        version: v2.x
 
   - id: GITHUB
     name: Syncing with GitHub
@@ -805,6 +800,9 @@ areas:
         requirements:
           - Deleting all items needs admin
           - Deleting a missing item is not an error
+      - id: COLLECTION-06
+        story: Admin can rename a collection
+        version: v2.x
 
   - id: CHANNEL
     name: Proxying through channels
@@ -833,7 +831,7 @@ areas:
         version: v2.x
         requirements:
           - Clients must match one of the channel's auth methods, if it has any
-          - Each request is logged with its outcome
+          - Each forwarded request is logged with its outcome
       - id: CHANNEL-06
         story: Viewer can review a channel's request log
         version: v2.x
