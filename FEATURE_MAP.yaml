@@ -46,7 +46,6 @@ scenarios:
   record.scheduled_for_deletion: Target record is scheduled for deletion
   webhook.auth_failed: Request lacks valid credentials for the trigger's webhook auth
   # Instance configuration
-  instance.limit_exceeded: A usage limit for this action is reached
   instance.feature_off: The instance has the feature disabled or unconfigured (e.g. signup, AI, GitHub)
 
 cross_cutting_scenarios:
@@ -293,7 +292,7 @@ areas:
       - id: PROJECT-05
         story: Admin can require multi-factor authentication for a project
         version: v2.x
-        scenarios: [instance.limit_exceeded, project.sandbox]
+        scenarios: [project.sandbox]
         requirements:
           - Collaborators without MFA are kept out until they set it up
           - Sandboxes inherit the setting from their parent
@@ -313,7 +312,6 @@ areas:
       - id: PROJECT-09
         story: Viewer can turn failure alerts on or off for themselves in a project
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Each collaborator can only change their own setting
       - id: PROJECT-10
@@ -324,7 +322,6 @@ areas:
       - id: PROJECT-11
         story: Viewer receives an email when a run fails in their project
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Only collaborators who turned failure alerts on are emailed
       - id: PROJECT-12
@@ -336,7 +333,7 @@ areas:
       - id: PROJECT-14
         story: Admin can create or update a project from a provisioning document
         version: v2.x
-        scenarios: [actor.superuser, actor.service_account, instance.limit_exceeded]
+        scenarios: [actor.superuser, actor.service_account]
         requirements:
           - Creating a new project needs a superuser
           - Workflows, channels and collections in the document are created or updated; records are removed only when marked for deletion
@@ -351,14 +348,12 @@ areas:
       - id: COLLAB-02
         story: Admin can add an existing user to a project
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Cannot be added as owner
           - Each added user is emailed
       - id: COLLAB-03
         story: Admin can invite someone without an account to a project
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Creates their account and adds them to the project at once, and emails them a link to set a password
       - id: COLLAB-04
@@ -456,7 +451,6 @@ areas:
       - id: WORKFLOW-02
         story: Editor can create a blank workflow
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Starts as a draft with triggers off
       - id: WORKFLOW-03
@@ -522,7 +516,7 @@ areas:
       - id: WORKFLOW-16
         story: Editor can take a workflow live
         version: v2.x
-        scenarios: [instance.limit_exceeded, project.sandbox]
+        scenarios: [project.sandbox]
         requirements:
           - Enables its triggers and records a release
       - id: WORKFLOW-17
@@ -569,27 +563,25 @@ areas:
       - id: RUN-01
         story: Webhook caller can start a workflow by sending a request
         version: v2.x
-        scenarios: [workflow.draft, instance.limit_exceeded, webhook.auth_failed]
+        scenarios: [workflow.draft, webhook.auth_failed]
         requirements:
           - Creates a work order and a run with the request body as input
           - Refused requests create no run
       - id: RUN-02
         story: System can start a workflow on its cron schedule
         version: v2.x
-        scenarios: [workflow.draft, instance.limit_exceeded]
+        scenarios: [workflow.draft]
         requirements:
           - Input is the final state of the last successful run
       - id: RUN-03
         story: Editor can run a workflow manually with chosen input
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Input can be empty, custom, or an existing dataclip
           - Unsaved changes are saved first
       - id: RUN-04
         story: Editor can rerun a workflow from a chosen step
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Uses that step's original input and adds a run to the same work order
           - Refused when that input has been erased
@@ -657,7 +649,6 @@ areas:
       - id: HISTORY-03
         story: Editor can retry many work orders at once
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - From the start or from a chosen step
           - Work orders whose input was erased are skipped and reported
@@ -693,13 +684,13 @@ areas:
       - id: AI-01
         story: Viewer can ask the AI assistant about a job's code
         version: v2.x
-        scenarios: [instance.feature_off, instance.limit_exceeded]
+        scenarios: [instance.feature_off]
         requirements:
           - Can include the logs and data of the run being viewed
       - id: AI-02
         story: Viewer can ask the AI assistant to design or change a workflow
         version: v2.x
-        scenarios: [instance.feature_off, instance.limit_exceeded]
+        scenarios: [instance.feature_off]
       - id: AI-03
         story: Editor can apply the assistant's suggested changes
         version: v2.x
@@ -715,7 +706,6 @@ areas:
       - id: AI-05
         story: Viewer can retry a failed assistant message
         version: v2.x
-        scenarios: [instance.limit_exceeded]
 
   - id: SANDBOX
     name: Working in sandboxes
@@ -724,7 +714,6 @@ areas:
       - id: SANDBOX-01
         story: Editor can create a sandbox from a project
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Copies workflows, credential links and collaborators; collections arrive empty
       - id: SANDBOX-02
@@ -744,7 +733,6 @@ areas:
       - id: SANDBOX-05
         story: Admin can merge a sandbox into another project in its workspace
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Needs editor on the target
           - Choose which workflows, credentials and collections to bring across
@@ -753,13 +741,11 @@ areas:
       - id: SANDBOX-06
         story: Editor can open a live workflow for editing in a sandbox
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Creates a new sandbox
       - id: SANDBOX-07
         story: Editor can promote a workflow from a sandbox to its parent
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Records a release on the parent workflow
 
@@ -770,13 +756,12 @@ areas:
       - id: GITHUB-01
         story: Admin can connect a project to a GitHub repository and branch
         version: v2.x
-        scenarios: [instance.feature_off, instance.limit_exceeded, project.sandbox]
+        scenarios: [instance.feature_off, project.sandbox]
         requirements:
           - Adds the deploy setup to the repo
       - id: GITHUB-02
         story: Editor can save a workflow and push it to GitHub
         version: v2.x
-        scenarios: [instance.limit_exceeded]
       - id: GITHUB-03
         story: Admin can disconnect a project from GitHub
         version: v2.x
@@ -785,11 +770,9 @@ areas:
       - id: GITHUB-04
         story: Editor can sync the whole project to GitHub on demand
         version: v2.x
-        scenarios: [instance.limit_exceeded]
       - id: GITHUB-05
         story: Repository can deploy changes back to its project
         version: v2.x
-        scenarios: [instance.limit_exceeded]
 
   - id: COLLECTION
     name: Storing data in collections
@@ -798,7 +781,6 @@ areas:
       - id: COLLECTION-01
         story: Admin can create a collection in a project
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Names are unique within the project
       - id: COLLECTION-02
@@ -814,7 +796,6 @@ areas:
       - id: COLLECTION-04
         story: Editor can write items to a collection
         version: v2.x
-        scenarios: [instance.limit_exceeded]
         requirements:
           - Single or batch
           - A run can read and write its own project's collections
