@@ -6,8 +6,7 @@
 # Structure
 #   scenarios   shared "Given..." cases, referenced by id from stories. A story
 #               lists a scenario only where behaviour diverges.
-#   entities    the records stories touch. `api: true` means the JSON API exposes
-#               it (see API.md).
+#   entities    the records stories touch.
 #   areas       highest-level breakdown of functionality. Each has entities and
 #               stories.
 #   stories     one key capability each ("<lowest allowed actor> can ...").
@@ -18,7 +17,7 @@
 # The test for every line: would a smoke test or a backend check be wrong
 # without it? If not, leave it out. No status codes, timeouts, config flags,
 # enum lists, screen layouts or route paths: API.md, the code and the tests
-# hold those. "Also via the API" is enough to tell testers to cover both.
+# hold those.
 #
 # Versioning: "v2.x" = in Lightning as of Nov 2026; "v3.x" = introduced after.
 # Actors: project roles are viewer < editor < admin < owner. "User" means any
@@ -55,40 +54,40 @@ cross_cutting_scenarios:
   role.none: Every project-scoped story; the project is not found
   auth.mfa_missing: Every project-scoped story; actor is sent to set up MFA instead
   project.scheduled_for_deletion: Every project-scoped story; the project is not found
-  auth.missing_grant: Every API story; a token without the route's grant is refused
+  auth.missing_grant: Every story done with a token; a token without the needed grant is refused
 
 entities:
-  users: {api: true}
-  projects: {api: true}
-  project_users: {api: false}
-  provisioning_documents: {api: true}
-  credentials: {api: true}
-  keychain_credentials: {api: false}
-  oauth_clients: {api: false}
-  workflows: {api: true}
-  jobs: {api: true}
-  triggers: {api: false}
-  edges: {api: false}
-  webhook_auth_methods: {api: false}
-  workflow_versions: {api: false}
-  workflow_templates: {api: false}
-  work_orders: {api: true}
-  runs: {api: true}
-  steps: {api: false}
-  dataclips: {api: false}
-  log_lines: {api: true}
-  collections: {api: true}
-  collection_items: {api: true}
-  channels: {api: false}
-  channel_requests: {api: false}
-  sandboxes: {api: false}
-  repo_connections: {api: false}
-  ai_assistant_sessions: {api: false}
-  workflow_health: {api: true}
-  project_files: {api: false}
-  api_tokens: {api: false}
-  auth_providers: {api: false}
-  audit_events: {api: false}
+  - users
+  - projects
+  - project_users
+  - provisioning_documents
+  - credentials
+  - keychain_credentials
+  - oauth_clients
+  - workflows
+  - jobs
+  - triggers
+  - edges
+  - webhook_auth_methods
+  - workflow_versions
+  - workflow_templates
+  - work_orders
+  - runs
+  - steps
+  - dataclips
+  - log_lines
+  - collections
+  - collection_items
+  - channels
+  - channel_requests
+  - sandboxes
+  - repo_connections
+  - ai_assistant_sessions
+  - workflow_health
+  - project_files
+  - api_tokens
+  - auth_providers
+  - audit_events
 
 areas:
 
@@ -133,7 +132,6 @@ areas:
         scenarios: [instance.feature_off]
         requirements:
           - Only offered while the instance has no superuser
-          - Also via the API, by the service account
 
   - id: PRF
     name: Managing your own account
@@ -180,7 +178,7 @@ areas:
         story: User can delete a personal access token
         version: v2.x
         requirements:
-          - Deleted token is refused by the API immediately
+          - Deleted token stops working immediately
       - id: PRF-09
         story: User can connect their GitHub account
         version: v2.x
@@ -206,20 +204,16 @@ areas:
       - id: ADM-01
         story: Superuser can list and search users
         version: v2.x
-        requirements:
-          - Also via the API, by the service account only
       - id: ADM-02
         story: Superuser can create a user
         version: v2.x
         requirements:
-          - Also via the API, by the service account only
           - New user is emailed (app only)
       - id: ADM-03
         story: Superuser can edit a user
         version: v2.x
         requirements:
           - Includes their instance role and support-user flag
-          - Also via the API, by the service account only
       - id: ADM-04
         story: Superuser can delete a user
         version: v2.x
@@ -284,8 +278,6 @@ areas:
       - id: PRJ-02
         story: Viewer can list the projects they belong to
         version: v2.x
-        requirements:
-          - Also via the API
       - id: PRJ-03
         story: Admin can edit a project's name and description
         version: v2.x
@@ -345,22 +337,13 @@ areas:
       - id: PRJ-10
         story: Viewer can download a project as YAML
         version: v2.x
-        requirements:
-          - Also via the API
       - id: PRJ-11
         story: Admin can create or update a project from a provisioning document
         version: v2.x
         scenarios: [role.editor, actor.superuser, actor.service_account, instance.limit_exceeded]
         requirements:
-          - API only; creating a new project needs a superuser
+          - Creating a new project needs a superuser
           - Workflows, channels and collections in the document are created or updated; records are removed only when marked for deletion
-      - id: PRJ-12
-        story: Admin can replace a project's details through the API
-        version: v2.x
-        scenarios: [role.editor, actor.superuser, actor.service_account, record.missing]
-        requirements:
-          - A free id creates the project, which needs a superuser or the service account
-          - Repeating the same request changes nothing
 
   - id: COL
     name: Managing collaborators
@@ -406,7 +389,6 @@ areas:
         scenarios: [actor.service_account]
         requirements:
           - Fields come from the chosen adaptor's schema
-          - Also via the API, which never returns secrets
       - id: CRD-02
         story: Editor can create a credential from inside a project
         version: v2.x
@@ -422,8 +404,6 @@ areas:
       - id: CRD-04
         story: Viewer can list the credentials available in a project
         version: v2.x
-        requirements:
-          - Also via the API
       - id: CRD-05
         story: Credential owner can edit a credential
         version: v2.x
@@ -441,7 +421,7 @@ areas:
         scenarios: [actor.service_account]
         requirements:
           - Deletion is scheduled and can be cancelled; it unlinks the credential from projects and jobs at once
-          - Immediate deletion (including via the API) is refused once runs have used it
+          - Immediate deletion is refused once runs have used it
       - id: CRD-08
         story: Credential owner can transfer a credential to another user
         version: v2.x
@@ -478,14 +458,11 @@ areas:
       - id: WFB-01
         story: Viewer can list a project's workflows
         version: v2.x
-        requirements:
-          - Also via the API
       - id: WFB-02
         story: Editor can create a blank workflow
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded]
         requirements:
-          - Also via the API
           - Starts as a draft with triggers off
       - id: WFB-03
         story: Editor can create a workflow from a template
@@ -555,7 +532,6 @@ areas:
         scenarios: [role.viewer, workflow.concurrent_edit, workflow.live]
         requirements:
           - Records a version
-          - Also via the API
       - id: WFB-15
         story: Editor can take a workflow live
         version: v2.x
@@ -594,10 +570,6 @@ areas:
       - id: WFB-23
         story: Viewer can export a workflow as YAML
         version: v2.x
-      - id: WFB-24
-        story: Viewer can read jobs through the API
-        version: v2.x
-        scenarios: [actor.service_account]
       - id: WFB-20
         story: Editor can delete a workflow
         version: v2.x
@@ -700,12 +672,9 @@ areas:
         version: v2.x
         requirements:
           - The filtered view can be shared as a link
-          - Also via the API, without text search
       - id: HIS-02
         story: Viewer can inspect a work order's runs and steps
         version: v2.x
-        requirements:
-          - Runs also via the API
       - id: HIS-03
         story: Editor can retry many work orders at once
         version: v2.x
@@ -859,7 +828,6 @@ areas:
         scenarios: [role.editor, instance.limit_exceeded]
         requirements:
           - Names are unique within the project
-          - Also via the API
       - id: CLN-02
         story: Admin can delete a collection
         version: v2.x
@@ -870,7 +838,7 @@ areas:
         story: Viewer can read items from a collection
         version: v2.x
         requirements:
-          - Through the collections API with a token, or by download in the app
+          - From jobs, or by download in the app
       - id: CLN-04
         story: Editor can write items to a collection
         version: v2.x
