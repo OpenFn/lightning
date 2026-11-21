@@ -15,9 +15,15 @@
 #               adding `retired: <version>` rather than deleting it.
 #   requirements  only the essentials, including side effects on other records.
 #
+# The test for every line: would a smoke test or a backend check be wrong
+# without it? If not, leave it out. No status codes, timeouts, config flags,
+# enum lists, screen layouts or route paths: API.md, the code and the tests
+# hold those. "Also via the API" is enough to tell testers to cover both.
+#
 # Versioning: "v2.x" = in Lightning as of Nov 2026; "v3.x" = introduced after.
 # Actors: project roles are viewer < editor < admin < owner. "User" means any
 # signed-in user. Lower roles than the actor are refused scenarios.
+# Cross-cutting scenarios apply to every story in scope without being listed.
 
 version: 1
 lightning_version: 2.20.1
@@ -29,29 +35,27 @@ scenarios:
   role.admin: Actor is a project admin
   role.owner: Actor is a project owner
   role.none: Actor has no membership in the project
-  actor.anonymous: Actor is not signed in
   actor.superuser: Actor is an instance superuser
   actor.support: Actor is a support user with no membership, on a project that allows support access
   actor.service_account: Actor is the instance service account
-  actor.record_owner: Actor owns the record (e.g. the credential)
-  # How they authenticate
-  auth.session: Browser session (cookie)
-  auth.personal_token: Personal access token (bearer)
-  auth.missing_grant: Token lacks the grant the route needs
-  auth.mfa_missing: Project requires MFA and actor has not set it up
   auth.sudo_expired: Action needs recent re-authentication and actor has none
   # State of the target
   project.sandbox: Target project is a sandbox (has a parent)
-  project.scheduled_for_deletion: Target project is scheduled for deletion
   workflow.live: Workflow is live (triggers enabled; read-only in a root project)
-  workflow.draft: Workflow is a draft (triggers disabled; editable)
+  workflow.draft: Workflow is a draft (triggers disabled)
   workflow.concurrent_edit: Another user saved since the actor loaded it
   record.missing: Target record does not exist
   record.scheduled_for_deletion: Target record is scheduled for deletion
+  webhook.auth_failed: Request lacks valid credentials for the trigger's webhook auth
   # Instance configuration
   instance.limit_exceeded: A usage limit for this action is reached
   instance.feature_off: The instance has the feature disabled or unconfigured (e.g. signup, AI, GitHub)
-  webhook.auth_failed: Trigger has webhook auth and the request's credentials are missing (401) or wrong (404)
+
+cross_cutting_scenarios:
+  role.none: Every project-scoped story; the project is not found
+  auth.mfa_missing: Every project-scoped story; actor is sent to set up MFA instead
+  project.scheduled_for_deletion: Every project-scoped story; the project is not found
+  auth.missing_grant: Every API story; a token without the route's grant is refused
 
 entities:
   users: {api: true}
@@ -97,35 +101,29 @@ areas:
         version: v2.x
         scenarios: [instance.feature_off]
         requirements:
-          - Available in the browser; POST /api/users/register answers 501 unless an extension provides it
-          - New user is logged in immediately and sent a confirmation email
-          - When email verification is required, accounts still unconfirmed after 48 hours are locked out
-          - When the instance creates starter projects, the new user owns one
+          - New user is logged in and sent a confirmation email
       - id: ACC-02
         story: User can confirm their email address
         version: v2.x
         requirements:
-          - Confirmation link can be re-sent
+          - Where the instance requires it, unconfirmed accounts are locked out after a grace period
       - id: ACC-03
         story: User can log in with email and password
         version: v2.x
         scenarios: [record.scheduled_for_deletion]
         requirements:
-          - Disabled accounts and accounts scheduled for deletion are refused
-          - Users with MFA enabled are asked for a TOTP or backup code
+          - Users with MFA are asked for a code
       - id: ACC-04
         story: User can log in through an external identity provider (SSO)
         version: v2.x
         scenarios: [instance.feature_off, record.scheduled_for_deletion]
         requirements:
-          - Only logs in an existing account matched by verified email; no account is created
-          - Users with MFA are still asked for a code
+          - Matches an existing account by verified email; never creates one
       - id: ACC-05
         story: User can reset a forgotten password
         version: v2.x
         requirements:
-          - Reset link is valid for 1 day
-          - Resetting revokes all sessions and personal access tokens
+          - Revokes all sessions and personal access tokens
       - id: ACC-06
         story: User can log out
         version: v2.x
@@ -134,8 +132,8 @@ areas:
         version: v2.x
         scenarios: [instance.feature_off]
         requirements:
-          - Only offered while the instance has no superuser; every page redirects there until then
-          - The service account can do the same through the API
+          - Only offered while the instance has no superuser
+          - Also via the API, by the service account
 
   - id: PRF
     name: Managing your own account
@@ -154,22 +152,25 @@ areas:
         version: v2.x
         requirements:
           - Requires the current password
-          - Revokes all other sessions and all personal access tokens
+          - Revokes all other sessions and personal access tokens
       - id: PRF-04
         story: User can enable multi-factor authentication
         version: v2.x
         requirements:
-          - TOTP app setup; backup codes are generated if the user has none (codes from an earlier enable are kept)
+          - Backup codes are issued
       - id: PRF-05
         story: User can disable multi-factor authentication
         version: v2.x
       - id: PRF-06
-        story: User can view and regenerate MFA backup codes
+        story: User can view their MFA backup codes
+        version: v2.x
+        scenarios: [auth.sudo_expired]
+      - id: PRF-13
+        story: User can regenerate their MFA backup codes
         version: v2.x
         scenarios: [auth.sudo_expired]
         requirements:
-          - Regenerating invalidates old codes
-          - Codes can be printed
+          - Old codes stop working
       - id: PRF-07
         story: User can create a personal access token
         version: v2.x
@@ -181,18 +182,19 @@ areas:
         requirements:
           - Deleted token is refused by the API immediately
       - id: PRF-09
-        story: User can connect and disconnect their GitHub account
+        story: User can connect their GitHub account
         version: v2.x
         scenarios: [instance.feature_off]
+      - id: PRF-12
+        story: User can disconnect their GitHub account
+        version: v2.x
       - id: PRF-10
         story: User can delete their own account
         version: v2.x
         scenarios: [actor.superuser]
         requirements:
-          - Confirmed by typing their own email; superuser accounts cannot be deleted
-          - Account is disabled and all sessions and API tokens are revoked immediately
-          - Purged after the instance's grace period, along with the user's credentials
-          - Users who created runs are never purged; they stay disabled
+          - Account is disabled and its sessions and tokens revoked at once; it is purged later with its credentials
+          - Users who created runs stay disabled and are never purged
       - id: PRF-11
         story: User can opt in to experimental features
         version: v2.x
@@ -204,59 +206,55 @@ areas:
       - id: ADM-01
         story: Superuser can list and search users
         version: v2.x
-        scenarios: [actor.service_account]
         requirements:
-          - GET /api/users is for the service account only (users:read); a superuser's personal token is refused
+          - Also via the API, by the service account only
       - id: ADM-02
         story: Superuser can create a user
         version: v2.x
-        scenarios: [actor.service_account]
         requirements:
-          - POST /api/users is for the service account only (users:write)
-          - Creating in the app emails the new user confirmation instructions; the API does not
+          - Also via the API, by the service account only
+          - New user is emailed (app only)
       - id: ADM-03
-        story: Superuser can edit a user, including their role and support-user flag
+        story: Superuser can edit a user
         version: v2.x
-        scenarios: [actor.service_account]
         requirements:
-          - PATCH /api/users/:id (service account only) changes name, role, password and confirmed; not the support-user flag, email or disabled
+          - Includes their instance role and support-user flag
+          - Also via the API, by the service account only
       - id: ADM-04
         story: Superuser can delete a user
         version: v2.x
         requirements:
-          - Deletion is scheduled and can be cancelled; scheduling revokes the user's sessions and tokens and emails them
-          - Deleting an already-scheduled user purges them now, unless they have created runs
-          - Superuser accounts cannot be deleted
+          - Deletion is scheduled and can be cancelled; the user is locked out and emailed at once
+          - Superusers cannot be deleted
       - id: ADM-05
         story: Superuser can list all projects on the instance
         version: v2.x
       - id: ADM-06
         story: Superuser can create a project for other users
         version: v2.x
-        requirements:
-          - Owner and members are set at creation
       - id: ADM-15
-        story: Superuser can edit any project's details and members from instance settings
+        story: Superuser can edit any project from instance settings
         version: v2.x
       - id: ADM-07
         story: Superuser can schedule any project for deletion
         version: v2.x
         requirements:
-          - Deleting a project that is already scheduled deletes it immediately
-          - A scheduled deletion can be cancelled
+          - A scheduled deletion can be cancelled, or carried out at once
       - id: ADM-08
         story: Superuser can configure an external authentication provider
         version: v2.x
         requirements:
           - Configuration can be tested before saving
-          - Only one provider can be configured; disabling it deletes its configuration
       - id: ADM-09
         story: Superuser can review the instance audit trail
         version: v2.x
         requirements:
-          - Shows who changed credentials, workflows, projects and settings, and when
+          - Shows who changed what, and when
       - id: ADM-10
-        story: Superuser can refresh the adaptor catalogue and adaptor icons
+        story: Superuser can refresh the adaptor catalogue
+        version: v2.x
+      - id: ADM-16
+        story: Superuser can refresh adaptor icons
         version: v2.x
       - id: ADM-11
         story: Superuser can see whether anonymous usage metrics are sent
@@ -271,8 +269,8 @@ areas:
         story: Service account can exchange its assertion for an access token
         version: v2.x
         requirements:
-          - Token carries exactly the scopes requested, each from users:read, users:write, projects:write, credentials:write, collections:write
-          - Token expires after five minutes; issuing it is audited
+          - Token carries only the grants requested
+          - Issuing a token is audited
 
   - id: PRJ
     name: Managing projects
@@ -287,8 +285,7 @@ areas:
         story: Viewer can list the projects they belong to
         version: v2.x
         requirements:
-          - Dashboard can be sorted and shows workflow counts and last activity
-          - Also at GET /api/projects
+          - Also via the API
       - id: PRJ-03
         story: Admin can edit a project's name and description
         version: v2.x
@@ -298,18 +295,17 @@ areas:
         version: v2.x
         scenarios: [role.admin, project.sandbox]
         requirements:
-          - Deletion is scheduled; members lose access at once
-          - Name must be typed to confirm
-          - Scheduling disables all the project's triggers and emails every member
-          - At purge its sandboxes, workflows, work orders and credential links are deleted
-          - Deleting a sandbox is immediate and removes its descendant sandboxes
+          - Deletion is scheduled; members lose access and the project's triggers stop at once
+          - Every member is emailed
+          - Purging removes its sandboxes, workflows and history
+          - Deleting a sandbox is immediate and takes its own sandboxes with it
       - id: PRJ-05
         story: Admin can require multi-factor authentication for a project
         version: v2.x
         scenarios: [role.editor, instance.limit_exceeded, project.sandbox]
         requirements:
-          - A sandbox inherits the setting from its parent and cannot change it
-          - Members without MFA are sent to a "MFA required" page instead of the project
+          - Members without MFA are kept out until they set it up
+          - Sandboxes inherit the setting from their parent
       - id: PRJ-06
         story: Admin can allow or deny support-user access to a project
         version: v2.x
@@ -323,51 +319,48 @@ areas:
         version: v2.x
         scenarios: [role.editor]
         requirements:
-          - Separate periods for history and for input/output data
-          - Option to keep no input/output data at all
-          - Input/output period cannot exceed the history period; periods offered depend on usage limits
-          - Admins and owners are emailed when retention changes
-          - Data older than the period is erased by a scheduled job
+          - Separate periods for history and for input/output data, including keeping no data
+          - Data older than the period is erased
+          - Admins are emailed when it changes
       - id: PRJ-09
-        story: Viewer can choose their own failure-alert and digest-email settings for a project
+        story: Viewer can turn failure alerts on or off for themselves in a project
         version: v2.x
         scenarios: [instance.limit_exceeded]
         requirements:
-          - Failure alerts are unavailable when the alerts limit applies
-          - Digest frequency is never, daily, weekly or monthly
-          - Each member can only change their own settings
+          - Each member can only change their own setting
+      - id: PRJ-15
+        story: Viewer can choose how often they get a project's digest email
+        version: v2.x
+        requirements:
+          - Each member can only change their own setting
       - id: PRJ-13
         story: Viewer receives an email when a run fails in their project
         version: v2.x
         scenarios: [instance.limit_exceeded]
         requirements:
-          - Only members who turned failure alerts on
+          - Only members who turned failure alerts on are emailed
       - id: PRJ-14
         story: Viewer receives a digest email of their project's workflow activity
         version: v2.x
-        requirements:
-          - Sent daily, weekly or monthly to match their setting
       - id: PRJ-10
         story: Viewer can download a project as YAML
         version: v2.x
         requirements:
-          - Also at GET /api/provision/:id and /api/provision/yaml
+          - Also via the API
       - id: PRJ-11
         story: Admin can create or update a project from a provisioning document
         version: v2.x
         scenarios: [role.editor, actor.superuser, actor.service_account, instance.limit_exceeded]
         requirements:
-          - POST /api/provision; creating a new project this way needs a superuser
-          - Workflows (with jobs, triggers and edges), channels and collections are created or updated
-          - Workflows and collections are removed only when marked "delete": true
+          - API only; creating a new project needs a superuser
+          - Workflows, channels and collections in the document are created or updated; records are removed only when marked for deletion
       - id: PRJ-12
-        story: Admin can replace a project's name and description through the API
+        story: Admin can replace a project's details through the API
         version: v2.x
         scenarios: [role.editor, actor.superuser, actor.service_account, record.missing]
         requirements:
-          - PUT /api/projects/:id replaces if held (200)
-          - Creating at a free id (201) needs a superuser or the service account, takes members with exactly one owner, and emails them unless notify is false
-          - Repeating the same request writes nothing
+          - A free id creates the project, which needs a superuser or the service account
+          - Repeating the same request changes nothing
 
   - id: COL
     name: Managing collaborators
@@ -381,29 +374,27 @@ areas:
         version: v2.x
         scenarios: [role.editor, instance.limit_exceeded]
         requirements:
-          - Added as viewer, editor or admin (not owner)
+          - Cannot be added as owner
           - Each added user is emailed
       - id: COL-03
         story: Admin can invite someone without an account to a project
         version: v2.x
         scenarios: [role.editor, instance.limit_exceeded]
         requirements:
-          - An account is created and added to the project at once; the invitee is emailed a link to set their password
+          - Creates their account and membership at once, and emails them a link to set a password
       - id: COL-04
         story: Superuser can change a member's role
         version: v2.x
         scenarios: [role.owner]
         requirements:
-          - Done from instance settings; project admins and owners cannot change roles
           - A project always keeps exactly one owner
       - id: COL-05
         story: Admin can remove a member from a project
         version: v2.x
         scenarios: [role.editor, project.sandbox]
         requirements:
-          - The owner cannot be removed; an admin cannot remove themselves
-          - In a sandbox, admins and owners of the parent project cannot be removed
-          - The removed member's credentials are removed from the project
+          - The owner cannot be removed, nor can admins remove themselves
+          - The removed member's credentials are unlinked from the project
 
   - id: CRD
     name: Managing credentials
@@ -414,15 +405,15 @@ areas:
         version: v2.x
         scenarios: [actor.service_account]
         requirements:
-          - Fields come from the chosen adaptor's schema, or raw JSON
-          - Also at POST /api/credentials and PUT /api/credentials/:id
-          - Secrets are encrypted and never returned by the API
+          - Fields come from the chosen adaptor's schema
+          - Also via the API, which never returns secrets
       - id: CRD-02
         story: Editor can create a credential from inside a project
         version: v2.x
         scenarios: [role.viewer]
         requirements:
-          - Available from project settings and the job inspector; new credential is linked to that project
+          - Available from project settings and the job inspector
+          - The credential is linked to that project
       - id: CRD-03
         story: User can list the credentials they own
         version: v2.x
@@ -432,7 +423,7 @@ areas:
         story: Viewer can list the credentials available in a project
         version: v2.x
         requirements:
-          - Also at GET /api/projects/:project_id/credentials
+          - Also via the API
       - id: CRD-05
         story: Credential owner can edit a credential
         version: v2.x
@@ -442,32 +433,31 @@ areas:
         version: v2.x
         scenarios: [role.none, role.viewer]
         requirements:
-          - In the app the owner must be a member of each project; over the API they must be an editor, and links can only be added
+          - Owner must belong to each project
           - Removing a project unlinks the credential from that project's jobs
       - id: CRD-07
         story: Credential owner can delete a credential
         version: v2.x
         scenarios: [actor.service_account]
         requirements:
-          - In the app deletion is scheduled and can be cancelled; it unlinks the credential from projects and jobs, revokes OAuth tokens and emails the owner
-          - DELETE /api/credentials/:id and "Delete now" delete at once, and are refused if runs have used the credential
+          - Deletion is scheduled and can be cancelled; it unlinks the credential from projects and jobs at once
+          - Immediate deletion (including via the API) is refused once runs have used it
       - id: CRD-08
         story: Credential owner can transfer a credential to another user
         version: v2.x
         requirements:
           - Receiver must have access to every project it is shared with
-          - Transfer completes only when confirmed from an emailed link; it can be revoked before then
+          - Completes only when confirmed by email; can be revoked until then
       - id: CRD-09
         story: User can create a credential by authorising with an OAuth provider
         version: v2.x
         requirements:
-          - Scopes can be chosen
-          - Expired tokens are refreshed when a run needs them; if the refresh is refused the run gets a reauthorisation-required error and an audit event is recorded
+          - Expired tokens are refreshed when a run needs them; a refused refresh fails the run with a clear reason
       - id: CRD-10
         story: User can register an OAuth client for others to authorise against
         version: v2.x
         requirements:
-          - Mandatory and optional scopes; can be shared with projects or made global by a superuser
+          - Can be shared with projects, or made global by a superuser
       - id: CRD-11
         story: Admin can create a keychain credential that picks a credential per run
         version: v2.x
@@ -479,7 +469,7 @@ areas:
         version: v2.x
         scenarios: [project.sandbox]
         requirements:
-          - A run uses the values for its project's environment; a missing environment fails the run with a clear reason
+          - A run uses its project's environment; a missing environment fails the run with a clear reason
 
   - id: WFB
     name: Building workflows
@@ -489,17 +479,14 @@ areas:
         story: Viewer can list a project's workflows
         version: v2.x
         requirements:
-          - Search by name and sort
-          - Shows each workflow's recent success/failure counts
-          - Also at GET /api/projects/:project_id/workflows
+          - Also via the API
       - id: WFB-02
         story: Editor can create a blank workflow
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded]
         requirements:
-          - Also at POST /api/projects/:project_id/workflows
-          - New workflows start as drafts in the editor; the API can create one with enabled triggers
-          - At the active-workflow limit the editor creates it with triggers off; the API refuses (402) only if the body enables a trigger
+          - Also via the API
+          - Starts as a draft with triggers off
       - id: WFB-03
         story: Editor can create a workflow from a template
         version: v2.x
@@ -509,16 +496,20 @@ areas:
         version: v2.x
         scenarios: [role.viewer]
         requirements:
-          - Invalid YAML is rejected with a pointer to the problem
+          - Invalid YAML is rejected with a clear reason
       - id: WFB-05
         story: Viewer can open a workflow in the editor
         version: v2.x
         scenarios: [role.editor, workflow.live]
         requirements:
-          - Viewers, and live workflows in a root project, open read-only with a visible warning
-          - Shows other people currently editing, with their cursors and selections
+          - Opens read-only, with a warning, for viewers and for live workflows
+          - Shows who else is editing
       - id: WFB-06
-        story: Editor can add, rename and remove jobs
+        story: Editor can add a job
+        version: v2.x
+        scenarios: [role.viewer, workflow.live]
+      - id: WFB-26
+        story: Editor can remove a job
         version: v2.x
         scenarios: [role.viewer, workflow.live]
       - id: WFB-07
@@ -529,59 +520,48 @@ areas:
         story: Editor can attach a credential to a job
         version: v2.x
         scenarios: [role.viewer]
-        requirements:
-          - Only credentials available in the project are offered
       - id: WFB-09
         story: Editor can write a job's code
         version: v2.x
         scenarios: [role.viewer]
-        requirements:
-          - Autocomplete from the adaptor's docs and the credential's metadata where available
       - id: WFB-10
         story: Editor can configure a webhook trigger
         version: v2.x
         scenarios: [role.viewer]
         requirements:
           - Shows the webhook URL
-          - Response can be sent before the run starts, after it completes, or as a custom response
+          - Response can be sent before the run starts or after it completes
       - id: WFB-11
         story: Editor can configure a cron trigger
         version: v2.x
         scenarios: [role.viewer]
-        requirements:
-          - Cron runs can start from the last run's final state
       - id: WFB-12
         story: Admin can add authentication to a webhook trigger
         version: v2.x
         scenarios: [role.editor, workflow.live]
         requirements:
           - Basic auth or API key
-          - Viewing an existing method's secret needs recent re-authentication
-          - Requests without valid credentials are refused and create no work order
-          - Deleting an auth method detaches it from every trigger at once (a trigger left with none becomes open)
+          - Deleting a method removes it from every trigger using it
       - id: WFB-13
         story: Editor can connect steps with a path condition
         version: v2.x
         scenarios: [role.viewer]
         requirements:
-          - Conditions are always, on success, on failure, or a JavaScript expression
-          - A path can be disabled
-          - The graph must stay acyclic (blocked in the editor; validated by the API)
+          - Conditions include on success, on failure and a JavaScript expression
+          - The graph must stay acyclic
       - id: WFB-14
         story: Editor can save a workflow
         version: v2.x
         scenarios: [role.viewer, workflow.concurrent_edit, workflow.live]
         requirements:
-          - Each save that changes content captures a snapshot; consecutive saves in the app squash into one version
-          - API updates answer 409 while the workflow is open in the editor
-          - Also at PATCH/PUT /api/projects/:project_id/workflows/:id
+          - Records a version
+          - Also via the API
       - id: WFB-15
         story: Editor can take a workflow live
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded, project.sandbox]
         requirements:
           - Enables its triggers and records a release
-          - In a sandbox the workflow stays editable while live
       - id: WFB-16
         story: Editor can switch a live workflow back to draft
         version: v2.x
@@ -592,32 +572,32 @@ areas:
         story: Viewer can browse a workflow's past versions and releases
         version: v2.x
         requirements:
-          - Live root workflows list releases; others list saved versions
           - Opening a past version is read-only
       - id: WFB-18
         story: Editor can restore a past release of a live workflow
         version: v2.x
         scenarios: [role.viewer]
         requirements:
-          - Restoring records a new release; it does not rewrite history
-          - Triggers added since that release are deleted
+          - Records a new release; history is kept
       - id: WFB-19
-        story: Editor can set a workflow's concurrency and whether job logs are kept
+        story: Editor can set a workflow's concurrency
+        version: v2.x
+        scenarios: [role.viewer]
+      - id: WFB-25
+        story: Editor can turn off job logs for a workflow
         version: v2.x
         scenarios: [role.viewer]
       - id: WFB-22
-        story: Editor can discard unsaved changes and reset a workflow to its last saved version
+        story: Editor can discard unsaved changes to a workflow
         version: v2.x
         scenarios: [role.viewer]
       - id: WFB-23
-        story: Viewer can view, copy and download a workflow as YAML
+        story: Viewer can export a workflow as YAML
         version: v2.x
       - id: WFB-24
         story: Viewer can read jobs through the API
         version: v2.x
         scenarios: [actor.service_account]
-        requirements:
-          - GET /api/projects/:project_id/jobs and /api/jobs
       - id: WFB-20
         story: Editor can delete a workflow
         version: v2.x
@@ -639,46 +619,42 @@ areas:
         scenarios: [workflow.draft, instance.limit_exceeded, webhook.auth_failed]
         requirements:
           - Creates a work order and a run with the request body as input
-          - Disabled trigger or draft workflow refuses the request
-          - At the run limit the payload is still saved as a rejected work order with no run; the rate limiter answers 429
+          - Refused requests create no run
       - id: RUN-02
         story: System can start a workflow on its cron schedule
         version: v2.x
         scenarios: [workflow.draft, instance.limit_exceeded]
         requirements:
-          - Input is the final state of the last successful run (or the chosen step's last output); empty on the first run
+          - Input is the final state of the last successful run
       - id: RUN-03
         story: Editor can run a workflow manually with chosen input
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded]
         requirements:
-          - Input can be empty, custom JSON, or an existing dataclip searched by date or name
-          - Running from the editor first saves pending changes (a new version); viewing a live or past version runs the saved workflow
+          - Input can be empty, custom, or an existing dataclip
+          - Unsaved changes are saved first
       - id: RUN-04
         story: Editor can rerun a workflow from a chosen step
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded]
         requirements:
-          - Uses that step's original input; creates a new run on the same work order
-          - Refused when that input was erased by data retention
+          - Uses that step's original input and adds a run to the same work order
+          - Refused when that input has been erased
       - id: RUN-05
         story: Editor can cancel a run that is still queued
         version: v2.x
         scenarios: [role.viewer]
-        requirements:
-          - Runs already claimed by a worker cannot be cancelled
       - id: RUN-06
         story: Viewer can watch a run's progress, logs, input and output
         version: v2.x
         requirements:
           - Available in the editor and on the run page; updates live
-          - Data is hidden when the project keeps no input/output data
       - id: RUN-07
         story: Editor can name a dataclip so it can be reused as input
         version: v2.x
         scenarios: [role.viewer]
       - id: RUN-08
-        story: System enforces project and workflow concurrency limits
+        story: System enforces concurrency limits
         version: v2.x
         requirements:
           - Runs beyond the limit wait in the queue rather than failing
@@ -691,31 +667,29 @@ areas:
         story: Worker can claim available runs
         version: v2.x
         requirements:
-          - Authenticates with the worker secret; each run carries its own signed token
+          - Each run carries its own token, scoped to that run
       - id: EXE-02
         story: Worker can fetch a run's plan, input and credentials
         version: v2.x
         scenarios: [record.missing]
         requirements:
-          - Credentials are resolved for the run's environment and refreshed if expired
-          - Fetching the input erases the run's data when the project keeps no input/output data
+          - Credentials are resolved for the run's environment
       - id: EXE-03
         story: Worker can report step and run outcomes
         version: v2.x
         requirements:
-          - Final states are success, failed, crashed, cancelled, killed, exception or lost
           - The work order's state follows its latest run
-          - Completing a run sends failure alerts and answers a waiting webhook caller
+          - A failed run sends failure alerts; a waiting webhook caller gets its response
       - id: EXE-04
         story: Worker can stream logs for a run
         version: v2.x
         requirements:
           - Secrets from the run's credentials are scrubbed from logs
       - id: EXE-05
-        story: System marks runs lost when they run past their maximum duration plus a grace period
+        story: System marks runs lost when they overrun their time limit
         version: v2.x
         requirements:
-          - Checked periodically; lost runs trigger failure alerts
+          - Lost runs send failure alerts
 
   - id: HIS
     name: Monitoring history
@@ -725,33 +699,32 @@ areas:
         story: Viewer can filter and search work orders
         version: v2.x
         requirements:
-          - Filter by status, workflow, date ranges and text in input or logs
-          - The filtered view is shareable as a link
-          - Also at GET /api/projects/:project_id/work_orders (state, workflow and date filters; no text search)
+          - The filtered view can be shared as a link
+          - Also via the API, without text search
       - id: HIS-02
         story: Viewer can inspect a work order's runs and steps
         version: v2.x
         requirements:
-          - The run (not its steps) is also at GET /api/projects/:project_id/runs/:id
+          - Runs also via the API
       - id: HIS-03
         story: Editor can retry many work orders at once
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded]
         requirements:
-          - Retries from the start or from a chosen job
-          - Work orders whose input data was not kept are skipped and reported
+          - From the start or from a chosen step
+          - Work orders whose input was erased are skipped and reported
       - id: HIS-04
         story: Editor can cancel many work orders at once
         version: v2.x
         scenarios: [role.viewer]
         requirements:
-          - Only runs not yet started are cancelled; cancelling all matches runs in the background
+          - Only runs not yet started are cancelled
       - id: HIS-05
         story: Editor can export history
         version: v2.x
         scenarios: [role.viewer]
         requirements:
-          - Export runs in the background, is audited, emails the requester, and appears as a project file any member can download
+          - Requester is emailed when it is ready; any member can download it
       - id: HIS-06
         story: Viewer can view a dataclip
         version: v2.x
@@ -760,13 +733,13 @@ areas:
         story: Viewer can see a workflow's health
         version: v2.x
         requirements:
-          - Work order outcomes, run volume over time, and most common failures with counts, over the last 1, 7 or 30 days
+          - Outcomes over time and the most common failures with clear counts
       - id: HIS-08
         story: Service account can read runs, work orders and log lines across projects
         version: v2.x
         scenarios: [actor.service_account]
         requirements:
-          - Must filter by project_id on runs, work orders and log lines
+          - Must name a project
 
   - id: AIA
     name: Using the AI assistant
@@ -777,25 +750,23 @@ areas:
         version: v2.x
         scenarios: [instance.feature_off, instance.limit_exceeded]
         requirements:
-          - Assistant sees the job's code, adaptor and workflow, and, if chosen, the logs and data of the run being viewed
+          - Can include the logs and data of the run being viewed
       - id: AIA-02
         story: Viewer can ask the AI assistant to design or change a workflow
         version: v2.x
         scenarios: [instance.feature_off, instance.limit_exceeded]
-        requirements:
-          - Skills include /design, /diagnose and /qa
       - id: AIA-03
         story: Editor can apply the assistant's suggested changes
         version: v2.x
         scenarios: [role.viewer, workflow.live]
         requirements:
-          - Workflow changes are applied for the editor who asked and can be reverted; job code is previewed first
-          - Collaborators see changes being applied
+          - Applied changes can be reverted
+          - Collaborators see changes as they are applied
       - id: AIA-04
         story: Viewer can return to earlier assistant conversations
         version: v2.x
         requirements:
-          - Sessions are kept per workflow (per project before it is saved) and are visible to all project members
+          - Conversations are shared with all project members
       - id: AIA-05
         story: Viewer can retry a failed assistant message
         version: v2.x
@@ -810,15 +781,14 @@ areas:
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded]
         requirements:
-          - Copies workflows, credential links and members; collections are copied as empty
-          - Selected dataclips can be copied
+          - Copies workflows, credential links and members; collections arrive empty
       - id: SBX-02
         story: Viewer can list a project's sandboxes
         version: v2.x
         requirements:
           - Lists only sandboxes the actor is a member of
       - id: SBX-03
-        story: Admin can edit a sandbox's name and colour
+        story: Admin can edit a sandbox's details
         version: v2.x
         scenarios: [role.editor]
       - id: SBX-04
@@ -826,18 +796,17 @@ areas:
         version: v2.x
         scenarios: [role.editor]
         requirements:
-          - From the sandboxes list deletion is scheduled and can be cancelled (refused at the sandbox limit); from the sandbox's settings it is immediate
-          - Descendant sandboxes go too, and their triggers are disabled
+          - Its own sandboxes go too
           - Root project admins can delete any sandbox in the workspace
       - id: SBX-05
         story: Admin can merge a sandbox into another project in its workspace
         version: v2.x
         scenarios: [role.editor, instance.limit_exceeded]
         requirements:
-          - Usually the parent; needs editor on the target
-          - Choose which workflows, credentials and collection names to bring across (collections arrive empty)
+          - Needs editor on the target
+          - Choose which workflows, credentials and collections to bring across
           - Warns when the target changed since the sandbox was made
-          - The sandbox is scheduled for deletion after a merge; a GitHub-connected target is synced before and after
+          - The sandbox is deleted afterwards
       - id: SBX-06
         story: Editor can open a live workflow for editing in a sandbox
         version: v2.x
@@ -860,20 +829,17 @@ areas:
         version: v2.x
         scenarios: [role.editor, instance.feature_off, instance.limit_exceeded, project.sandbox]
         requirements:
-          - Connecting adds pull and deploy actions and an API-token secret to the repo; pulling direction also commits the project
-          - A branch can be used by only one project in a sandbox family
+          - Adds the deploy setup to the repo
       - id: VCS-02
         story: Editor can save a workflow and push it to GitHub
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded]
-        requirements:
-          - Takes a commit message
       - id: VCS-03
         story: Admin can disconnect a project from GitHub
         version: v2.x
         scenarios: [role.editor]
         requirements:
-          - Removes the deploy action and API secret from the repo; optionally deletes the project's files there
+          - Removes the deploy setup from the repo
       - id: VCS-05
         story: Editor can sync the whole project to GitHub on demand
         version: v2.x
@@ -882,8 +848,6 @@ areas:
         story: Repository can deploy changes back to its project
         version: v2.x
         scenarios: [instance.limit_exceeded]
-        requirements:
-          - Uses the connection's own token against POST /api/provision
 
   - id: CLN
     name: Storing data in collections
@@ -894,8 +858,8 @@ areas:
         version: v2.x
         scenarios: [role.editor, instance.limit_exceeded]
         requirements:
-          - Names are URL-safe and unique within the project
-          - Also at PUT /api/projects/:project_id/collections/:id
+          - Names are unique within the project
+          - Also via the API
       - id: CLN-02
         story: Admin can delete a collection
         version: v2.x
@@ -906,22 +870,21 @@ areas:
         story: Viewer can read items from a collection
         version: v2.x
         requirements:
-          - Through /collections with a token, or by downloading in the app
-          - Filter by key pattern and date; results stream in pages
+          - Through the collections API with a token, or by download in the app
       - id: CLN-04
         story: Editor can write items to a collection
         version: v2.x
         scenarios: [role.viewer, instance.limit_exceeded]
         requirements:
-          - Single put or batch; oversized or empty values are refused
-          - A run's token can read, write and delete its own project's collections
+          - Single or batch
+          - A run can read and write its own project's collections
       - id: CLN-05
         story: Editor can delete items from a collection
         version: v2.x
         scenarios: [role.viewer]
         requirements:
           - Deleting all items needs admin
-          - Deleting a missing item is not an error (deleted 0)
+          - Deleting a missing item is not an error
 
   - id: CHN
     name: Proxying through channels
@@ -932,7 +895,7 @@ areas:
         version: v2.x
         scenarios: [role.viewer]
         requirements:
-          - Client authentication and destination authentication are set separately
+          - Client and destination authentication are set separately
       - id: CHN-02
         story: Editor can edit a channel
         version: v2.x
@@ -953,11 +916,10 @@ areas:
         story: Client can send a request through a channel to its destination
         version: v2.x
         requirements:
-          - If the channel has client auth methods, clients matching none are refused; a channel with none is open
-          - Each request is logged with its outcome (success, failed, timeout, error)
+          - Clients must match one of the channel's auth methods, if it has any
+          - Each request is logged with its outcome
       - id: CHN-06
         story: Viewer can review a channel's request log
         version: v2.x
         requirements:
-          - Filterable; shows the destination's response or error
-          - Payloads are not kept when the project does not save data
+          - Shows the destination's response or error
