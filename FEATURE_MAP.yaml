@@ -21,7 +21,8 @@
 #
 # Versioning: "v2.x" = in Lightning as of Nov 2026; "v3.x" = introduced after.
 # Actors: project roles are viewer < editor < admin < owner. "User" means any
-# signed-in user. Lower roles than the actor are refused scenarios.
+# signed-in user. Every story is refused for roles below its actor; role
+# scenarios are listed only where the actor is outside that ladder.
 # Cross-cutting scenarios apply to every story in scope without being listed.
 
 version: 1
@@ -30,8 +31,6 @@ lightning_version: 2.20.1
 scenarios:
   # Who is acting
   role.viewer: Actor is a project viewer
-  role.editor: Actor is a project editor
-  role.admin: Actor is a project admin
   role.owner: Actor is a project owner
   role.none: Actor is not a collaborator on the project
   actor.superuser: Actor is an instance superuser
@@ -281,11 +280,11 @@ areas:
       - id: PROJECT-03
         story: Admin can edit a project's name and description
         version: v2.x
-        scenarios: [role.editor, project.sandbox]
+        scenarios: [project.sandbox]
       - id: PROJECT-04
         story: Owner can delete a project
         version: v2.x
-        scenarios: [role.admin, project.sandbox]
+        scenarios: [project.sandbox]
         requirements:
           - Deletion is scheduled; collaborators lose access and the project's triggers stop at once
           - Every collaborator is emailed
@@ -294,22 +293,19 @@ areas:
       - id: PROJECT-05
         story: Admin can require multi-factor authentication for a project
         version: v2.x
-        scenarios: [role.editor, instance.limit_exceeded, project.sandbox]
+        scenarios: [instance.limit_exceeded, project.sandbox]
         requirements:
           - Collaborators without MFA are kept out until they set it up
           - Sandboxes inherit the setting from their parent
       - id: PROJECT-06
         story: Admin can allow or deny support-user access to a project
         version: v2.x
-        scenarios: [role.editor]
       - id: PROJECT-07
         story: Admin can set a project's run concurrency
         version: v2.x
-        scenarios: [role.editor]
       - id: PROJECT-08
         story: Admin can set a project's data retention
         version: v2.x
-        scenarios: [role.editor]
         requirements:
           - Separate periods for history and for input/output data, including keeping no data
           - Data older than the period is erased
@@ -340,7 +336,7 @@ areas:
       - id: PROJECT-14
         story: Admin can create or update a project from a provisioning document
         version: v2.x
-        scenarios: [role.editor, actor.superuser, actor.service_account, instance.limit_exceeded]
+        scenarios: [actor.superuser, actor.service_account, instance.limit_exceeded]
         requirements:
           - Creating a new project needs a superuser
           - Workflows, channels and collections in the document are created or updated; records are removed only when marked for deletion
@@ -355,14 +351,14 @@ areas:
       - id: COLLAB-02
         story: Admin can add an existing user to a project
         version: v2.x
-        scenarios: [role.editor, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Cannot be added as owner
           - Each added user is emailed
       - id: COLLAB-03
         story: Admin can invite someone without an account to a project
         version: v2.x
-        scenarios: [role.editor, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Creates their account and adds them to the project at once, and emails them a link to set a password
       - id: COLLAB-04
@@ -374,7 +370,7 @@ areas:
       - id: COLLAB-05
         story: Admin can remove a collaborator from a project
         version: v2.x
-        scenarios: [role.editor, project.sandbox]
+        scenarios: [project.sandbox]
         requirements:
           - The owner cannot be removed, nor can admins remove themselves
           - The removed collaborator's credentials are unlinked from the project
@@ -392,7 +388,6 @@ areas:
       - id: CREDENTIAL-02
         story: Editor can create a credential from inside a project
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Available from project settings and the job inspector
           - The credential is linked to that project
@@ -441,7 +436,7 @@ areas:
       - id: CREDENTIAL-11
         story: Admin can create a keychain credential that picks a credential per run
         version: v2.x
-        scenarios: [role.editor, actor.support]
+        scenarios: [actor.support]
         requirements:
           - Chooses among linked credentials by a path in the run's input, with a default
       - id: CREDENTIAL-12
@@ -461,87 +456,78 @@ areas:
       - id: WORKFLOW-02
         story: Editor can create a blank workflow
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Starts as a draft with triggers off
       - id: WORKFLOW-03
         story: Editor can create a workflow from a template
         version: v2.x
-        scenarios: [role.viewer]
       - id: WORKFLOW-04
         story: Editor can create a workflow by importing YAML
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Invalid YAML is rejected with a clear reason
       - id: WORKFLOW-05
         story: Viewer can open a workflow in the editor
         version: v2.x
-        scenarios: [role.editor, workflow.live]
+        scenarios: [workflow.live]
         requirements:
           - Opens read-only, with a warning, for viewers and for live workflows
           - Shows who else is editing
       - id: WORKFLOW-06
         story: Editor can add a job
         version: v2.x
-        scenarios: [role.viewer, workflow.live]
+        scenarios: [workflow.live]
       - id: WORKFLOW-07
         story: Editor can remove a job
         version: v2.x
-        scenarios: [role.viewer, workflow.live]
+        scenarios: [workflow.live]
       - id: WORKFLOW-08
         story: Editor can choose a job's adaptor and version
         version: v2.x
-        scenarios: [role.viewer]
       - id: WORKFLOW-09
         story: Editor can attach a credential to a job
         version: v2.x
-        scenarios: [role.viewer]
       - id: WORKFLOW-10
         story: Editor can write a job's code
         version: v2.x
-        scenarios: [role.viewer]
       - id: WORKFLOW-11
         story: Editor can configure a webhook trigger
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Shows the webhook URL
           - Response can be sent before the run starts or after it completes
       - id: WORKFLOW-12
         story: Editor can configure a cron trigger
         version: v2.x
-        scenarios: [role.viewer]
       - id: WORKFLOW-13
         story: Admin can add authentication to a webhook trigger
         version: v2.x
-        scenarios: [role.editor, workflow.live]
+        scenarios: [workflow.live]
         requirements:
           - Basic auth or API key
           - Deleting a method removes it from every trigger using it
       - id: WORKFLOW-14
         story: Editor can connect steps with a path condition
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Conditions include on success, on failure and a JavaScript expression
           - The graph must stay acyclic
       - id: WORKFLOW-15
         story: Editor can save a workflow
         version: v2.x
-        scenarios: [role.viewer, workflow.concurrent_edit, workflow.live]
+        scenarios: [workflow.concurrent_edit, workflow.live]
         requirements:
           - Records a version
       - id: WORKFLOW-16
         story: Editor can take a workflow live
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded, project.sandbox]
+        scenarios: [instance.limit_exceeded, project.sandbox]
         requirements:
           - Enables its triggers and records a release
       - id: WORKFLOW-17
         story: Editor can switch a live workflow back to draft
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Disables its triggers
       - id: WORKFLOW-18
@@ -552,28 +538,23 @@ areas:
       - id: WORKFLOW-19
         story: Editor can restore a past release of a live workflow
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Records a new release; history is kept
       - id: WORKFLOW-20
         story: Editor can set a workflow's concurrency
         version: v2.x
-        scenarios: [role.viewer]
       - id: WORKFLOW-21
         story: Editor can turn off job logs for a workflow
         version: v2.x
-        scenarios: [role.viewer]
       - id: WORKFLOW-22
         story: Editor can discard unsaved changes to a workflow
         version: v2.x
-        scenarios: [role.viewer]
       - id: WORKFLOW-23
         story: Viewer can export a workflow as YAML
         version: v2.x
       - id: WORKFLOW-24
         story: Editor can delete a workflow
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Its triggers stop firing; its history remains
       - id: WORKFLOW-25
@@ -601,21 +582,20 @@ areas:
       - id: RUN-03
         story: Editor can run a workflow manually with chosen input
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Input can be empty, custom, or an existing dataclip
           - Unsaved changes are saved first
       - id: RUN-04
         story: Editor can rerun a workflow from a chosen step
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Uses that step's original input and adds a run to the same work order
           - Refused when that input has been erased
       - id: RUN-05
         story: Editor can cancel a run that is still queued
         version: v2.x
-        scenarios: [role.viewer]
       - id: RUN-06
         story: Viewer can watch a run's progress, logs, input and output
         version: v2.x
@@ -624,7 +604,6 @@ areas:
       - id: RUN-07
         story: Editor can name a dataclip so it can be reused as input
         version: v2.x
-        scenarios: [role.viewer]
       - id: RUN-08
         story: System enforces concurrency limits
         version: v2.x
@@ -678,26 +657,23 @@ areas:
       - id: HISTORY-03
         story: Editor can retry many work orders at once
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - From the start or from a chosen step
           - Work orders whose input was erased are skipped and reported
       - id: HISTORY-04
         story: Editor can cancel many work orders at once
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Only runs not yet started are cancelled
       - id: HISTORY-05
         story: Editor can export history
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Requester is emailed when it is ready; any collaborator can download it
       - id: HISTORY-06
         story: Viewer can view a dataclip
         version: v2.x
-        scenarios: [role.none]
       - id: HISTORY-07
         story: Viewer can see a workflow's health
         version: v2.x
@@ -727,7 +703,7 @@ areas:
       - id: AI-03
         story: Editor can apply the assistant's suggested changes
         version: v2.x
-        scenarios: [role.viewer, workflow.live]
+        scenarios: [workflow.live]
         requirements:
           - Applied changes can be reverted
           - Collaborators see changes as they are applied
@@ -748,7 +724,7 @@ areas:
       - id: SANDBOX-01
         story: Editor can create a sandbox from a project
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Copies workflows, credential links and collaborators; collections arrive empty
       - id: SANDBOX-02
@@ -759,18 +735,16 @@ areas:
       - id: SANDBOX-03
         story: Admin can edit a sandbox's details
         version: v2.x
-        scenarios: [role.editor]
       - id: SANDBOX-04
         story: Admin can delete a sandbox
         version: v2.x
-        scenarios: [role.editor]
         requirements:
           - Its own sandboxes go too
           - Root project admins can delete any sandbox in the workspace
       - id: SANDBOX-05
         story: Admin can merge a sandbox into another project in its workspace
         version: v2.x
-        scenarios: [role.editor, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Needs editor on the target
           - Choose which workflows, credentials and collections to bring across
@@ -779,13 +753,13 @@ areas:
       - id: SANDBOX-06
         story: Editor can open a live workflow for editing in a sandbox
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Creates a new sandbox
       - id: SANDBOX-07
         story: Editor can promote a workflow from a sandbox to its parent
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Records a release on the parent workflow
 
@@ -796,23 +770,22 @@ areas:
       - id: GITHUB-01
         story: Admin can connect a project to a GitHub repository and branch
         version: v2.x
-        scenarios: [role.editor, instance.feature_off, instance.limit_exceeded, project.sandbox]
+        scenarios: [instance.feature_off, instance.limit_exceeded, project.sandbox]
         requirements:
           - Adds the deploy setup to the repo
       - id: GITHUB-02
         story: Editor can save a workflow and push it to GitHub
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
       - id: GITHUB-03
         story: Admin can disconnect a project from GitHub
         version: v2.x
-        scenarios: [role.editor]
         requirements:
           - Removes the deploy setup from the repo
       - id: GITHUB-04
         story: Editor can sync the whole project to GitHub on demand
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
       - id: GITHUB-05
         story: Repository can deploy changes back to its project
         version: v2.x
@@ -825,13 +798,12 @@ areas:
       - id: COLLECTION-01
         story: Admin can create a collection in a project
         version: v2.x
-        scenarios: [role.editor, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Names are unique within the project
       - id: COLLECTION-02
         story: Admin can delete a collection
         version: v2.x
-        scenarios: [role.editor]
         requirements:
           - Removes all its items
       - id: COLLECTION-03
@@ -842,14 +814,13 @@ areas:
       - id: COLLECTION-04
         story: Editor can write items to a collection
         version: v2.x
-        scenarios: [role.viewer, instance.limit_exceeded]
+        scenarios: [instance.limit_exceeded]
         requirements:
           - Single or batch
           - A run can read and write its own project's collections
       - id: COLLECTION-05
         story: Editor can delete items from a collection
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Deleting all items needs admin
           - Deleting a missing item is not an error
@@ -861,23 +832,19 @@ areas:
       - id: CHANNEL-01
         story: Editor can create a channel to a destination URL
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Client and destination authentication are set separately
       - id: CHANNEL-02
         story: Editor can edit a channel
         version: v2.x
-        scenarios: [role.viewer]
       - id: CHANNEL-03
         story: Editor can turn a channel off and on
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - A disabled channel refuses requests
       - id: CHANNEL-04
         story: Editor can delete a channel
         version: v2.x
-        scenarios: [role.viewer]
         requirements:
           - Deletion is immediate and removes the channel's request log
       - id: CHANNEL-05
