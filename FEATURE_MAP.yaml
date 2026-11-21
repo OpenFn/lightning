@@ -1,28 +1,8 @@
 # Lightning feature map
 #
-# A maintained, MECE overview of what Lightning lets people do. It is a map, not
-# the territory: keep it short, and push detail into tests and docs.
+# Follows FEATURE_MAP_SPEC.md, which defines its structure and rules.
 #
-# Structure
-#   scenarios   shared "Given..." cases. A story lists a scenario only where
-#               behaviour diverges, with a short note saying how.
-#   entities    the records stories touch.
-#   areas       highest-level breakdown of functionality. Each has entities and
-#               stories.
-#   stories     one key capability each ("<lowest allowed actor> can ...").
-#               `id` is stable: never reuse or renumber one. Retire a story by
-#               adding `retired: <version>` rather than deleting it.
-#   requirements  only the essentials, including side effects on other records.
-#
-# The test for every line: would a smoke test or a backend check be wrong
-# without it? If not, leave it out. No status codes, timeouts, config flags,
-# enum lists, screen layouts or route paths: API.md, the code and the tests
-# hold those.
-#
-# Versioning: "v2.x" = in Lightning as of Nov 2026; "v3.x" = introduced after.
-# Actors: project roles are viewer < editor < admin < owner. "User" means any
-# signed-in user. Every story is refused for roles below its actor; role
-# scenarios are listed only where the actor is outside that ladder.
+# Project roles, lowest first: viewer < editor < admin < owner.
 # Cross-cutting scenarios apply to every story in scope without being listed.
 
 version: 1
