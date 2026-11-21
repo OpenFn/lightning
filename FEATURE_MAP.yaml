@@ -4,8 +4,8 @@
 # the territory: keep it short, and push detail into tests and docs.
 #
 # Structure
-#   scenarios   shared "Given..." cases, referenced by id from stories. A story
-#               lists a scenario only where behaviour diverges.
+#   scenarios   shared "Given..." cases. A story lists a scenario only where
+#               behaviour diverges, with a short note saying how.
 #   entities    the records stories touch.
 #   areas       highest-level breakdown of functionality. Each has entities and
 #               stories.
@@ -41,7 +41,6 @@ scenarios:
   project.sandbox: Target project is a sandbox (has a parent)
   workflow.live: Workflow is live
   trigger.disabled: The trigger is turned off
-  workflow.concurrent_edit: Another user saved since the actor loaded it
   record.missing: Target record does not exist
   record.scheduled_for_deletion: Target record is scheduled for deletion
   webhook.auth_failed: Request lacks valid credentials for the trigger's webhook auth
@@ -96,7 +95,8 @@ areas:
       - id: ACCESS-01
         story: Visitor can sign up for an account
         version: v2.x
-        scenarios: [instance.feature_off]
+        scenarios:
+          instance.feature_off: Signup is not offered
         requirements:
           - New user is logged in and sent a confirmation email
       - id: ACCESS-02
@@ -107,13 +107,16 @@ areas:
       - id: ACCESS-03
         story: User can log in with email and password
         version: v2.x
-        scenarios: [record.scheduled_for_deletion]
+        scenarios:
+          record.scheduled_for_deletion: Login is refused
         requirements:
           - Users with MFA are asked for a code
       - id: ACCESS-04
         story: User can log in through an external identity provider (SSO)
         version: v2.x
-        scenarios: [instance.feature_off, record.scheduled_for_deletion]
+        scenarios:
+          instance.feature_off: No identity provider is offered
+          record.scheduled_for_deletion: Login is refused
         requirements:
           - Matches an existing account by email; never creates one
       - id: ACCESS-05
@@ -127,7 +130,8 @@ areas:
       - id: ACCESS-07
         story: Visitor can create the first superuser account on a new instance
         version: v2.x
-        scenarios: [instance.feature_off]
+        scenarios:
+          instance.feature_off: The setup page is blocked
         requirements:
           - Only offered while the instance has no superuser
 
@@ -160,11 +164,13 @@ areas:
       - id: PROFILE-06
         story: User can view their MFA backup codes
         version: v2.x
-        scenarios: [auth.sudo_expired]
+        scenarios:
+          auth.sudo_expired: Must re-enter their password or an MFA code first
       - id: PROFILE-07
         story: User can regenerate their MFA backup codes
         version: v2.x
-        scenarios: [auth.sudo_expired]
+        scenarios:
+          auth.sudo_expired: Must re-enter their password or an MFA code first
         requirements:
           - Old codes stop working
       - id: PROFILE-08
@@ -180,14 +186,16 @@ areas:
       - id: PROFILE-10
         story: User can connect their GitHub account
         version: v2.x
-        scenarios: [instance.feature_off]
+        scenarios:
+          instance.feature_off: Not offered
       - id: PROFILE-11
         story: User can disconnect their GitHub account
         version: v2.x
       - id: PROFILE-12
         story: User can delete their own account
         version: v2.x
-        scenarios: [actor.superuser]
+        scenarios:
+          actor.superuser: Refused
         requirements:
           - Account is disabled and its sessions and tokens revoked at once; it is purged later with its credentials
       - id: PROFILE-13
@@ -278,11 +286,13 @@ areas:
       - id: PROJECT-03
         story: Admin can edit a project's name and description
         version: v2.x
-        scenarios: [project.sandbox]
+        scenarios:
+          project.sandbox: Changes stay with the sandbox; a merge does not carry them
       - id: PROJECT-04
         story: Owner can delete a project
         version: v2.x
-        scenarios: [project.sandbox]
+        scenarios:
+          project.sandbox: Deleting from the sandbox's settings is immediate and takes its own sandboxes
         requirements:
           - Deletion is scheduled; collaborators lose access and the project's triggers stop at once
           - Every collaborator is emailed
@@ -290,7 +300,8 @@ areas:
       - id: PROJECT-05
         story: Admin can require multi-factor authentication for a project
         version: v2.x
-        scenarios: [project.sandbox]
+        scenarios:
+          project.sandbox: Cannot be changed in a sandbox
         requirements:
           - Collaborators without MFA are kept out until they set it up
       - id: PROJECT-06
@@ -329,7 +340,9 @@ areas:
       - id: PROJECT-14
         story: Admin can create or update a project from a provisioning document
         version: v2.x
-        scenarios: [actor.superuser, actor.service_account]
+        scenarios:
+          actor.superuser: Can also create new projects
+          actor.service_account: Refused
         requirements:
           - Creating a new project needs a superuser
           - Workflows, channels and collections in the document are created or updated; records are removed only when marked for deletion
@@ -355,13 +368,15 @@ areas:
       - id: COLLAB-04
         story: Superuser can change a collaborator's role
         version: v2.x
-        scenarios: [role.owner]
+        scenarios:
+          role.owner: Refused
         requirements:
           - A project always keeps exactly one owner
       - id: COLLAB-05
         story: Admin can remove a collaborator from a project
         version: v2.x
-        scenarios: [project.sandbox]
+        scenarios:
+          project.sandbox: Admins and owners of the parent project cannot be removed
         requirements:
           - The owner cannot be removed, nor can admins remove themselves
           - The removed collaborator's credentials are unlinked from the project
@@ -373,7 +388,8 @@ areas:
       - id: CREDENTIAL-01
         story: User can create a credential
         version: v2.x
-        scenarios: [actor.service_account]
+        scenarios:
+          actor.service_account: Can create one owned by another user
         requirements:
           - Fields come from the chosen adaptor's schema
       - id: CREDENTIAL-02
@@ -393,18 +409,24 @@ areas:
       - id: CREDENTIAL-05
         story: Credential owner can edit a credential
         version: v2.x
-        scenarios: [actor.superuser, actor.service_account, record.scheduled_for_deletion]
+        scenarios:
+          actor.superuser: Refused unless they own it
+          actor.service_account: Allowed
+          record.scheduled_for_deletion: Refused
       - id: CREDENTIAL-06
         story: Credential owner can share a credential with projects
         version: v2.x
-        scenarios: [role.none, role.viewer]
+        scenarios:
+          role.none: Refused
+          role.viewer: Allowed in the app, refused through the API
         requirements:
           - Owner must belong to each project
           - Removing a project unlinks the credential from that project's jobs
       - id: CREDENTIAL-07
         story: Credential owner can delete a credential
         version: v2.x
-        scenarios: [actor.service_account]
+        scenarios:
+          actor.service_account: Refused
         requirements:
           - Deletion is scheduled and can be cancelled; it unlinks the credential from projects and jobs at once
           - Immediate deletion is refused once runs have used it
@@ -427,13 +449,15 @@ areas:
       - id: CREDENTIAL-11
         story: Admin can create a keychain credential that picks a credential per run
         version: v2.x
-        scenarios: [actor.support]
+        scenarios:
+          actor.support: Allowed without being a collaborator
         requirements:
           - Chooses among linked credentials by a path in the run's input, with a default
       - id: CREDENTIAL-12
         story: Credential owner can keep separate credential values per environment
         version: v2.x
-        scenarios: [project.sandbox]
+        scenarios:
+          project.sandbox: Runs in the sandbox use the sandbox's values
         requirements:
           - A run uses its project's environment; a missing environment fails the run with a clear reason
 
@@ -458,18 +482,21 @@ areas:
       - id: WORKFLOW-05
         story: Viewer can open a workflow in the editor
         version: v2.x
-        scenarios: [workflow.live]
+        scenarios:
+          workflow.live: Opens read-only in a root project
         requirements:
           - Opens read-only for viewers
           - Shows who else is editing
       - id: WORKFLOW-06
         story: Editor can add a job
         version: v2.x
-        scenarios: [workflow.live]
+        scenarios:
+          workflow.live: Refused in a root project
       - id: WORKFLOW-07
         story: Editor can remove a job
         version: v2.x
-        scenarios: [workflow.live]
+        scenarios:
+          workflow.live: Refused in a root project
       - id: WORKFLOW-08
         story: Editor can choose a job's adaptor and version
         version: v2.x
@@ -491,7 +518,8 @@ areas:
       - id: WORKFLOW-13
         story: Admin can add authentication to a webhook trigger
         version: v2.x
-        scenarios: [workflow.live]
+        scenarios:
+          workflow.live: Refused in a root project
         requirements:
           - Basic auth or API key
           - Deleting a method removes it from every trigger using it
@@ -504,13 +532,15 @@ areas:
       - id: WORKFLOW-15
         story: Editor can save a workflow
         version: v2.x
-        scenarios: [workflow.concurrent_edit, workflow.live]
+        scenarios:
+          workflow.live: Refused in a root project
         requirements:
           - Records a version
       - id: WORKFLOW-16
         story: Editor can take a workflow live
         version: v2.x
-        scenarios: [project.sandbox]
+        scenarios:
+          project.sandbox: The workflow stays editable while live
         requirements:
           - Enables its triggers and records a release
       - id: WORKFLOW-17
@@ -548,7 +578,8 @@ areas:
       - id: WORKFLOW-25
         story: Support user can publish a workflow as a template
         version: v2.x
-        scenarios: [role.owner]
+        scenarios:
+          role.owner: Refused
 
   - id: RUN
     name: Running workflows
@@ -557,14 +588,17 @@ areas:
       - id: RUN-01
         story: Webhook caller can start a workflow by sending a request
         version: v2.x
-        scenarios: [trigger.disabled, webhook.auth_failed]
+        scenarios:
+          trigger.disabled: Refused; no work order is created
+          webhook.auth_failed: Refused; no work order is created
         requirements:
           - Creates a work order and a run with the request body as input
           - Refused requests create no run
       - id: RUN-02
         story: System can start a workflow on its cron schedule
         version: v2.x
-        scenarios: [trigger.disabled]
+        scenarios:
+          trigger.disabled: No runs start
         requirements:
           - Input is the final state of the last successful run
       - id: RUN-03
@@ -608,7 +642,8 @@ areas:
       - id: WORKER-02
         story: Worker can fetch a run's plan, input and credentials
         version: v2.x
-        scenarios: [record.missing]
+        scenarios:
+          record.missing: The worker gets an error instead
         requirements:
           - Credentials are resolved for the run's environment
       - id: WORKER-03
@@ -667,7 +702,6 @@ areas:
       - id: HISTORY-08
         story: Service account can read runs, work orders and log lines across projects
         version: v2.x
-        scenarios: [actor.service_account]
         requirements:
           - Must name a project
 
@@ -678,17 +712,20 @@ areas:
       - id: AI-01
         story: Viewer can ask the AI assistant about a job's code
         version: v2.x
-        scenarios: [instance.feature_off]
+        scenarios:
+          instance.feature_off: The assistant is not offered
         requirements:
           - Can include the logs and data of the run being viewed
       - id: AI-02
         story: Viewer can ask the AI assistant to design or change a workflow
         version: v2.x
-        scenarios: [instance.feature_off]
+        scenarios:
+          instance.feature_off: The assistant is not offered
       - id: AI-03
         story: Editor can apply the assistant's suggested changes
         version: v2.x
-        scenarios: [workflow.live]
+        scenarios:
+          workflow.live: Refused in a root project
         requirements:
           - Applied changes can be reverted
           - Collaborators see changes as they are applied
@@ -751,7 +788,9 @@ areas:
       - id: GITHUB-01
         story: Admin can connect a project to a GitHub repository and branch
         version: v2.x
-        scenarios: [instance.feature_off, project.sandbox]
+        scenarios:
+          instance.feature_off: Not offered
+          project.sandbox: Connects the sandbox only
         requirements:
           - Adds the deploy setup to the repo
       - id: GITHUB-02
