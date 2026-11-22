@@ -105,6 +105,10 @@ and this project adheres to
 - GitHub Sync now refreshes and retries a rejected OAuth token once when loading
   app installations, and directs users to reconnect their account when recovery
   is not possible. [#4972](https://github.com/OpenFn/lightning/issues/4972)
+- The AI Assistant panel no longer runs off the right edge of the screen on
+  smaller laptops, and the workflow editor's header and job editor toolbar no
+  longer overlap when the panel is open.
+  [#5285](https://github.com/OpenFn/lightning/pull/5285)
 
 ### Security
 
