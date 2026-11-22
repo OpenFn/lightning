@@ -78,14 +78,9 @@ defmodule Lightning.MixProject do
 
   # Advisories we have checked and accepted. Hex matches an advisory's primary ID
   # or any alias, so the CVE form also silences the GHSA and EEF variants.
-  #
-  # cowlib: names a function on cowlib's header-building path that nothing in
-  # our tree calls. No patched cowlib release exists yet. Detail in #5102.
   defp hex_audit do
     [
       ignore_advisories: [
-        # cow_http_struct_hd:escape_string/2
-        "CVE-2026-43966",
         # cloak and cloak_ecto, no patched release exists. Our only cipher is
         # Cloak.Ciphers.AES.GCM (Lightning.Vault), which authenticates its
         # ciphertext, and we define no Cloak.Ecto.PBKDF2 fields.
