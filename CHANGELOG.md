@@ -97,6 +97,7 @@ and this project adheres to
 
 - When the AI model declines a request, the AI assistant now says so instead of
   showing "Something went wrong".
+  [#5286](https://github.com/OpenFn/lightning/pull/5286)
 - A form that loses a save race with another user, or saves a record someone
   else deleted, shows a message instead of crashing.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
