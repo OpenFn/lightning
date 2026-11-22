@@ -136,13 +136,16 @@ and this project adheres to
   (CVE-2026-120287). Lightning serves with Cowboy and parses multipart before
   login, so the pipelining and multipart issues were live. The HTTP/2 one only
   applies if your proxy passes unencrypted HTTP/2 through to Lightning.
+  [#5287](https://github.com/OpenFn/lightning/pull/5287)
 - Phoenix moves from 1.7.24 to 1.7.25 and Phoenix LiveView from 1.0.19 to
   1.0.20, for CVE-2026-129344, CVE-2026-128361 and CVE-2026-126334. Lightning
   doesn't broadcast binary payloads or take Presence keys from clients, and its
   LiveViews can't be mounted without their hooks, so these clear advisories
   rather than live issues. Both stay on their current minor versions.
+  [#5287](https://github.com/OpenFn/lightning/pull/5287)
 - hackney moves from 4.9.1 to 4.12.3 and Swoosh from 1.26.3 to 1.30.0, which
   brings idna 8.0.0 for CVE-2026-117678.
+  [#5287](https://github.com/OpenFn/lightning/pull/5287)
 
 ## [2.20.1] - 2026-11-04
 
