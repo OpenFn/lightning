@@ -130,18 +130,12 @@ and this project adheres to
   could grow Ecto's query cache without limit. Lightning doesn't use the
   affected query forms, so this clears the advisory rather than a live issue.
 - Cowboy moves from 2.20.0 to 2.21.0, cowlib from 2.21.0 to 2.22.0 and Plug from
-  1.20.3 to 1.20.4. That fixes unbounded buffering of pipelined HTTP/1.1
-  requests (CVE-2026-115701), unbounded HTTP/2 header lists (CVE-2026-113431)
-  and multipart framing that slipped past the upload size limit
-  (CVE-2026-120287). Lightning serves with Cowboy and parses multipart before
-  login, so the pipelining and multipart issues were live. The HTTP/2 one only
-  applies if your proxy passes unencrypted HTTP/2 through to Lightning.
-  [#5287](https://github.com/OpenFn/lightning/pull/5287)
+  1.20.3 to 1.20.4, for CVE-2026-115701, CVE-2026-113431 and CVE-2026-120287.
+  CVE-2026-113431 only applies if your proxy passes unencrypted HTTP/2 through
+  to Lightning. [#5287](https://github.com/OpenFn/lightning/pull/5287)
 - Phoenix moves from 1.7.24 to 1.7.25 and Phoenix LiveView from 1.0.19 to
-  1.0.20, for CVE-2026-129344, CVE-2026-128361 and CVE-2026-126334. Lightning
-  doesn't broadcast binary payloads or take Presence keys from clients, and its
-  LiveViews can't be mounted without their hooks, so these clear advisories
-  rather than live issues. Both stay on their current minor versions.
+  1.0.20, for CVE-2026-129344, CVE-2026-128361 and CVE-2026-126334. Both stay on
+  their current minor versions.
   [#5287](https://github.com/OpenFn/lightning/pull/5287)
 - hackney moves from 4.9.1 to 4.12.3 and Swoosh from 1.26.3 to 1.30.0, which
   brings idna 8.0.0 for CVE-2026-117678.
