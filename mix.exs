@@ -126,7 +126,7 @@ defmodule Lightning.MixProject do
       # Overridden because phoenix_swoosh 1.2.1 (latest) still declares
       # hackney ~> 1.10. It never actually calls hackney, so the constraint is
       # dead weight, but it has to be overridden to resolve.
-      {:hackney, "~> 4.9", override: true},
+      {:hackney, "~> 4.11", override: true},
       {:heroicons, "~> 0.5.3"},
       {:highlander_pg, "~> 1.0"},
       {:httpoison, "~> 3.0.0", override: true},
@@ -145,13 +145,13 @@ defmodule Lightning.MixProject do
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.19"},
-      {:phoenix, "~> 1.7.11"},
+      {:phoenix, "~> 1.7.25"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
-      {:phoenix_live_view, "~> 1.0.17"},
+      {:phoenix_live_view, "~> 1.0.20"},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       # highlander_pg declares a narrower postgrex range than the rest of the
