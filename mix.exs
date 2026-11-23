@@ -81,9 +81,11 @@ defmodule Lightning.MixProject do
   defp hex_audit do
     [
       ignore_advisories: [
-        # cloak and cloak_ecto, no patched release exists. Our only cipher is
-        # Cloak.Ciphers.AES.GCM (Lightning.Vault), which authenticates its
-        # ciphertext, and we define no Cloak.Ecto.PBKDF2 fields.
+        # cloak and cloak_ecto, no patched release exists (cloak#132,
+        # cloak_ecto#66). Lightning.Vault.init/1 hard-sets AES.GCM as the only
+        # cipher, which authenticates its ciphertext, and we define no
+        # Cloak.Ecto.PBKDF2 fields. Remove once fixed upstream; revisit if we
+        # add a CTR cipher or a PBKDF2 field. Detail in #5246.
         # Cloak.Ciphers.AES.CTR, no MAC
         "CVE-2026-95105",
         # Cloak.Ecto.PBKDF2 ignores :iterations
