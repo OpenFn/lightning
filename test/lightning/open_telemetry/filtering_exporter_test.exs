@@ -121,6 +121,35 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
 
       assert %{"url.path": "[redacted]"} == :otel_attributes.map(attributes)
     end
+
+    defmodule TableReportingExporter do
+      def init(pid), do: {:ok, pid}
+
+      def export(tab, _resource, pid) do
+        send(pid, {:exported_table, tab})
+        :ok
+      end
+    end
+
+    test "deletes the table it hands the wrapped exporter" do
+      {:ok, state} =
+        FilteringExporter.init(%{exporter: {TableReportingExporter, self()}})
+
+      tab = span_table()
+
+      :ets.insert(
+        tab,
+        span_rec(
+          name: :first,
+          attributes: :otel_attributes.new(%{}, 128, :infinity)
+        )
+      )
+
+      FilteringExporter.export(tab, :otel_resource.create([]), state)
+
+      assert_received {:exported_table, exported}
+      assert :undefined == :ets.info(exported)
+    end
   end
 
   describe "shutdown/1" do
