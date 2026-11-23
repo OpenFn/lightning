@@ -41,11 +41,11 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
     :ets.insert(scrubbed, tab |> :ets.tab2list() |> Enum.map(&scrub/1))
 
-    export_result = mod.export(scrubbed, resource, state)
-
-    :ets.delete(scrubbed)
-
-    export_result
+    try do
+      mod.export(scrubbed, resource, state)
+    after
+      :ets.delete(scrubbed)
+    end
   end
 
   def scrub(span(attributes: attrs) = s) do

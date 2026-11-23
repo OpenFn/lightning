@@ -150,6 +150,37 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
       assert_received {:exported_table, exported}
       assert :undefined == :ets.info(exported)
     end
+
+    defmodule RaisingExporter do
+      def init(pid), do: {:ok, pid}
+
+      def export(tab, _resource, pid) do
+        send(pid, {:exported_table, tab})
+        raise "export failed"
+      end
+    end
+
+    test "deletes the table on error and bubbles error up" do
+      {:ok, state} =
+        FilteringExporter.init(%{exporter: {RaisingExporter, self()}})
+
+      tab = span_table()
+
+      :ets.insert(
+        tab,
+        span_rec(
+          name: :first,
+          attributes: :otel_attributes.new(%{}, 128, :infinity)
+        )
+      )
+
+      assert_raise RuntimeError, "export failed", fn ->
+        FilteringExporter.export(tab, :otel_resource.create([]), state)
+      end
+
+      assert_received {:exported_table, exported}
+      assert :undefined == :ets.info(exported)
+    end
   end
 
   describe "shutdown/1" do
