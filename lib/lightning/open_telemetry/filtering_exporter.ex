@@ -31,6 +31,19 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     end
   end
 
+  @impl true
+  def export(tab, resource, {mod, state}) do
+    scrubbed =
+      :ets.new(:scrubbed_spans, [
+        :duplicate_bag,
+        {:keypos, span(:instrumentation_scope) + 1}
+      ])
+
+    :ets.insert(scrubbed, tab |> :ets.tab2list() |> Enum.map(&scrub/1))
+
+    mod.export(scrubbed, resource, state)
+  end
+
   def scrub(span(attributes: attrs) = s) do
     attrs_map = :otel_attributes.map(attrs)
 
@@ -42,9 +55,6 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
     span(s, attributes: updated_attrs)
   end
-
-  @impl true
-  def export(tab, resource, {mod, state}), do: mod.export(tab, resource, state)
 
   @impl true
   def shutdown({mod, state}), do: mod.shutdown(state)

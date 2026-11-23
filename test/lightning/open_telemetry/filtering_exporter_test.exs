@@ -60,13 +60,66 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
         FilteringExporter.init(%{exporter: {:otel_exporter_pid, self()}})
 
       tab = span_table()
-      :ets.insert(tab, [span_rec(name: :first), span_rec(name: :second)])
+
+      :ets.insert(
+        tab,
+        span_rec(
+          name: :first,
+          attributes: :otel_attributes.new(%{}, 128, :infinity)
+        )
+      )
+
+      :ets.insert(
+        tab,
+        span_rec(
+          name: :second,
+          attributes: :otel_attributes.new(%{}, 128, :infinity)
+        )
+      )
 
       assert :ok ==
                FilteringExporter.export(tab, :otel_resource.create([]), state)
 
       assert_received {:span, span_rec(name: :first)}
       assert_received {:span, span_rec(name: :second)}
+    end
+
+    test "hands the wrapped exporter scrubbed spans" do
+      {:ok, state} =
+        FilteringExporter.init(%{exporter: {:otel_exporter_pid, self()}})
+
+      tab = span_table()
+
+      :ets.insert(
+        tab,
+        span_rec(
+          name: :redactible,
+          attributes:
+            :otel_attributes.new(%{"url.path": "/i/abc123"}, 128, :infinity)
+        )
+      )
+
+      :ets.insert(
+        tab,
+        span_rec(
+          name: :other_redactible,
+          attributes:
+            :otel_attributes.new(%{"url.path": "/i/def456"}, 128, :infinity)
+        )
+      )
+
+      assert :ok ==
+               FilteringExporter.export(tab, :otel_resource.create([]), state)
+
+      assert_received {:span,
+                       span_rec(name: :redactible, attributes: attributes)}
+
+      assert %{"url.path": "[redacted]"} == :otel_attributes.map(attributes)
+
+      assert_received {:span,
+                       span_rec(name: :other_redactible, attributes: attributes)}
+
+      assert %{"url.path": "[redacted]"} == :otel_attributes.map(attributes)
     end
   end
 
