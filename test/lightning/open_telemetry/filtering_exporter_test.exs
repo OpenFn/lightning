@@ -82,16 +82,53 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
   end
 
   describe "scrub/1" do
-    test "redacts url.path" do
+    test "redacts all redactible attributes present" do
       span =
         span_rec(
           attributes:
-            :otel_attributes.new(%{"url.path": "/i/abc123"}, 128, :infinity)
+            :otel_attributes.new(
+              %{
+                "url.path": "/i/abc123",
+                "url.query": "token=abc123",
+                "client.address": "1.1.1.1",
+                "network.peer.address": "2.2.2.2",
+                "server.address": "3.3.3.3",
+                "network.local.address": "4.4.4.4",
+                "http.request.method": :GET
+              },
+              128,
+              :infinity
+            )
         )
 
       span_rec(attributes: attributes) = FilteringExporter.scrub(span)
 
-      assert %{"url.path": "[redacted]"} == :otel_attributes.map(attributes)
+      assert %{
+               "url.path": "[redacted]",
+               "url.query": "[redacted]",
+               "client.address": "[redacted]",
+               "network.peer.address": "[redacted]",
+               "server.address": "[redacted]",
+               "network.local.address": "[redacted]",
+               "http.request.method": :GET
+             } == :otel_attributes.map(attributes)
+    end
+
+    test "does not touch the span if there are no redactible attributes" do
+      span =
+        span_rec(
+          attributes:
+            :otel_attributes.new(
+              %{
+                "http.request.method": :GET,
+                "http.response.status_code": 200
+              },
+              10,
+              64
+            )
+        )
+
+      assert span == FilteringExporter.scrub(span)
     end
   end
 

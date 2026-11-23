@@ -15,7 +15,12 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
   )
 
   @redactions [
-    :"url.path"
+    :"url.path",
+    :"url.query",
+    :"client.address",
+    :"network.peer.address",
+    :"server.address",
+    :"network.local.address"
   ]
 
   @impl true
