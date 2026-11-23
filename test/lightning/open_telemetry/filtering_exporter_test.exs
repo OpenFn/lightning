@@ -127,8 +127,36 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
 
       def export(tab, _resource, pid) do
         send(pid, {:exported_table, tab})
+        send(pid, {:table_type, :ets.info(tab, :type)})
+        send(pid, {:table_keypos, :ets.info(tab, :keypos)})
         :ok
       end
+    end
+
+    test "creates a table to match the provided table" do
+      {:ok, state} =
+        FilteringExporter.init(%{exporter: {TableReportingExporter, self()}})
+
+      tab = spurious_span_table()
+
+      input_table_type = :ets.info(tab, :type)
+      input_table_keypos = :ets.info(tab, :keypos)
+
+      :ets.insert(
+        tab,
+        span_rec(
+          name: :first,
+          attributes: :otel_attributes.new(%{}, 128, :infinity)
+        )
+      )
+
+      FilteringExporter.export(tab, :otel_resource.create([]), state)
+
+      assert_received({:table_type, temporary_table_type})
+      assert input_table_type == temporary_table_type
+
+      assert_received({:table_keypos, temporary_table_keypos})
+      assert input_table_keypos == temporary_table_keypos
     end
 
     test "deletes the table it hands the wrapped exporter" do
@@ -180,6 +208,32 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
 
       assert_received {:exported_table, exported}
       assert :undefined == :ets.info(exported)
+    end
+
+    defmodule UnusualResponseExporter do
+      def init(pid), do: {:ok, pid}
+
+      def export(_tab, _resource, _pid) do
+        :failed_not_retryable
+      end
+    end
+
+    test "returns the response of the wrapped exporter" do
+      {:ok, state} =
+        FilteringExporter.init(%{exporter: {UnusualResponseExporter, self()}})
+
+      tab = span_table()
+
+      :ets.insert(
+        tab,
+        span_rec(
+          name: :first,
+          attributes: :otel_attributes.new(%{}, 128, :infinity)
+        )
+      )
+
+      assert :failed_not_retryable =
+               FilteringExporter.export(tab, :otel_resource.create([]), state)
     end
   end
 
@@ -254,6 +308,16 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
     :ets.new(:spans, [
       :duplicate_bag,
       {:keypos, span_rec(:instrumentation_scope) + 1}
+    ])
+  end
+
+  # Does not (currently) resemble the ETS table that OT creates Used to confirm
+  # that the temporary table created to hold scrubbed spans matches the input
+  # table's type and key position.
+  defp spurious_span_table do
+    :ets.new(:spans, [
+      :bag,
+      {:keypos, span_rec(:instrumentation_scope) - 1}
     ])
   end
 end
