@@ -30,6 +30,18 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
     end
   end
 
+  describe "behaviour" do
+    test "implements :otel_exporter_traces" do
+      assert :otel_exporter_traces in (Keyword.get_values(
+                                         FilteringExporter.module_info(
+                                           :attributes
+                                         ),
+                                         :behaviour
+                                       )
+                                       |> List.flatten())
+    end
+  end
+
   describe "init/1" do
     test "initialises the wrapped exporter and keeps it with its state" do
       assert {:ok, {:otel_exporter_pid, self()}} ==

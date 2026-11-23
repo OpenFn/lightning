@@ -4,9 +4,9 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
   filtering is added in later commits.
   """
 
-  # @behaviour :otel_exporter_traces
-  #
-  # @impl true
+  @behaviour :otel_exporter_traces
+
+  @impl true
   def init(%{exporter: {mod, opts}}) do
     case mod.init(opts) do
       {:ok, state} -> {:ok, {mod, state}}
@@ -14,11 +14,10 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     end
   end
 
-  #
-  # @impl true
+  @impl true
   def export(tab, resource, {mod, state}), do: mod.export(tab, resource, state)
 
-  # @impl true
+  @impl true
   def shutdown({mod, state}), do: mod.shutdown(state)
 
   def allowed_attributes do
