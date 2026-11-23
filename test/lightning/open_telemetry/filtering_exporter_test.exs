@@ -81,6 +81,20 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
     end
   end
 
+  describe "scrub/1" do
+    test "redacts url.path" do
+      span =
+        span_rec(
+          attributes:
+            :otel_attributes.new(%{"url.path": "/i/abc123"}, 128, :infinity)
+        )
+
+      span_rec(attributes: attributes) = FilteringExporter.scrub(span)
+
+      assert %{"url.path": "[redacted]"} == :otel_attributes.map(attributes)
+    end
+  end
+
   # Built the way the batch processor builds the table it hands an exporter
   # (`otel_batch_processor:new_export_table/1`): a duplicate bag keyed on the
   # instrumentation scope, which the OTLP exporter relies on to group spans.
