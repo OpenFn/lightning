@@ -1889,7 +1889,7 @@ defmodule Lightning.Config.BootstrapTest do
       assert get_env(:lightning, :otel)[:enabled]
     end
 
-    test "includes the RedactingProcessor and does not set span_processor" do
+    test "is confgiured to use the FilteringExporter" do
       reconfigure(%{
         "TRACING_ENABLED" => "yes",
         "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
@@ -1898,14 +1898,9 @@ defmodule Lightning.Config.BootstrapTest do
 
       opentelemetry = get_env(:opentelemetry)
 
-      # Ensure we are redacting potentially sensitive data before exporting traces
-      assert {Lightning.OpenTelemetry.RedactingProcessor, %{}} in opentelemetry[
-               :processors
-             ]
-
-      # Ensure we have not set a span_processor, as this will result in OTel 
-      # ignoring the processors list.
-      refute Keyword.has_key?(opentelemetry, :span_processor)
+      assert opentelemetry[:traces_exporter] ==
+               {Lightning.OpenTelemetry.FilteringExporter,
+                %{exporter: {:opentelemetry_exporter, %{}}}}
     end
   end
 
