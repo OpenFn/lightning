@@ -1,7 +1,6 @@
 defmodule Lightning.OpenTelemetry.FilteringExporter do
   @moduledoc """
-  Wraps a traces exporter. For now it hands every batch on unchanged; span
-  filtering is added in later commits.
+  Wraps a traces exporter.
   """
 
   @behaviour :otel_exporter_traces
