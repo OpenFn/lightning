@@ -1318,6 +1318,21 @@ defmodule Lightning.Config.Bootstrap do
         sdk_disabled_set -> sdk_disabled_set
       end
 
+    if env!("OTEL_TRACES_EXPORTER", :string, nil) do
+      raise ArgumentError, """
+      OTEL_TRACES_EXPORTER is not currently supported as it will circumvent the
+      current filtering of sensitive data. This may change in the future.
+      """
+    end
+
+    if env!("OTEL_SPAN_EVENT_COUNT_LIMIT", :integer, nil) do
+      raise ArgumentError, """
+      OTEL_SPAN_EVENT_COUNT_LIMIT is not currently supported as it will
+      circumvent the current filtering of sensitive data. This may change in the
+      future.
+      """
+    end
+
     config :lightning, :otel,
       enabled: not disabled?,
       ecto_enabled: env!("TRACING_ECTO_ENABLED", &Utils.ensure_boolean/1, false)

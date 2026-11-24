@@ -1902,6 +1902,56 @@ defmodule Lightning.Config.BootstrapTest do
                {Lightning.OpenTelemetry.FilteringExporter,
                 %{exporter: {:opentelemetry_exporter, %{}}}}
     end
+
+    test "raises if tracing enabled, OTEL_TRACES_EXPORTER is set" do
+      assert_raise ArgumentError, ~r/OTEL_TRACES_EXPORTER/, fn ->
+        reconfigure(%{
+          "TRACING_ENABLED" => "yes",
+          "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+          "OTEL_TRACES_EXPORTER" => "otlp"
+        })
+      end
+    end
+
+    test "raises if tracing enabled, OTEL_TRACES_EXPORTER is empty string" do
+      assert_raise ArgumentError, ~r/OTEL_TRACES_EXPORTER/, fn ->
+        reconfigure(%{
+          "TRACING_ENABLED" => "yes",
+          "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+          "OTEL_TRACES_EXPORTER" => ""
+        })
+      end
+    end
+
+    test "raises if tracing enabled, OTEL_SPAN_EVENT_COUNT_LIMIT is set" do
+      assert_raise ArgumentError, ~r/OTEL_SPAN_EVENT_COUNT_LIMIT/, fn ->
+        reconfigure(%{
+          "TRACING_ENABLED" => "yes",
+          "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+          "OTEL_SPAN_EVENT_COUNT_LIMIT" => "128"
+        })
+      end
+    end
+
+    test "raises if tracing enabled, OTEL_SPAN_EVENT_COUNT_LIMIT is empty string" do
+      assert_raise ArgumentError, ~r/OTEL_SPAN_EVENT_COUNT_LIMIT/, fn ->
+        reconfigure(%{
+          "TRACING_ENABLED" => "yes",
+          "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+          "OTEL_SPAN_EVENT_COUNT_LIMIT" => ""
+        })
+      end
+    end
+
+    test "raises if tracing enabled, OTEL_SPAN_EVENT_COUNT_LIMIT is non-int" do
+      assert_raise RuntimeError, ~r/OTEL_SPAN_EVENT_COUNT_LIMIT/, fn ->
+        reconfigure(%{
+          "TRACING_ENABLED" => "yes",
+          "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+          "OTEL_SPAN_EVENT_COUNT_LIMIT" => "eeek"
+        })
+      end
+    end
   end
 
   # Helpers to read the in-process config that Config writes
