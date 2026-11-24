@@ -78,17 +78,14 @@ defmodule Lightning.MixProject do
 
   # Advisories we have checked and accepted. Hex matches an advisory's primary ID
   # or any alias, so the CVE form also silences the GHSA and EEF variants.
-  #
-  # cowlib: names a function on cowlib's header-building path that nothing in
-  # our tree calls. No patched cowlib release exists yet. Detail in #5102.
   defp hex_audit do
     [
       ignore_advisories: [
-        # cow_http_struct_hd:escape_string/2
-        "CVE-2026-43966",
-        # cloak and cloak_ecto, no patched release exists. Our only cipher is
-        # Cloak.Ciphers.AES.GCM (Lightning.Vault), which authenticates its
-        # ciphertext, and we define no Cloak.Ecto.PBKDF2 fields.
+        # cloak and cloak_ecto, no patched release exists (cloak#132,
+        # cloak_ecto#66). Lightning.Vault.init/1 hard-sets AES.GCM as the only
+        # cipher, which authenticates its ciphertext, and we define no
+        # Cloak.Ecto.PBKDF2 fields. Remove once fixed upstream; revisit if we
+        # add a CTR cipher or a PBKDF2 field. Detail in #5246.
         # Cloak.Ciphers.AES.CTR, no MAC
         "CVE-2026-95105",
         # Cloak.Ecto.PBKDF2 ignores :iterations
@@ -131,7 +128,7 @@ defmodule Lightning.MixProject do
       # Overridden because phoenix_swoosh 1.2.1 (latest) still declares
       # hackney ~> 1.10. It never actually calls hackney, so the constraint is
       # dead weight, but it has to be overridden to resolve.
-      {:hackney, "~> 4.9", override: true},
+      {:hackney, "~> 4.11", override: true},
       {:heroicons, "~> 0.5.3"},
       {:highlander_pg, "~> 1.0"},
       {:httpoison, "~> 3.0.0", override: true},
@@ -150,13 +147,13 @@ defmodule Lightning.MixProject do
       {:mox, "~> 1.2.0", only: :test},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.19"},
-      {:phoenix, "~> 1.7.11"},
+      {:phoenix, "~> 1.7.25"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
-      {:phoenix_live_view, "~> 1.0.17"},
+      {:phoenix_live_view, "~> 1.0.20"},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       # highlander_pg declares a narrower postgrex range than the rest of the
