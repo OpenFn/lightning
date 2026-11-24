@@ -78,7 +78,7 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     :otel_attributes.dropped(attrs) > 0
   end
 
-  def scrub(span(attributes: attrs) = s) do
+  def scrub(span(attributes: attrs, status: status) = s) do
     attrs_map = :otel_attributes.map(attrs)
 
     allowed_attrs =
@@ -87,8 +87,19 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
     span(s,
       attributes:
-        :otel_attributes.new(allowed_attrs, map_size(allowed_attrs), :infinity)
+        :otel_attributes.new(allowed_attrs, map_size(allowed_attrs), :infinity),
+      status: scrub_status(status)
     )
+  end
+
+  defp scrub_status({:status, code, _message}) do
+    {:status, code, ""}
+  end
+
+  defp scrub_status(:undefined), do: :undefined
+
+  defp scrub_status(_anything_else) do
+    :opentelemetry.status(:error, "Lightning scrubbed unexpected status")
   end
 
   @impl true

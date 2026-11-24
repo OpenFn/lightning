@@ -417,6 +417,68 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
       assert count_limit == 2
       assert value_length_limit == :infinity
     end
+
+    test "clears the status message, reagrdless of code" do
+      span =
+        span_rec(
+          attributes: :otel_attributes.new(%{}, 10, 64),
+          status: {:status, :unobtainium, "message"}
+        )
+
+      span_rec(status: status) = FilteringExporter.scrub(span)
+
+      assert {:status, :unobtainium, ""} == status
+    end
+
+    test "leaves an :undefined status alone" do
+      span =
+        span_rec(
+          attributes: :otel_attributes.new(%{}, 10, 64),
+          status: :undefined
+        )
+
+      span_rec(status: status) = FilteringExporter.scrub(span)
+
+      assert :undefined == status
+    end
+
+    test "replaces an unrecognised status with an error status" do
+      span =
+        span_rec(
+          attributes: :otel_attributes.new(%{}, 10, 64),
+          status: {:unexpected, :unobtainium, "secret"}
+        )
+
+      span_rec(status: status) = FilteringExporter.scrub(span)
+
+      assert {:status, :error, "Lightning scrubbed unexpected status"} == status
+    end
+
+    test "correctly scrubs a span with attributes, status and links" do
+      span =
+        span_rec(
+          name: :redactible,
+          attributes:
+            :otel_attributes.new(
+              %{
+                "http.response.status_code": 200,
+                "lightning.invented": "secret",
+                "lightning.also_invented": "secret"
+              },
+              128,
+              :infinity
+            ),
+          status: {:status, :error, "message"}
+        )
+
+      span_rec(attributes: attributes, status: status) =
+        FilteringExporter.scrub(span)
+
+      assert %{"http.response.status_code": 200} ==
+               :otel_attributes.map(attributes)
+
+      assert {:status, :error, ""} == status
+    end
   end
 
   # Built the way the batch processor builds the table it hands an exporter
