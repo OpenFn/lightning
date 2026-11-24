@@ -96,8 +96,12 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
   def allowed_attributes do
     [
+      :"error.type",
       :"http.request.method",
-      :"http.response.status_code"
+      :"http.response.status_code",
+      :"http.route",
+      :"server.port",
+      :"url.scheme"
     ]
   end
 end
