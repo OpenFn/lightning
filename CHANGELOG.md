@@ -98,6 +98,11 @@ and this project adheres to
 - A form that loses a save race with another user, or saves a record someone
   else deleted, shows a message instead of crashing.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)
+- `step:complete` no longer crashes with an unhandled `Postgrex.Error` (code
+  `22P05`) when an `output_dataclip` body contains a NUL byte. The dataclip
+  insert is rejected with a changeset error instead of raising, since PostgreSQL
+  cannot store the NUL byte (`\u0000`) in `text`/`jsonb`.
+  [#4893](https://github.com/OpenFn/lightning/issues/4893)
 - URLs with a port above 65535 are now rejected on save, for OAuth client
   endpoints and channel destinations. On Elixir 1.19.7 such a URL would
   otherwise be sent to the scheme's default port.
