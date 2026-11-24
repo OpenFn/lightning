@@ -299,6 +299,55 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
     end
   end
 
+  describe "scrub/1 - allowlist" do
+    test "if there is a single non-allowed attribute, it is removed" do
+      span =
+        span_rec(
+          attributes:
+            :otel_attributes.new(
+              %{"http.request.method": :GET, "lightning.invented": "secret"},
+              128,
+              :infinity
+            )
+        )
+
+      span_rec(attributes: attributes) = FilteringExporter.scrub(span)
+
+      refute Map.has_key?(
+               :otel_attributes.map(attributes),
+               :"lightning.invented"
+             )
+    end
+
+    test "if there are multiple non-allowed attributes, they are removed" do
+      span =
+        span_rec(
+          attributes:
+            :otel_attributes.new(
+              %{
+                "http.request.method": :GET,
+                "lightning.invented": "secret",
+                "lightning.also_invented": "secret"
+              },
+              128,
+              :infinity
+            )
+        )
+
+      span_rec(attributes: attributes) = FilteringExporter.scrub(span)
+
+      refute Map.has_key?(
+               :otel_attributes.map(attributes),
+               :"lightning.invented"
+             )
+
+      refute Map.has_key?(
+               :otel_attributes.map(attributes),
+               :"lightning.also_invented"
+             )
+    end
+  end
+
   # Built the way the batch processor builds the table it hands an exporter
   # (`otel_batch_processor:new_export_table/1`): a duplicate bag keyed on the
   # instrumentation scope, which the OTLP exporter relies on to group spans.

@@ -17,15 +17,6 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     Record.extract(:span, from_lib: "opentelemetry/include/otel_span.hrl")
   )
 
-  @redactions [
-    :"url.path",
-    :"url.query",
-    :"client.address",
-    :"network.peer.address",
-    :"server.address",
-    :"network.local.address"
-  ]
-
   @impl true
   def init(%{exporter: {mod, opts}}) do
     case mod.init(opts) do
@@ -56,16 +47,8 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     ]
   end
 
-  def scrub(span(attributes: attrs) = s) do
-    attrs_map = :otel_attributes.map(attrs)
-
-    updated_attrs =
-      case @redactions |> Enum.filter(&Map.has_key?(attrs_map, &1)) do
-        [] -> attrs
-        keys -> :otel_attributes.set(Map.new(keys, &{&1, "[redacted]"}), attrs)
-      end
-
-    span(s, attributes: updated_attrs)
+  def scrub(span() = s) do
+    span(s, attributes: :otel_attributes.new(%{}, 128, :infinity))
   end
 
   @impl true
