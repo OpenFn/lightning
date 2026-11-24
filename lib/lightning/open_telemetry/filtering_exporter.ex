@@ -9,6 +9,7 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
   @behaviour :otel_exporter_traces
 
+  require Logger
   require Record
 
   Record.defrecordp(
@@ -31,7 +32,13 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
     scrubbed = :ets.new(:scrubbed_spans, [type, {:keypos, keypos}])
 
-    :ets.insert(scrubbed, tab |> :ets.tab2list() |> Enum.map(&scrub/1))
+    scrubbed_spans =
+      tab
+      |> :ets.tab2list()
+      |> tap(&warn_of_dropped_attributes/1)
+      |> Enum.map(&scrub/1)
+
+    :ets.insert(scrubbed, scrubbed_spans)
 
     try do
       mod.export(scrubbed, resource, state)
@@ -47,14 +54,50 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     ]
   end
 
-  def scrub(span() = s) do
-    span(s, attributes: :otel_attributes.new(%{}, 128, :infinity))
+  defp warn_of_dropped_attributes(spans) do
+    spans
+    |> Enum.filter(&has_dropped_attributes/1)
+    |> Enum.map(&span(&1, :name))
+    |> case do
+      [] ->
+        :ok
+
+      dropped ->
+        names =
+          dropped
+          |> Enum.uniq()
+          |> Enum.sort()
+
+        Logger.warning(
+          "Spans with dropped attributes detected: #{inspect(names)}."
+        )
+    end
+  end
+
+  defp has_dropped_attributes(span(attributes: attrs)) do
+    :otel_attributes.dropped(attrs) > 0
+  end
+
+  def scrub(span(attributes: attrs) = s) do
+    attrs_map = :otel_attributes.map(attrs)
+
+    allowed_attrs =
+      attrs_map
+      |> Map.take(allowed_attributes())
+
+    span(s,
+      attributes:
+        :otel_attributes.new(allowed_attrs, map_size(allowed_attrs), :infinity)
+    )
   end
 
   @impl true
   def shutdown({mod, state}), do: mod.shutdown(state)
 
   def allowed_attributes do
-    []
+    [
+      :"http.request.method",
+      :"http.response.status_code"
+    ]
   end
 end

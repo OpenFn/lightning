@@ -1,5 +1,6 @@
 defmodule Lightning.OpenTelemetry.FilteringExporterTest do
   use ExUnit.Case, async: true
+  import ExUnit.CaptureLog
 
   require Record
 
@@ -235,6 +236,56 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
       assert :failed_not_retryable =
                FilteringExporter.export(tab, :otel_resource.create([]), state)
     end
+
+    test "writes any spans with dropped attributes to the log as warnings" do
+      {:ok, state} =
+        FilteringExporter.init(%{exporter: {UnusualResponseExporter, self()}})
+
+      tab = span_table()
+
+      add_span(tab, :span_a, dropped_attr_count: 0)
+      add_span(tab, :span_b, dropped_attr_count: 0)
+      add_span(tab, :span_c, dropped_attr_count: 1)
+      add_span(tab, :span_d, dropped_attr_count: 2)
+      add_span(tab, :span_c, dropped_attr_count: 2)
+      add_span(tab, :span_b, dropped_attr_count: 1)
+      add_span(tab, :span_a, dropped_attr_count: 0)
+
+      log =
+        capture_log(fn ->
+          FilteringExporter.export(tab, :otel_resource.create([]), state)
+        end)
+
+      assert log =~ "[warning] Spans"
+      assert log =~ "[:span_b, :span_c, :span_d]"
+    end
+
+    defp add_span(table, span_name, dropped_attr_count: dropped_attr_count) do
+      :ets.insert(
+        table,
+        span_rec(
+          name: span_name,
+          attributes: attributes_with_drops(dropped_attr_count)
+        )
+      )
+    end
+
+    defp attributes_with_drops(dropped_attr_count) when dropped_attr_count < 3 do
+      base_limit = 3
+      count_limit = base_limit - dropped_attr_count
+
+      :otel_attributes.new(
+        %{"http.request.method": :GET},
+        count_limit,
+        :infinity
+      )
+      |> then(&:otel_attributes.set(%{"http.response.status_code": 200}, &1))
+      |> then(&:otel_attributes.set(%{"lightning.invented": "secret"}, &1))
+    end
+
+    defp attributes_with_drops(_dropped_attr_count) do
+      raise "Dropping more than 2 attributes is not supported"
+    end
   end
 
   describe "shutdown/1" do
@@ -305,27 +356,9 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
         span_rec(
           attributes:
             :otel_attributes.new(
-              %{"http.request.method": :GET, "lightning.invented": "secret"},
-              128,
-              :infinity
-            )
-        )
-
-      span_rec(attributes: attributes) = FilteringExporter.scrub(span)
-
-      refute Map.has_key?(
-               :otel_attributes.map(attributes),
-               :"lightning.invented"
-             )
-    end
-
-    test "if there are multiple non-allowed attributes, they are removed" do
-      span =
-        span_rec(
-          attributes:
-            :otel_attributes.new(
               %{
                 "http.request.method": :GET,
+                "http.response.status_code": 200,
                 "lightning.invented": "secret",
                 "lightning.also_invented": "secret"
               },
@@ -336,15 +369,88 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
 
       span_rec(attributes: attributes) = FilteringExporter.scrub(span)
 
-      refute Map.has_key?(
-               :otel_attributes.map(attributes),
-               :"lightning.invented"
-             )
+      attributes_map = :otel_attributes.map(attributes)
 
-      refute Map.has_key?(
-               :otel_attributes.map(attributes),
-               :"lightning.also_invented"
-             )
+      assert attributes_map == %{
+               "http.request.method": :GET,
+               "http.response.status_code": 200
+             }
+    end
+
+    test "if there are multiple non-allowed attributes, they are removed" do
+      span =
+        span_rec(
+          attributes:
+            :otel_attributes.new(
+              %{
+                "http.request.method": :GET,
+                "http.response.status_code": 200,
+                "lightning.invented": "secret",
+                "lightning.also_invented": "secret"
+              },
+              128,
+              :infinity
+            )
+        )
+
+      span_rec(attributes: attributes) = FilteringExporter.scrub(span)
+
+      attributes_map = :otel_attributes.map(attributes)
+
+      assert attributes_map == %{
+               "http.request.method": :GET,
+               "http.response.status_code": 200
+             }
+    end
+
+    test "passes through all attributes if only allowed attributes present" do
+      span =
+        span_rec(
+          attributes:
+            :otel_attributes.new(
+              %{
+                "http.request.method": :GET,
+                "http.response.status_code": 200
+              },
+              10,
+              64
+            )
+        )
+
+      span_rec(attributes: attributes) = FilteringExporter.scrub(span)
+
+      attributes_map = :otel_attributes.map(attributes)
+
+      assert attributes_map == %{
+               "http.request.method": :GET,
+               "http.response.status_code": 200
+             }
+    end
+
+    test "sets limits that ensure no truncation of allowed attributes" do
+      span =
+        span_rec(
+          attributes:
+            :otel_attributes.new(
+              %{
+                "http.request.method": :GET,
+                "http.response.status_code": 200,
+                "lightning.invented": "secret",
+                "lightning.also_invented": "secret"
+              },
+              128,
+              :infinity
+            )
+        )
+
+      span_rec(
+        attributes:
+          {:attributes, count_limit, value_length_limit, _dropped, _map}
+      ) =
+        FilteringExporter.scrub(span)
+
+      assert count_limit == 2
+      assert value_length_limit == :infinity
     end
   end
 
