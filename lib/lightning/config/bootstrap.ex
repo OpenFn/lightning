@@ -1318,18 +1318,21 @@ defmodule Lightning.Config.Bootstrap do
         sdk_disabled_set -> sdk_disabled_set
       end
 
-    if env!("OTEL_TRACES_EXPORTER", :string, nil) do
+    # The OTel SDK apparently counts an empty string as a set value, so it
+    # is included in the check.
+    if not disabled? && env!("OTEL_TRACES_EXPORTER", :string, nil) do
       raise ArgumentError, """
-      OTEL_TRACES_EXPORTER is not currently supported as it will circumvent the
-      current filtering of sensitive data. This may change in the future.
+      OTEL_TRACES_EXPORTER is not currently supported when tracing is enabled as
+      it circumvents the filtering of sensitive data.
       """
     end
 
-    if env!("OTEL_SPAN_EVENT_COUNT_LIMIT", :integer, nil) do
+    # The OTel SDK apparently counts an empty string as a set value, so it
+    # is included in the check.
+    if not disabled? && env!("OTEL_SPAN_EVENT_COUNT_LIMIT", :string, nil) do
       raise ArgumentError, """
-      OTEL_SPAN_EVENT_COUNT_LIMIT is not currently supported as it will
-      circumvent the current filtering of sensitive data. This may change in the
-      future.
+      OTEL_SPAN_EVENT_COUNT_LIMIT is not currently supported when tracing is
+      enabled as it circumvents the filtering of sensitive data.
       """
     end
 

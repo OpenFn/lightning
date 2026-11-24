@@ -111,9 +111,8 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
   # `server.port` can act as the control for `server.address`.
   @forwarded_port 8443
 
-  # The OS variables the SDK reads that can undo a data protection. Mirrors
-  # the list in `Lightning.Config.Bootstrap`; see the bootstrap tests for the
-  # raise.
+  # The OS variables the SDK reads that can undo a data protection. The
+  # presence of these will result in `Lightning.Config.Bootstrap` raising errors.
   @bypass_vars ~w(OTEL_TRACES_EXPORTER OTEL_SPAN_EVENT_COUNT_LIMIT)
 
   # Keys that must never be exported, listed independently of the

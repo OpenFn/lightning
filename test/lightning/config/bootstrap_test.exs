@@ -1889,7 +1889,7 @@ defmodule Lightning.Config.BootstrapTest do
       assert get_env(:lightning, :otel)[:enabled]
     end
 
-    test "is confgiured to use the FilteringExporter" do
+    test "is configured to use the FilteringExporter" do
       reconfigure(%{
         "TRACING_ENABLED" => "yes",
         "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
@@ -1944,13 +1944,63 @@ defmodule Lightning.Config.BootstrapTest do
     end
 
     test "raises if tracing enabled, OTEL_SPAN_EVENT_COUNT_LIMIT is non-int" do
-      assert_raise RuntimeError, ~r/OTEL_SPAN_EVENT_COUNT_LIMIT/, fn ->
+      assert_raise ArgumentError, ~r/OTEL_SPAN_EVENT_COUNT_LIMIT/, fn ->
         reconfigure(%{
           "TRACING_ENABLED" => "yes",
           "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
           "OTEL_SPAN_EVENT_COUNT_LIMIT" => "eeek"
         })
       end
+    end
+
+    test "no raise if tracing disabled, OTEL_TRACES_EXPORTER is set" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_TRACES_EXPORTER" => "otlp"
+      })
+
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "no raise if tracing disabled, OTEL_TRACES_EXPORTER is empty string" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_TRACES_EXPORTER" => ""
+      })
+
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "no raise if tracing disabled, OTEL_SPAN_EVENT_COUNT_LIMIT is set" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SPAN_EVENT_COUNT_LIMIT" => "128"
+      })
+
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "no raise if tracing disabled, OTEL_SPAN_EVENT_COUNT_LIMIT is empty string" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SPAN_EVENT_COUNT_LIMIT" => ""
+      })
+
+      assert get_env(:opentelemetry)[:sdk_disabled]
+    end
+
+    test "no raise if tracing disabled, OTEL_SPAN_EVENT_COUNT_LIMIT is non-int" do
+      reconfigure(%{
+        "TRACING_ENABLED" => "no",
+        "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",
+        "OTEL_SPAN_EVENT_COUNT_LIMIT" => "eeek"
+      })
+
+      assert get_env(:opentelemetry)[:sdk_disabled]
     end
   end
 

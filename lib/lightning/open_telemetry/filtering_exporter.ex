@@ -1,6 +1,10 @@
 defmodule Lightning.OpenTelemetry.FilteringExporter do
   @moduledoc """
-  Wraps a traces exporter.
+  Wraps a traces exporter and redacts sensitive attributes from each span
+  before handing the batch on.
+
+  Installed as the SDK's `traces_exporter` by `Lightning.Config.Bootstrap`,
+  wrapping the OTLP exporter.
   """
 
   @behaviour :otel_exporter_traces
