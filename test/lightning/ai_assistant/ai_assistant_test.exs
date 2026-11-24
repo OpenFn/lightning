@@ -3421,6 +3421,38 @@ defmodule Lightning.AiAssistantTest do
                        %{error: "The prompt is too long."}}
     end
 
+    # A safety decline from the model. Apollo writes this sentence for a person,
+    # and the generic one would invite a retry that gets declined again.
+    test "passes through a model refusal", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "code" => 422,
+          "type" => "MODEL_REFUSAL",
+          "message" =>
+            "The AI service declined to answer this request. Try rephrasing it.",
+          "details" => %{"category" => "cyber"}
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{
+                         error:
+                           "The AI service declined to answer this request. Try rephrasing it."
+                       }}
+    end
+
     # A session whose latest message is a pending question, which is what the
     # stream replies to.
     defp global_session_with_pending_message(user, project, workflow) do

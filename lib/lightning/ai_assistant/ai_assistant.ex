@@ -39,7 +39,7 @@ defmodule Lightning.AiAssistant do
   # INVALID_REQUEST, UNKNOWN_ERROR, DATABASE_ERROR, FETCH_ERROR,
   # ADAPTOR_API_ERROR - and `str(e)` carries hostnames and container paths.
   # These are the types whose message apollo writes for a person, read off
-  # v3.1.1. Anything else is logged, not shown.
+  # v3.1.1, plus MODEL_REFUSAL from v3.6.0. Anything else is logged, not shown.
   @apollo_readable_errors ~w(
     AUTH_ERROR
     CONNECTION_ERROR
@@ -48,6 +48,7 @@ defmodule Lightning.AiAssistant do
     FORBIDDEN
     INVALID_LLM_RESPONSE
     MISSING_API_KEY
+    MODEL_REFUSAL
     NOT_FOUND
     OUTPUT_TRUNCATED
     PROMPT_TOO_LONG
