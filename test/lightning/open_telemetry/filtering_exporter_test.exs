@@ -454,6 +454,49 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
       assert {:status, :error, "Lightning scrubbed unexpected status"} == status
     end
 
+    test "scrubs the links when there is a single link" do
+      span =
+        span_rec(
+          attributes: :otel_attributes.new(%{}, 10, 64),
+          links: [
+            :opentelemetry.link(1, 2, %{}, :otel_tracestate.new())
+          ]
+        )
+
+      span_rec(links: links) = FilteringExporter.scrub(span)
+
+      assert length(links) == 1
+
+      assert span_rec(links: []) = FilteringExporter.scrub(span)
+    end
+
+    test "scrubs the links when there are multiple links" do
+      span =
+        span_rec(
+          attributes: :otel_attributes.new(%{}, 10, 64),
+          links: [
+            :opentelemetry.link(1, 2, %{}, :otel_tracestate.new()),
+            :opentelemetry.link(3, 4, %{}, :otel_tracestate.new())
+          ]
+        )
+
+      span_rec(links: links) = FilteringExporter.scrub(span)
+
+      assert length(links) == 2
+
+      assert span_rec(links: []) = FilteringExporter.scrub(span)
+    end
+
+    test "leaves links empty when there are no links" do
+      span =
+        span_rec(
+          attributes: :otel_attributes.new(%{}, 10, 64),
+          links: []
+        )
+
+      assert span_rec(links: []) = FilteringExporter.scrub(span)
+    end
+
     test "correctly scrubs a span with attributes, status and links" do
       span =
         span_rec(
@@ -468,14 +511,20 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
               128,
               :infinity
             ),
+          links: [
+            :opentelemetry.link(1, 2, %{}, :otel_tracestate.new()),
+            :opentelemetry.link(3, 4, %{}, :otel_tracestate.new())
+          ],
           status: {:status, :error, "message"}
         )
 
-      span_rec(attributes: attributes, status: status) =
+      span_rec(attributes: attributes, links: links, status: status) =
         FilteringExporter.scrub(span)
 
       assert %{"http.response.status_code": 200} ==
                :otel_attributes.map(attributes)
+
+      assert length(links) == 0
 
       assert {:status, :error, ""} == status
     end
