@@ -140,6 +140,7 @@ and this project adheres to
 - hackney moves from 4.9.1 to 4.12.3 and Swoosh from 1.26.3 to 1.30.0, which
   brings idna 8.0.0 for CVE-2026-117678.
   [#5287](https://github.com/OpenFn/lightning/pull/5287)
+- db_connection moves from 2.10.2 to 2.10.3 for CVE-2026-133555.
 
 ## [2.20.1] - 2026-11-04
 
