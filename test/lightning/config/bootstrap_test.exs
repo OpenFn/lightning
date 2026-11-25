@@ -1622,6 +1622,15 @@ defmodule Lightning.Config.BootstrapTest do
   end
 
   describe "configuring OpenTelemetry" do
+    test "sets the instance id to the hostname" do
+      hostname = :inet.gethostname() |> elem(1) |> to_string()
+
+      reconfigure(%{})
+
+      assert get_env(:opentelemetry)[:resource][:service][:instance][:id] ==
+               hostname
+    end
+
     test "enabled if TRACING_ENABLED not set, OTEL_SDK_DISABLED false" do
       reconfigure(%{
         "OTEL_EXPORTER_OTLP_ENDPOINT" => "http://localhost:4317",

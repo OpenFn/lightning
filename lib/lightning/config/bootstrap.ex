@@ -1354,6 +1354,7 @@ defmodule Lightning.Config.Bootstrap do
       sampler: {:parent_based, %{root: {:trace_id_ratio_based, 0.05}}},
       resource: %{
         service: %{
+          instance: %{id: host_name()},
           name: "lightning",
           version: to_string(Application.spec(:lightning, :vsn))
         }
@@ -1397,5 +1398,11 @@ defmodule Lightning.Config.Bootstrap do
       "" -> nil
       endpoint -> endpoint
     end
+  end
+
+  defp host_name() do
+    {:ok, hostname} = :inet.gethostname()
+
+    to_string(hostname)
   end
 end
