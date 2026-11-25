@@ -1318,8 +1318,9 @@ defmodule Lightning.Config.Bootstrap do
         sdk_disabled_set -> sdk_disabled_set
       end
 
-    # The OTel SDK apparently counts an empty string as a set value, so it
-    # is included in the check.
+    # At the time of writing, OTel SDK will use the default, unfiltered exporter
+    # if OTEL_TRACES_EXPORTER is an empty string, so an empty string is also
+    # disallowed.
     if not disabled? && env!("OTEL_TRACES_EXPORTER", :string, nil) do
       raise ArgumentError, """
       OTEL_TRACES_EXPORTER is not currently supported when tracing is enabled as
@@ -1327,8 +1328,9 @@ defmodule Lightning.Config.Bootstrap do
       """
     end
 
-    # The OTel SDK apparently counts an empty string as a set value, so it
-    # is included in the check.
+    # At the time of writing, OTel SDK will use the default event count
+    # if OTEL_SPAN_EVENT_COUNT_LIMIT is an empty string, so an empty string is
+    # also disallowed.
     if not disabled? && env!("OTEL_SPAN_EVENT_COUNT_LIMIT", :string, nil) do
       raise ArgumentError, """
       OTEL_SPAN_EVENT_COUNT_LIMIT is not currently supported when tracing is

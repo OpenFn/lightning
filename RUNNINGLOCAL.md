@@ -214,6 +214,12 @@ The above can be configured via a `.env` file to be read by Dotenvy. Any other
 libraries. As a result they will be ignored by Dotenvy, e.g.
 `OTEL_TRACES_SAMPLER` in the `iex -S mix phx.server` code snippet above.
 
+With tracing on, Lightning refuses to start if `OTEL_TRACES_EXPORTER` or
+`OTEL_SPAN_EVENT_COUNT_LIMIT` is set, even to an empty value, because either
+would bypass the filtering of span data. This applies to `iex -S mix phx.server`
+and to `mix test`, and to a value in `.env` as well as one exported in your
+shell. If you see one of these errors, unset the variable, or turn tracing off.
+
 Generate some traffic, wait about ten seconds, then open http://localhost:16686
 and pick the `lightning` service.
 
@@ -223,6 +229,9 @@ If you are not seeing an expected span, the following may be factors:
   for a span to arrive.
 - Sampling keeps 5% of traces by default, unless you use the `always_on`
   sampler. This can be set with `OTEL_TRACES_SAMPLER=always_on`.
+- Only attributes on the list in [Tracing](DEPLOYMENT.md#tracing) are exported.
+  If an attribute you expect is missing, check that it is on the list before
+  looking anywhere else.
 
 Jaeger keeps spans for the life of the container, and a service stays in the
 list once it has appeared. Restart it between runs to reduce noise:
@@ -241,7 +250,7 @@ set -euo pipefail
 
 SERVICE="${1:-lightning}"
 LOOKBACK_SECS="${2:-3600}"
-ATTR_KEY="${3:-db.url}"
+ATTR_KEY="${3:-http.route}"
 JAEGER_URL="${JAEGER_URL:-http://localhost:16686}"
 OUT="${OUT:-/tmp/spans.json}"
 

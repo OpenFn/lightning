@@ -477,36 +477,96 @@ without changing the rest of its configuration.
 
 LiveView is not traced, so the workflow editor produces no spans.
 
-Request paths, query strings and network addresses are not exported. Lightning
-puts single-use tokens, collection keys and caller record identifiers in URLs,
-and an address identifies the person behind a request, so `url.path`,
-`url.query`, `client.address`, `network.peer.address` and `server.address` are
-replaced with `[redacted]` before a span leaves the instance. Spans carry the
+#### What a span carries
+
+Every span is filtered before it leaves the instance. Only attributes on a
+reviewed list are exported, and every other attribute is removed. Lightning puts
+single-use tokens, collection keys and caller record identifiers in URLs, and an
+address identifies the person behind a request, so request paths, query strings,
+headers, user agents and network addresses are not on the list. Spans carry the
 route template instead, so a trace shows `GET /projects/:project_id/w` without
 the project id.
 
-A trace will not tell you which client made a request, or which host served it.
-Use your proxy or load balancer logs for that.
+The exported attributes are:
+
+| Spans for        | Attributes                                                                                                                                                                                                                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| HTTP requests    | `http.request.method`, `http.route`, `http.response.status_code`, `url.scheme`, `server.port`, `network.protocol.name`, `network.protocol.version`, `phoenix.plug`, `phoenix.action`, `error.type`                                                                                                                             |
+| Oban jobs        | `messaging.system`, `messaging.operation.name`, `messaging.operation.type`, `messaging.message.id`, `messaging.client.id`, `messaging.destination.name`, `oban.job.job_id`, `oban.job.worker`, `oban.job.priority`, `oban.job.attempt`, `oban.job.max_attempts`, `oban.job.inserted_at`, `oban.job.scheduled_at`, `error.type` |
+| Database queries | `db.system`, `db.type`, `db.name`, `db.instance`, `source`, `total_time_microseconds`, `query_time_microseconds`, `queue_time_microseconds`, `decode_time_microseconds`, `idle_time_microseconds`                                                                                                                              |
+
+An attribute added by a new version of an instrumentation library is not
+exported until it has been reviewed and added to the list.
+
+A trace will not tell you which client made a request. Use your proxy or load
+balancer logs for that.
 
 Exception messages are not exported. A span records that a request or job
 failed, and the exception type in `error.type`, but not what the exception said.
-The application logs and Sentry still have it.
+The status message is cleared on every span, and the status code is kept. The
+application logs and Sentry still have the message.
 
-Two mistakes stop the boot rather than being logged and ignored:
+If the OpenTelemetry SDK records a status in a form Lightning does not
+recognise, the span is exported as an error with the message
+`Lightning scrubbed unexpected status`. If every span shows this after an
+upgrade, the cause is the upgrade, not a failure in Lightning.
+
+Span events are not recorded, so exceptions are not attached to spans as events.
+Lightning does not continue traces started by callers: an incoming `traceparent`
+header starts a new trace, and the link back to the caller's trace is removed
+before export.
+
+Span names are not filtered. They are an HTTP method and route template,
+`process <queue>` for Oban jobs, or the repo and table for a query. None of them
+is taken from request data.
+
+#### Instance id
+
+`service.instance.id` is set to the host name, which is the pod name on
+Kubernetes. Without it, the SDK would use the Erlang node name, and on
+Kubernetes that contains the pod's IP address. Pods running with
+`hostNetwork: true` report the Kubernetes node's host name, so they share an id.
+
+To set the id yourself, use `OTEL_SERVICE_INSTANCE`. A `service.instance.id` in
+`OTEL_RESOURCE_ATTRIBUTES` is overridden by Lightning's value.
+
+#### Dropped attributes
+
+The SDK keeps at most 128 attributes per span, or the value of
+`OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT` if you set it. Attributes over the limit are
+dropped before Lightning filters the span, so a listed attribute can be among
+them. When that happens, Lightning logs a warning that starts
+`Spans with dropped attributes detected:` and names the affected spans.
+Lightning's spans carry far fewer than 128 attributes, so this warning usually
+means the limit has been set lower.
+
+#### Settings that stop the boot
+
+Four mistakes stop the boot rather than being logged and ignored:
 
 - `OTEL_SDK_DISABLED` set to anything other than `true` or `false`.
 - Tracing on with neither endpoint variable set.
+- Tracing on with `OTEL_TRACES_EXPORTER` set. It replaces the exporter that
+  filters spans.
+- Tracing on with `OTEL_SPAN_EVENT_COUNT_LIMIT` set. It overrides the setting
+  that stops span events being recorded, and events are not filtered.
+
+For the last two, unset the variable or turn tracing off. Any value counts as
+set, including an empty one, because the SDK acts on an empty value instead of
+ignoring it.
 
 An empty value counts as unset for `OTEL_SDK_DISABLED` and for both endpoint
 variables, so a template or a Kubernetes operator that expands to nothing leaves
 the default in place.
 
 The OpenTelemetry SDK reads its own variables from the real process environment,
-so `OTEL_*` entries in `.env` have no effect. If you wish to use the `OTEL_*`
-variables in a local dev instance, they will need to be set as OS ENV variables.
-The two endpoint variables ( `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and
+so `OTEL_*` entries in `.env` have no effect on it. If you wish to use the
+`OTEL_*` variables in a local dev instance, they will need to be set as OS ENV
+variables. The two endpoint variables (`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and
 `OTEL_EXPORTER_OTLP_ENDPOINT`) are the exception, because Lightning reads those
-itself and passes them on.
+itself and passes them on. Lightning also checks `.env` for
+`OTEL_TRACES_EXPORTER` and `OTEL_SPAN_EVENT_COUNT_LIMIT`, so an entry there
+stops the boot even though the SDK would not read it.
 
 A complete list of OpenTelemetry-supported environment variables can be found
 [here](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/).
@@ -532,13 +592,7 @@ when tracing is on.
 TRACING_ECTO_ENABLED=true
 ```
 
-Turn this on deliberately. It spans every query, so there is volume to plan for,
-but the bigger decision is what those spans carry: a failed query sets the span
-status to the message Postgres returned, and that message can include column
-values. This may expose sensitive data. A unique constraint violation names the
-value that clashed, such as a user's email address, and some errors carry the
-statement that failed as well. The redaction described above does not cover any
-of it, because it rewrites span attributes and this is a span status.
-
-Keep query spans off where other people's data is involved, or send them only to
-a collector you would trust with the contents of your database.
+Turn this on deliberately. It spans every query, so there is volume to plan for.
+Query spans carry the table, the database name and timings, as listed above. The
+statement, its parameters and the database URL are not exported, and the status
+message from a failed query is cleared like any other.
