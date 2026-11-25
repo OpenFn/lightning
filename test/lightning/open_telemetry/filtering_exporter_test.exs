@@ -458,43 +458,49 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
       span =
         span_rec(
           attributes: :otel_attributes.new(%{}, 10, 64),
-          links: [
-            :opentelemetry.link(1, 2, %{}, :otel_tracestate.new())
-          ]
+          links:
+            build_links([
+              :opentelemetry.link(1, 2, %{}, :otel_tracestate.new())
+            ])
         )
 
-      span_rec(links: links) = FilteringExporter.scrub(span)
+      assert span_rec(span, :links) |> :otel_links.list() |> length() == 1
 
-      assert length(links) == 1
+      assert span_rec(links: scrubbed_links) = FilteringExporter.scrub(span)
 
-      assert span_rec(links: []) = FilteringExporter.scrub(span)
+      assert scrubbed_links |> :otel_links.list() |> length() == 0
     end
 
     test "scrubs the links when there are multiple links" do
       span =
         span_rec(
           attributes: :otel_attributes.new(%{}, 10, 64),
-          links: [
-            :opentelemetry.link(1, 2, %{}, :otel_tracestate.new()),
-            :opentelemetry.link(3, 4, %{}, :otel_tracestate.new())
-          ]
+          links:
+            build_links([
+              :opentelemetry.link(1, 2, %{}, :otel_tracestate.new()),
+              :opentelemetry.link(3, 4, %{}, :otel_tracestate.new())
+            ])
         )
 
-      span_rec(links: links) = FilteringExporter.scrub(span)
+      assert span_rec(span, :links) |> :otel_links.list() |> length() == 2
 
-      assert length(links) == 2
+      assert span_rec(links: scrubbed_links) = FilteringExporter.scrub(span)
 
-      assert span_rec(links: []) = FilteringExporter.scrub(span)
+      assert scrubbed_links |> :otel_links.list() |> length() == 0
     end
 
     test "leaves links empty when there are no links" do
       span =
         span_rec(
           attributes: :otel_attributes.new(%{}, 10, 64),
-          links: []
+          links: build_links([])
         )
 
-      assert span_rec(links: []) = FilteringExporter.scrub(span)
+      assert span_rec(span, :links) |> :otel_links.list() |> length() == 0
+
+      assert span_rec(links: scrubbed_links) = FilteringExporter.scrub(span)
+
+      assert scrubbed_links |> :otel_links.list() |> length() == 0
     end
 
     test "correctly scrubs a span with attributes, status and links" do
@@ -511,22 +517,29 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
               128,
               :infinity
             ),
-          links: [
-            :opentelemetry.link(1, 2, %{}, :otel_tracestate.new()),
-            :opentelemetry.link(3, 4, %{}, :otel_tracestate.new())
-          ],
+          links:
+            build_links([
+              :opentelemetry.link(1, 2, %{}, :otel_tracestate.new()),
+              :opentelemetry.link(3, 4, %{}, :otel_tracestate.new())
+            ]),
           status: {:status, :error, "message"}
         )
 
-      span_rec(attributes: attributes, links: links, status: status) =
+      assert span_rec(span, :links) |> :otel_links.list() |> length() == 2
+
+      span_rec(attributes: attributes, links: scrubbed_links, status: status) =
         FilteringExporter.scrub(span)
 
       assert %{"http.response.status_code": 200} ==
                :otel_attributes.map(attributes)
 
-      assert length(links) == 0
+      assert scrubbed_links |> :otel_links.list() |> length() == 0
 
       assert {:status, :error, ""} == status
+    end
+
+    defp build_links(links) do
+      :otel_links.new(links, length(links), 128, :infinity)
     end
   end
 

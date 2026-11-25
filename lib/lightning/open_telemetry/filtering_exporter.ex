@@ -88,6 +88,7 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     span(s,
       attributes:
         :otel_attributes.new(allowed_attrs, map_size(allowed_attrs), :infinity),
+      links: :otel_links.new([], 0, 0, :infinity),
       status: scrub_status(status)
     )
   end
