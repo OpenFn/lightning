@@ -68,6 +68,7 @@ config :lightning, LightningWeb.Endpoint,
   server: true
 
 config :lightning, Lightning.Runtime.RuntimeManager,
+  cd: Path.expand("../assets", __DIR__),
   ws_url: "ws://localhost:#{test_port}/worker"
 
 config :lightning, :workers,

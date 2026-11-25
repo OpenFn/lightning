@@ -43,7 +43,9 @@ config :lightning,
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
 
-config :lightning, Lightning.Runtime.RuntimeManager, start: true
+config :lightning, Lightning.Runtime.RuntimeManager,
+  start: true,
+  cd: Path.expand("../assets", __DIR__)
 
 config :lightning, :workers,
   private_key: """
