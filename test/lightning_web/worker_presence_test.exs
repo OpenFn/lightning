@@ -40,6 +40,37 @@ defmodule LightningWeb.WorkerPresenceTest do
     end
   end
 
+  describe "list_workers/0" do
+    test "lists each worker with the versions it reported" do
+      pid = spawn(fn -> Process.sleep(1000) end)
+
+      {:ok, _ref} =
+        WorkerPresence.track_worker(pid, "worker-1", 4,
+          worker_version: "1.30.0",
+          api_version: "1.2"
+        )
+
+      {:ok, _ref} = WorkerPresence.track_worker(self(), "worker-2", 1)
+
+      assert [
+               %{
+                 id: "worker-1",
+                 capacity: 4,
+                 worker_version: "1.30.0",
+                 api_version: "1.2"
+               },
+               %{
+                 id: "worker-2",
+                 capacity: 1,
+                 worker_version: nil,
+                 api_version: nil
+               }
+             ] = Enum.sort_by(WorkerPresence.list_workers(), & &1.id)
+
+      Process.exit(pid, :kill)
+    end
+  end
+
   describe "total_worker_capacity/0" do
     test "returns 0 when no workers are present" do
       assert WorkerPresence.total_worker_capacity() == 0

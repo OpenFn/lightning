@@ -84,7 +84,10 @@
             :if={assigns[:current_user]}
             current_user={@current_user}
           />
-          <LayoutComponents.sidebar_footer />
+          <LayoutComponents.sidebar_footer
+            current_user={assigns[:current_user]}
+            update_status={assigns[:update_status]}
+          />
         </div>
       </nav>
     </div>

@@ -47,6 +47,16 @@ defmodule LightningWeb.WorkerChannelTest do
       assert WorkerPresence.total_worker_capacity() == 1
     end
 
+    test "tracks the versions the worker connected with" do
+      {:ok, _, _socket} =
+        ws_worker_socket()
+        |> Phoenix.Socket.assign(worker_version: "1.30.0", api_version: "1.2")
+        |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue")
+
+      assert [%{worker_version: "1.30.0", api_version: "1.2"}] =
+               WorkerPresence.list_workers()
+    end
+
     test "tracks worker presence with custom capacity" do
       {:ok, _, _socket} =
         ws_worker_socket()
@@ -58,6 +68,23 @@ defmodule LightningWeb.WorkerChannelTest do
       Process.sleep(50)
 
       assert WorkerPresence.total_worker_capacity() == 10
+    end
+
+    test "falls back to a capacity of 1 when it isn't a non-negative integer" do
+      bad_capacities = ["10", -1, 1.5, %{"a" => "b"}]
+
+      for capacity <- bad_capacities do
+        {:ok, _, _socket} =
+          ws_worker_socket()
+          |> subscribe_and_join(LightningWeb.WorkerChannel, "worker:queue", %{
+            "capacity" => capacity
+          })
+      end
+
+      workers = WorkerPresence.list_workers()
+
+      assert length(workers) == length(bad_capacities)
+      assert Enum.all?(workers, &(&1.capacity == 1))
     end
   end
 

@@ -7,6 +7,209 @@
   <LayoutComponents.centered>
     <div class="flex flex-col gap-4">
       <div
+        id="update-card"
+        class="bg-white shadow-xs rounded-lg border border-gray-200 p-6 flex flex-col gap-4"
+      >
+        <div class="flex items-start justify-between gap-6">
+          <div class="flex flex-col">
+            <h2 class="text-lg font-semibold text-secondary-900">
+              Version
+            </h2>
+            <p class="mt-1 text-sm text-secondary-600">
+              Checks the image repository for new full releases. Set which
+              repository with the <.inline_code value="UPDATE_CHECK_*" />
+              environment variables.
+            </p>
+          </div>
+          <div class="flex shrink-0 items-center gap-3">
+            <.update_status_pill status={@update_status} />
+            <.button
+              theme="secondary"
+              phx-click="check_for_update"
+              id="check-for-update-button"
+              disabled={@checking_update? or not @update_check.enabled}
+            >
+              {if @checking_update?, do: "Checking...", else: "Check now"}
+            </.button>
+          </div>
+        </div>
+
+        <Common.alert
+          :if={@update_status && @update_status.update_available?}
+          id="update-available-callout"
+          type="warning"
+          header={"#{@update_status.latest} is available. Please upgrade."}
+        >
+          <:message>
+            <p>
+              This instance is running {@update_status.current}. See the
+              <a
+                id="update-instructions-link"
+                href={@update_status.instructions_url}
+                target="_blank"
+                class="underline font-medium"
+              >
+                upgrade guidelines
+              </a>
+              for how to upgrade.
+            </p>
+          </:message>
+        </Common.alert>
+
+        <p
+          :if={!@update_check.enabled}
+          id="update-check-disabled"
+          class="text-sm text-secondary-600"
+        >
+          The update check is turned off. Set
+          <.inline_code value="UPDATE_CHECK_ENABLED=true" /> and restart
+          to turn it on.
+        </p>
+
+        <div class="flex flex-col gap-1.5 text-sm text-secondary-700">
+          <p>
+            <span class="font-medium text-secondary-900">Running:</span>
+            <.inline_code
+              id="update-current-version"
+              value={Lightning.UpdateCheck.current_version()}
+            />
+          </p>
+          <p :if={@update_status && @update_status.latest}>
+            <span class="font-medium text-secondary-900">Latest release:</span>
+            <.inline_code
+              id="update-latest-version"
+              value={@update_status.latest}
+            />
+          </p>
+          <p>
+            <span class="font-medium text-secondary-900">Checking:</span>
+            <.inline_code
+              id="update-source"
+              value={"#{@update_check.registry}/#{@update_check.repository}:#{@update_check.tag}"}
+            />
+          </p>
+          <p :if={@update_status} class="text-xs text-secondary-500">
+            Last checked {Calendar.strftime(
+              @update_status.checked_at,
+              "%Y-%m-%d %H:%M UTC"
+            )}.
+          </p>
+        </div>
+      </div>
+
+      <div
+        id="workers-card"
+        class="bg-white shadow-xs rounded-lg border border-gray-200 p-6 flex flex-col gap-4"
+      >
+        <div class="flex items-start justify-between gap-6">
+          <div class="flex flex-col">
+            <h2 class="text-lg font-semibold text-secondary-900">
+              Workers
+            </h2>
+            <p class="mt-1 text-sm text-secondary-600">
+              Workers connected to this instance right now, across every node,
+              and the versions they report. Updates as workers connect and
+              disconnect.
+            </p>
+          </div>
+          <div class="shrink-0">
+            <.workers_status_pill
+              status={@update_status}
+              count={@worker_count}
+              outdated={@outdated_worker_count}
+            />
+          </div>
+        </div>
+
+        <Common.alert
+          :if={@outdated_worker_count > 0}
+          id="worker-update-callout"
+          type="warning"
+          header={"ws-worker #{@update_status.worker.latest} is available. Please upgrade."}
+        >
+          <:message>
+            <p>
+              {@outdated_worker_count} of {@worker_count} connected workers
+              run an older version. See the
+              <a
+                id="worker-update-instructions-link"
+                href={@update_status.instructions_url}
+                target="_blank"
+                class="underline font-medium"
+              >
+                upgrade guidelines
+              </a>
+              for how to upgrade.
+            </p>
+          </:message>
+        </Common.alert>
+
+        <p
+          :if={@worker_count == 0}
+          id="no-workers"
+          class="text-sm text-secondary-600"
+        >
+          No workers are connected, so no runs will be processed.
+        </p>
+
+        <.table :if={@worker_count > 0} id="worker-versions">
+          <:header>
+            <.tr>
+              <.th>Version</.th>
+              <.th>API version</.th>
+              <.th>Workers</.th>
+              <.th>Capacity</.th>
+            </.tr>
+          </:header>
+          <:body>
+            <.tr
+              :for={{group, index} <- Enum.with_index(@worker_groups)}
+              id={"worker-group-#{index}"}
+            >
+              <.td>
+                <span class="flex items-center gap-2">
+                  <.inline_code value={
+                    if group.version,
+                      do: String.trim_leading(group.version, "v"),
+                      else: "unknown"
+                  } />
+                  <.pill :if={group.outdated?} color="yellow">Outdated</.pill>
+                </span>
+              </.td>
+              <.td>{group.api_version || "unknown"}</.td>
+              <.td>{group.count}</.td>
+              <.td>{group.capacity}</.td>
+            </.tr>
+          </:body>
+        </.table>
+
+        <div class="flex flex-col gap-1.5 text-sm text-secondary-700">
+          <p :if={@worker_count > 0}>
+            <span class="font-medium text-secondary-900">Total capacity:</span>
+            <span id="worker-capacity">
+              {@worker_capacity} concurrent {if @worker_capacity == 1,
+                do: "run",
+                else: "runs"}
+            </span>
+          </p>
+          <p :if={@update_status && @update_status.worker}>
+            <span class="font-medium text-secondary-900">Latest release:</span>
+            <.inline_code
+              id="worker-latest-version"
+              value={@update_status.worker.latest}
+            />
+          </p>
+          <p :if={@update_check.worker_repository}>
+            <span class="font-medium text-secondary-900">Checking:</span>
+            <.inline_code
+              id="worker-update-source"
+              value={"#{@update_check.worker_registry}/#{@update_check.worker_repository}:latest"}
+            />
+          </p>
+        </div>
+      </div>
+
+      <div
         id="refresh-adaptors-card"
         class="bg-white shadow-xs rounded-lg border border-gray-200 p-6 flex items-start justify-between gap-6"
       >

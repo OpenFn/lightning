@@ -87,7 +87,8 @@ ARG COMMIT=""
 ARG IMAGE_TAG=""
 # Release builds pass the git tag, such as v2.19.2, as IMAGE_TAG, and the
 # version without the `v`, such as 2.19.2, as VERSION. Images are tagged with
-# VERSION, and it's recorded in the standard OCI version label.
+# VERSION, and it's recorded in the standard OCI version label, which the
+# update check reads from the image `latest` points at.
 ARG VERSION=""
 LABEL branch=${BRANCH}
 LABEL commit=${COMMIT}
