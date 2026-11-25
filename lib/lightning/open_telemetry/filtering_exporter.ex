@@ -1,10 +1,24 @@
 defmodule Lightning.OpenTelemetry.FilteringExporter do
   @moduledoc """
-  Wraps a traces exporter and redacts sensitive attributes from each span
-  before handing the batch on.
+  Wraps a traces exporter and scrubs each span before passing the batch on.
+  It's the last point at which span data can be filtered before it leaves the
+  application.
 
-  Installed as the SDK's `traces_exporter` by `Lightning.Config.Bootstrap`,
-  wrapping the OTLP exporter.
+  For each span:
+
+    * Attributes not on the allowlist are removed.
+    * The status message is cleared and the status code kept, where relevant.
+    * Links are removed.
+
+  This module does not handle events. The SDK is configured to record none.
+
+  If the SDK has already dropped attributes from a span because of its
+  attribute count limit, a warning is logged once per batch. An allowlisted
+  attribute may have been among those dropped.
+
+  Setting `OTEL_TRACES_EXPORTER` or `OTEL_SPAN_EVENT_COUNT_LIMIT` would
+  bypass this filtering, so Lightning refuses to boot with tracing enabled if
+  either is set see Lightning.Config.Bootstrap.
   """
 
   @behaviour :otel_exporter_traces
