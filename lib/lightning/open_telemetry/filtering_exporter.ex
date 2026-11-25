@@ -18,7 +18,7 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
   Setting `OTEL_TRACES_EXPORTER` or `OTEL_SPAN_EVENT_COUNT_LIMIT` would
   bypass this filtering, so Lightning refuses to boot with tracing enabled if
-  either is set see Lightning.Config.Bootstrap.
+  either is set (see Lightning.Config.Bootstrap).
   """
 
   @behaviour :otel_exporter_traces
@@ -33,6 +33,46 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     :span,
     Record.extract(:span, from_lib: "opentelemetry/include/otel_span.hrl")
   )
+
+  @allowed_attributes %{
+    :"db.instance" => :anything,
+    # SemConv replaces name wth namespace, but Ecto does not emit namespace
+    :"db.name" => :anything,
+    SemConv.Incubating.DBAttributes.db_system() => :anything,
+    :"db.type" => :anything,
+    :decode_time_microseconds => :anything,
+    SemConv.ErrorAttributes.error_type() => :anything,
+    SemConv.HTTPAttributes.http_request_method() => :anything,
+    SemConv.HTTPAttributes.http_response_status_code() => :anything,
+    SemConv.HTTPAttributes.http_route() => :anything,
+    :idle_time_microseconds => :anything,
+    SemConv.Incubating.MessagingAttributes.messaging_client_id() => :anything,
+    SemConv.Incubating.MessagingAttributes.messaging_destination_name() =>
+      :anything,
+    SemConv.Incubating.MessagingAttributes.messaging_message_id() => :anything,
+    SemConv.Incubating.MessagingAttributes.messaging_operation_name() =>
+      :anything,
+    SemConv.Incubating.MessagingAttributes.messaging_operation_type() =>
+      :anything,
+    SemConv.Incubating.MessagingAttributes.messaging_system() => :anything,
+    SemConv.NetworkAttributes.network_protocol_name() => :anything,
+    SemConv.NetworkAttributes.network_protocol_version() => :anything,
+    :"oban.job.attempt" => :anything,
+    :"oban.job.inserted_at" => :anything,
+    :"oban.job.job_id" => :anything,
+    :"oban.job.max_attempts" => :anything,
+    :"oban.job.priority" => :anything,
+    :"oban.job.scheduled_at" => :anything,
+    :"oban.job.worker" => :anything,
+    :"phoenix.action" => :atom,
+    :"phoenix.plug" => :anything,
+    :query_time_microseconds => :anything,
+    :queue_time_microseconds => :anything,
+    SemConv.ServerAttributes.server_port() => :anything,
+    :source => :anything,
+    :total_time_microseconds => :anything,
+    SemConv.URLAttributes.url_scheme() => :anything
+  }
 
   @impl true
   def init(%{exporter: {mod, opts}}) do
@@ -99,7 +139,13 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
     allowed_attrs =
       attrs_map
-      |> Map.take(allowed_attributes())
+      |> Map.filter(fn {k, v} ->
+        case @allowed_attributes[k] do
+          nil -> false
+          :anything -> true
+          :atom -> is_atom(v)
+        end
+      end)
 
     span(s,
       attributes:
@@ -122,42 +168,5 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
   @impl true
   def shutdown({mod, state}), do: mod.shutdown(state)
 
-  def allowed_attributes do
-    [
-      :"db.instance",
-      # SemConv replaces name wth namespace, but Ecto does not emit namespace
-      :"db.name",
-      SemConv.Incubating.DBAttributes.db_system(),
-      :"db.type",
-      :decode_time_microseconds,
-      SemConv.ErrorAttributes.error_type(),
-      SemConv.HTTPAttributes.http_request_method(),
-      SemConv.HTTPAttributes.http_response_status_code(),
-      SemConv.HTTPAttributes.http_route(),
-      :idle_time_microseconds,
-      SemConv.Incubating.MessagingAttributes.messaging_client_id(),
-      SemConv.Incubating.MessagingAttributes.messaging_destination_name(),
-      SemConv.Incubating.MessagingAttributes.messaging_message_id(),
-      SemConv.Incubating.MessagingAttributes.messaging_operation_name(),
-      SemConv.Incubating.MessagingAttributes.messaging_operation_type(),
-      SemConv.Incubating.MessagingAttributes.messaging_system(),
-      SemConv.NetworkAttributes.network_protocol_name(),
-      SemConv.NetworkAttributes.network_protocol_version(),
-      :"oban.job.attempt",
-      :"oban.job.inserted_at",
-      :"oban.job.job_id",
-      :"oban.job.max_attempts",
-      :"oban.job.priority",
-      :"oban.job.scheduled_at",
-      :"oban.job.worker",
-      :"phoenix.action",
-      :"phoenix.plug",
-      :query_time_microseconds,
-      :queue_time_microseconds,
-      SemConv.ServerAttributes.server_port(),
-      :source,
-      :total_time_microseconds,
-      SemConv.URLAttributes.url_scheme()
-    ]
-  end
+  def allowed_attributes, do: @allowed_attributes
 end

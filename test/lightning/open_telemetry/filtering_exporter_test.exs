@@ -418,7 +418,7 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
       assert value_length_limit == :infinity
     end
 
-    test "clears the status message, reagrdless of code" do
+    test "clears the status message, regardless of code" do
       span =
         span_rec(
           attributes: :otel_attributes.new(%{}, 10, 64),
@@ -538,6 +538,50 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
       assert {:status, :error, ""} == status
     end
 
+    test "removes phoenix.action if the value is not an atom" do
+      span =
+        span_rec(
+          name: :redactible,
+          attributes:
+            :otel_attributes.new(
+              %{
+                "http.response.status_code": 200,
+                "phoenix.action": "secret"
+              },
+              128,
+              :infinity
+            )
+        )
+
+      span_rec(attributes: attributes) = FilteringExporter.scrub(span)
+
+      assert %{"http.response.status_code": 200} ==
+               :otel_attributes.map(attributes)
+    end
+
+    test "does not remove phoenix.action if the value is an atom" do
+      span =
+        span_rec(
+          name: :redactible,
+          attributes:
+            :otel_attributes.new(
+              %{
+                "http.response.status_code": 200,
+                "phoenix.action": :not_so_secret
+              },
+              128,
+              :infinity
+            )
+        )
+
+      span_rec(attributes: attributes) = FilteringExporter.scrub(span)
+
+      assert %{
+               "http.response.status_code": 200,
+               "phoenix.action": :not_so_secret
+             } == :otel_attributes.map(attributes)
+    end
+
     defp build_links(links) do
       :otel_links.new(links, length(links), 128, :infinity)
     end
@@ -552,55 +596,55 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
     # `messaging.batch.message_count`, which only `OpentelemetryOban.insert*`
     # sets and Lightning does not call.
     test "is exactly the reviewed list" do
-      assert FilteringExporter.allowed_attributes() == [
+      assert FilteringExporter.allowed_attributes() == %{
                # Ecto, only with TRACING_ECTO_ENABLED
-               :"db.instance",
-               :"db.name",
-               :"db.system",
-               :"db.type",
+               :"db.instance" => :anything,
+               :"db.name" => :anything,
+               :"db.system" => :anything,
+               :"db.type" => :anything,
                # Ecto timing: the suffix comes from `:time_unit`, which
                # `Lightning.OpenTelemetry` leaves at its `:microsecond` default
-               :decode_time_microseconds,
+               :decode_time_microseconds => :anything,
                # cowboy (stop/exception) and Oban (job exception)
-               :"error.type",
+               :"error.type" => :anything,
                # cowboy and Phoenix
-               :"http.request.method",
-               :"http.response.status_code",
-               :"http.route",
+               :"http.request.method" => :anything,
+               :"http.response.status_code" => :anything,
+               :"http.route" => :anything,
                # Ecto timing
-               :idle_time_microseconds,
+               :idle_time_microseconds => :anything,
                # Oban job
-               :"messaging.client.id",
-               :"messaging.destination.name",
-               :"messaging.message.id",
-               :"messaging.operation.name",
-               :"messaging.operation.type",
-               :"messaging.system",
+               :"messaging.client.id" => :anything,
+               :"messaging.destination.name" => :anything,
+               :"messaging.message.id" => :anything,
+               :"messaging.operation.name" => :anything,
+               :"messaging.operation.type" => :anything,
+               :"messaging.system" => :anything,
                # cowboy
-               :"network.protocol.name",
-               :"network.protocol.version",
+               :"network.protocol.name" => :anything,
+               :"network.protocol.version" => :anything,
                # Oban job
-               :"oban.job.attempt",
-               :"oban.job.inserted_at",
-               :"oban.job.job_id",
-               :"oban.job.max_attempts",
-               :"oban.job.priority",
-               :"oban.job.scheduled_at",
-               :"oban.job.worker",
+               :"oban.job.attempt" => :anything,
+               :"oban.job.inserted_at" => :anything,
+               :"oban.job.job_id" => :anything,
+               :"oban.job.max_attempts" => :anything,
+               :"oban.job.priority" => :anything,
+               :"oban.job.scheduled_at" => :anything,
+               :"oban.job.worker" => :anything,
                # Phoenix
-               :"phoenix.action",
-               :"phoenix.plug",
+               :"phoenix.action" => :atom,
+               :"phoenix.plug" => :anything,
                # Ecto timing
-               :query_time_microseconds,
-               :queue_time_microseconds,
+               :query_time_microseconds => :anything,
+               :queue_time_microseconds => :anything,
                # cowboy
-               :"server.port",
+               :"server.port" => :anything,
                # Ecto
-               :source,
-               :total_time_microseconds,
+               :source => :anything,
+               :total_time_microseconds => :anything,
                # cowboy
-               :"url.scheme"
-             ]
+               :"url.scheme" => :anything
+             }
     end
   end
 
