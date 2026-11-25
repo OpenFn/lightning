@@ -253,14 +253,20 @@ defmodule LightningWeb.OauthClientsLiveTest do
           {view, added_mandatory_scopes, added_optional_scopes} =
             perforom_scopes_management_tests(view)
 
-          {:ok, _view, html} =
+          {:ok, redirected_view, html} =
             view
             |> form("#oauth-client-form-new", oauth_client: valid_attrs)
             |> render_submit()
             |> follow_redirect(conn, url)
 
-          assert html =~ valid_attrs.name
           assert html =~ "Oauth client created successfully"
+
+          expanded_html =
+            redirected_view
+            |> with_target("#credentials-index-component")
+            |> render_click("toggle_oauth_clients", %{})
+
+          assert expanded_html =~ valid_attrs.name
 
           saved_clients_names =
             Lightning.Repo.all(OauthClient)
@@ -268,18 +274,23 @@ defmodule LightningWeb.OauthClientsLiveTest do
 
           assert valid_attrs.name in saved_clients_names
 
-          assert Lightning.Repo.all(OauthClient)
-                 |> Enum.map(fn client ->
-                   MapSet.subset?(
-                     MapSet.new(String.split(client.mandatory_scopes, ",")),
-                     MapSet.new(added_mandatory_scopes)
-                   ) and
-                     MapSet.subset?(
-                       MapSet.new(String.split(client.optional_scopes, ",")),
-                       MapSet.new(added_optional_scopes)
-                     )
-                 end)
-                 |> Enum.all?()
+          new_client =
+            Lightning.Repo.all(
+              from c in OauthClient, where: c.name == ^valid_attrs.name
+            )
+            |> List.first()
+
+          assert new_client
+
+          assert MapSet.subset?(
+                   MapSet.new(String.split(new_client.mandatory_scopes, ",")),
+                   MapSet.new(added_mandatory_scopes)
+                 )
+
+          assert MapSet.subset?(
+                   MapSet.new(String.split(new_client.optional_scopes, ",")),
+                   MapSet.new(added_optional_scopes)
+                 )
         end)
     end
 

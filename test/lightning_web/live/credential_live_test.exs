@@ -719,6 +719,438 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "CredentialIndexComponent pagination and collapsible" do
+    test "credentials table shows pagination bar and supports page navigation when there are more than 10 credentials",
+         %{conn: conn, user: user} do
+      for _i <- 1..12, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(index_live, ~p"/credentials?credentials_page=2")
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "credentials table does not show page navigation links when there are 10 or fewer credentials",
+         %{conn: conn, user: user} do
+      for _i <- 1..5, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      refute table_html =~ "sr-only\">Previous"
+      refute table_html =~ "sr-only\">Next"
+    end
+
+    test "OAuth clients section is collapsed by default and toggle button is visible",
+         %{conn: conn, user: user} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, index_live, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert has_element?(index_live, "#oauth-clients-section")
+      assert has_element?(index_live, "button[phx-click='toggle_oauth_clients']")
+      refute html =~ oauth_client.name
+    end
+
+    test "toggling OAuth clients section shows and then hides the clients table",
+         %{conn: conn, user: user} do
+      oauth_client = insert(:oauth_client, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      html =
+        index_live
+        |> with_target("#credentials-index-component")
+        |> render_click("toggle_oauth_clients", %{})
+
+      assert html =~ oauth_client.name
+
+      html =
+        index_live
+        |> with_target("#credentials-index-component")
+        |> render_click("toggle_oauth_clients", %{})
+
+      refute html =~ oauth_client.name
+    end
+
+    test "OAuth clients table shows pagination bar after section is expanded and supports page navigation",
+         %{conn: conn, user: user} do
+      for _i <- 1..12, do: insert(:oauth_client, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      index_live
+      |> with_target("#credentials-index-component")
+      |> render_click("toggle_oauth_clients", %{})
+
+      table_html = index_live |> element("#oauth-clients-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(index_live, ~p"/credentials?oauth_clients_page=2")
+
+      table_html = index_live |> element("#oauth-clients-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "credentials pagination works on the project settings page",
+         %{conn: conn, user: user, project: project} do
+      for _i <- 1..12,
+          do:
+            insert(:credential,
+              user: user,
+              project_credentials: [%{project: project}]
+            )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      table_html = view |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(view, ~p"/projects/#{project.id}/settings?credentials_page=2")
+
+      table_html = view |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "keychain credentials table shows pagination on project settings when there are more than 10",
+         %{conn: conn, user: user, project: project} do
+      for _i <- 1..12,
+          do: insert(:keychain_credential, project: project, created_by: user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      table_html = view |> element("#keychain-credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+
+      render_patch(view, ~p"/projects/#{project.id}/settings?keychain_page=2")
+
+      table_html = view |> element("#keychain-credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+      assert table_html =~ "12"
+    end
+
+    test "keychain credentials section is not shown on the user credentials page",
+         %{conn: conn} do
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(index_live, "#keychain-credentials-table")
+    end
+
+    test "keychain credentials section is shown on the project settings page",
+         %{conn: conn, user: user, project: project} do
+      insert(:keychain_credential, project: project, created_by: user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert has_element?(view, "#keychain-credentials-table")
+    end
+
+    test "navigating to a page number beyond total pages falls back gracefully",
+         %{conn: conn, user: user} do
+      for _i <- 1..5, do: insert(:credential, user: user)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      render_patch(index_live, ~p"/credentials?credentials_page=999")
+
+      table_html = index_live |> element("#credentials-table") |> render()
+
+      assert table_html =~ "Showing"
+    end
+  end
+
+  describe "CredentialIndexComponent search and sort" do
+    defp patched_params(view) do
+      %URI{query: query} = view |> assert_patch() |> URI.parse()
+      URI.decode_query(query || "")
+    end
+
+    defp search(view, term) do
+      view
+      |> element("#credentials-index-component input[name=filter]")
+      |> render_keyup(%{"key" => "a", "value" => term})
+    end
+
+    defp click_sort(view, event, column) do
+      view
+      |> element("a[phx-click='#{event}'][phx-value-by='#{column}']")
+      |> render_click()
+    end
+
+    defp assert_in_order(html, [first, second | rest]) do
+      {first_position, _length} = :binary.match(html, first)
+      {second_position, _length} = :binary.match(html, second)
+
+      assert first_position < second_position,
+             "expected #{first} to come before #{second}"
+
+      assert_in_order(html, [second | rest])
+    end
+
+    defp assert_in_order(_html, [_last]), do: :ok
+
+    test "searching filters the table, resets every page and keeps the sort",
+         %{conn: conn, user: user} do
+      insert(:credential, user: user, name: "matching credential")
+      insert(:credential, user: user, name: "unrelated credential")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/credentials?credentials_page=2&oauth_clients_page=2&credentials_sort=type",
+          on_error: :raise
+        )
+
+      search(view, "  Matching ")
+
+      assert patched_params(view) ==
+               %{"q" => "Matching", "credentials_sort" => "type"}
+
+      table_html = view |> element("#credentials-table") |> render()
+      assert table_html =~ "matching credential"
+      refute table_html =~ "unrelated credential"
+      assert has_element?(view, "input[name=filter][value=Matching]")
+
+      view |> element("#clear_filter_button") |> render_click()
+
+      assert patched_params(view) == %{"credentials_sort" => "type"}
+
+      table_html = view |> element("#credentials-table") |> render()
+      assert table_html =~ "matching credential"
+      assert table_html =~ "unrelated credential"
+    end
+
+    test "a search in the URL applies to every table, expanding the OAuth clients",
+         %{conn: conn, user: user} do
+      insert(:credential, user: user, name: "matching credential")
+      insert(:oauth_client, user: user, name: "matching client")
+      insert(:oauth_client, user: user, name: "unrelated client")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/credentials?q=matching", on_error: :raise)
+
+      assert view |> element("#credentials-table") |> render() =~
+               "matching credential"
+
+      clients_html = view |> element("#oauth-clients-table") |> render()
+      assert clients_html =~ "matching client"
+      refute clients_html =~ "unrelated client"
+    end
+
+    test "tables without a match say so instead of saying there are none",
+         %{conn: conn, user: user, project: project} do
+      insert(:credential, user: user)
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project}/settings?q=nothing", on_error: :raise)
+
+      assert html =~ "No credentials match your search."
+      assert html =~ "No keychain credentials match your search."
+      assert html =~ "No OAuth clients match your search."
+      refute html =~ "No credentials found."
+    end
+
+    test "malformed or unknown params in the URL are ignored",
+         %{conn: conn, user: user} do
+      insert(:credential, user: user, name: "beta credential")
+      insert(:credential, user: user, name: "alpha credential")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/credentials?q[a]=b&credentials_sort=password&credentials_dir=sideways",
+          on_error: :raise
+        )
+
+      view
+      |> element("#credentials-table")
+      |> render()
+      |> assert_in_order(["alpha credential", "beta credential"])
+    end
+
+    test "clicking a header sorts the table, resets its page and keeps the rest",
+         %{conn: conn, user: user} do
+      for i <- 1..11 do
+        name = "cred-#{String.pad_leading("#{i}", 2, "0")}"
+        insert(:credential, user: user, name: name)
+      end
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/credentials?q=cred-&credentials_page=2&oauth_clients_page=3",
+          on_error: :raise
+        )
+
+      table_html = view |> element("#credentials-table") |> render()
+      assert table_html =~ "cred-11"
+      refute table_html =~ "cred-02"
+
+      click_sort(view, "sort_credentials", "name")
+
+      assert patched_params(view) == %{
+               "q" => "cred-",
+               "oauth_clients_page" => "3",
+               "credentials_sort" => "name",
+               "credentials_dir" => "desc"
+             }
+
+      table_html = view |> element("#credentials-table") |> render()
+      assert_in_order(table_html, ["cred-11", "cred-10", "cred-02"])
+      refute table_html =~ "cred-01"
+
+      click_sort(view, "sort_credentials", "type")
+
+      assert patched_params(view) == %{
+               "q" => "cred-",
+               "oauth_clients_page" => "3",
+               "credentials_sort" => "type",
+               "credentials_dir" => "asc"
+             }
+    end
+
+    test "the OAuth clients table can be sorted once expanded",
+         %{conn: conn, user: user} do
+      insert(:oauth_client, user: user, name: "alpha client")
+      insert(:oauth_client, user: user, name: "beta client")
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("toggle_oauth_clients", %{})
+
+      click_sort(view, "sort_oauth_clients", "name")
+
+      assert patched_params(view) ==
+               %{"oauth_clients_sort" => "name", "oauth_clients_dir" => "desc"}
+
+      view
+      |> element("#oauth-clients-table")
+      |> render()
+      |> assert_in_order(["beta client", "alpha client"])
+    end
+
+    test "the owner column is only sortable where it is shown",
+         %{conn: conn, user: user, project: project} do
+      insert(:credential,
+        user: user,
+        project_credentials: [%{project: project}]
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(
+               view,
+               "a[phx-click='sort_credentials'][phx-value-by='owner']"
+             )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert has_element?(
+               view,
+               "a[phx-click='sort_credentials'][phx-value-by='owner']"
+             )
+    end
+
+    test "pagination links on project settings stay on the credentials tab",
+         %{conn: conn, user: user, project: project} do
+      for _i <- 1..11,
+          do: insert(:keychain_credential, project: project, created_by: user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings?q=keychain",
+          on_error: :raise
+        )
+
+      assert has_element?(
+               view,
+               "#keychain-credentials-table a[href*='q=keychain'][href$='#credentials']"
+             )
+    end
+
+    test "searching and sorting work on project settings",
+         %{conn: conn, user: user, project: project} do
+      insert(:keychain_credential,
+        project: project,
+        created_by: user,
+        name: "alpha keychain",
+        path: "$.zone"
+      )
+
+      insert(:keychain_credential,
+        project: project,
+        created_by: user,
+        name: "beta keychain",
+        path: "$.area"
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      click_sort(view, "sort_keychain", "path")
+
+      uri = view |> assert_patch() |> URI.parse()
+
+      assert uri.path == ~p"/projects/#{project}/settings"
+
+      assert URI.decode_query(uri.query) ==
+               %{"keychain_sort" => "path", "keychain_dir" => "asc"}
+
+      view
+      |> element("#keychain-credentials-table")
+      |> render()
+      |> assert_in_order(["beta keychain", "alpha keychain"])
+
+      search(view, "alpha")
+
+      assert patched_params(view) == %{
+               "q" => "alpha",
+               "keychain_sort" => "path",
+               "keychain_dir" => "asc"
+             }
+
+      table_html = view |> element("#keychain-credentials-table") |> render()
+      assert table_html =~ "alpha keychain"
+      refute table_html =~ "beta keychain"
+    end
+  end
+
   describe "Clicking new from the list view" do
     test "allows the user to define and save a new raw credential", %{
       conn: conn,

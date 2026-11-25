@@ -36,6 +36,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Helpers
+  alias Lightning.OauthClients
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.Project
@@ -45,6 +46,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.VersionControl
   alias Lightning.WebhookAuthMethods
   alias LightningWeb.Components.GithubComponents
+  alias LightningWeb.CredentialLive.Helpers, as: CredentialHelpers
 
   require Logger
 
@@ -197,9 +199,19 @@ defmodule LightningWeb.ProjectLive.Settings do
        active_menu_item: :settings,
        can_receive_failure_alerts: can_receive_failure_alerts,
        collaborators_to_invite: [],
+       credentials_page: CredentialHelpers.empty_page(),
+       credentials_url: nil,
        current_user: socket.assigns.current_user,
        github_enabled: VersionControl.github_enabled?(),
+       keychain_credentials_page: CredentialHelpers.empty_page(),
+       keychain_url: nil,
        name: project.name,
+       oauth_clients_page: CredentialHelpers.empty_page(),
+       oauth_clients_url: nil,
+       table_params: %{},
+       table_path: fn query ->
+         ~p"/projects/#{project.id}/settings?#{query}" <> "#credentials"
+       end,
        parent_project: parent_project,
        root_project: root_project,
        project: project,
@@ -230,9 +242,10 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> apply_action(live_action, params)}
   end
 
-  defp apply_action(socket, :index, _params) do
-    project_users = Projects.get_project_users!(socket.assigns.project.id)
-    auth_methods = WebhookAuthMethods.list_for_project(socket.assigns.project)
+  defp apply_action(socket, :index, params) do
+    project = socket.assigns.project
+    project_users = Projects.get_project_users!(project.id)
+    auth_methods = WebhookAuthMethods.list_for_project(project)
 
     route_metadata =
       socket.router
@@ -245,6 +258,32 @@ defmodule LightningWeb.ProjectLive.Settings do
     concurrency_input_component = Map.get(route_metadata, :concurrency_input)
     usage_caps_input_component = Map.get(route_metadata, :usage_caps_input)
 
+    table_path = socket.assigns.table_path
+    table_params = CredentialHelpers.table_params(params)
+
+    credentials_page =
+      Credentials.list_credentials(
+        project,
+        CredentialHelpers.page_params(table_params, "credentials"),
+        CredentialHelpers.list_opts(table_params, "credentials")
+      )
+      |> CredentialHelpers.with_credential_display_fields()
+
+    keychain_credentials_page =
+      Credentials.list_keychain_credentials_for_project(
+        project,
+        CredentialHelpers.page_params(table_params, "keychain"),
+        CredentialHelpers.list_opts(table_params, "keychain")
+      )
+
+    oauth_clients_page =
+      OauthClients.list_clients(
+        project,
+        CredentialHelpers.page_params(table_params, "oauth_clients"),
+        CredentialHelpers.list_opts(table_params, "oauth_clients")
+      )
+      |> CredentialHelpers.with_oauth_client_display_fields()
+
     socket
     |> assign(
       page_title: "Project settings",
@@ -256,6 +295,22 @@ defmodule LightningWeb.ProjectLive.Settings do
       show_invite_collaborators_modal: false,
       active_modal: nil,
       active_modal_assigns: nil
+    )
+    |> assign(:table_params, table_params)
+    |> assign(:credentials_page, credentials_page)
+    |> assign(:keychain_credentials_page, keychain_credentials_page)
+    |> assign(:oauth_clients_page, oauth_clients_page)
+    |> assign(
+      :credentials_url,
+      CredentialHelpers.page_url(table_path, table_params, "credentials")
+    )
+    |> assign(
+      :keychain_url,
+      CredentialHelpers.page_url(table_path, table_params, "keychain")
+    )
+    |> assign(
+      :oauth_clients_url,
+      CredentialHelpers.page_url(table_path, table_params, "oauth_clients")
     )
   end
 
