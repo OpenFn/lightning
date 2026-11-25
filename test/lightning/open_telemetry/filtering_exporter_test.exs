@@ -543,6 +543,67 @@ defmodule Lightning.OpenTelemetry.FilteringExporterTest do
     end
   end
 
+  describe "allowed_attributes/0" do
+    # Written out as literal atoms on purpose. Every key on this list leaves
+    # the process. Adding one, or a semconv upgrade changing the value of a
+    # constant used in the lib, has to show up as a change to this test.
+
+    # Deliberately absent: `user_agent.original` (D2), and Oban's
+    # `messaging.batch.message_count`, which only `OpentelemetryOban.insert*`
+    # sets and Lightning does not call.
+    test "is exactly the reviewed list" do
+      assert FilteringExporter.allowed_attributes() == [
+               # Ecto, only with TRACING_ECTO_ENABLED
+               :"db.instance",
+               :"db.name",
+               :"db.system",
+               :"db.type",
+               # Ecto timing: the suffix comes from `:time_unit`, which
+               # `Lightning.OpenTelemetry` leaves at its `:microsecond` default
+               :decode_time_microseconds,
+               # cowboy (stop/exception) and Oban (job exception)
+               :"error.type",
+               # cowboy and Phoenix
+               :"http.request.method",
+               :"http.response.status_code",
+               :"http.route",
+               # Ecto timing
+               :idle_time_microseconds,
+               # Oban job
+               :"messaging.client.id",
+               :"messaging.destination.name",
+               :"messaging.message.id",
+               :"messaging.operation.name",
+               :"messaging.operation.type",
+               :"messaging.system",
+               # cowboy
+               :"network.protocol.name",
+               :"network.protocol.version",
+               # Oban job
+               :"oban.job.attempt",
+               :"oban.job.inserted_at",
+               :"oban.job.job_id",
+               :"oban.job.max_attempts",
+               :"oban.job.priority",
+               :"oban.job.scheduled_at",
+               :"oban.job.worker",
+               # Phoenix
+               :"phoenix.action",
+               :"phoenix.plug",
+               # Ecto timing
+               :query_time_microseconds,
+               :queue_time_microseconds,
+               # cowboy
+               :"server.port",
+               # Ecto
+               :source,
+               :total_time_microseconds,
+               # cowboy
+               :"url.scheme"
+             ]
+    end
+  end
+
   # Built the way the batch processor builds the table it hands an exporter
   # (`otel_batch_processor:new_export_table/1`): a duplicate bag keyed on the
   # instrumentation scope, which the OTLP exporter relies on to group spans.

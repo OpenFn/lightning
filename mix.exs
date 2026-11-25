@@ -162,6 +162,7 @@ defmodule Lightning.MixProject do
       {:opentelemetry_exporter, "~> 1.10.0"},
       {:opentelemetry_oban, "~> 1.2.0"},
       {:opentelemetry_phoenix, "~> 2.0.1"},
+      {:opentelemetry_semantic_conventions, "~> 1.27.0"},
       {:phoenix, "~> 1.7.25"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_html, "~> 4.1"},

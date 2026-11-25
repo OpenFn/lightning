@@ -12,6 +12,8 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
   require Logger
   require Record
 
+  alias OpenTelemetry.SemConv
+
   Record.defrecordp(
     :span,
     :span,
@@ -108,12 +110,40 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
 
   def allowed_attributes do
     [
-      :"error.type",
-      :"http.request.method",
-      :"http.response.status_code",
-      :"http.route",
-      :"server.port",
-      :"url.scheme"
+      :"db.instance",
+      # SemConv replaces name wth namespace, but Ecto does not emit namespace
+      :"db.name",
+      SemConv.Incubating.DBAttributes.db_system(),
+      :"db.type",
+      :decode_time_microseconds,
+      SemConv.ErrorAttributes.error_type(),
+      SemConv.HTTPAttributes.http_request_method(),
+      SemConv.HTTPAttributes.http_response_status_code(),
+      SemConv.HTTPAttributes.http_route(),
+      :idle_time_microseconds,
+      SemConv.Incubating.MessagingAttributes.messaging_client_id(),
+      SemConv.Incubating.MessagingAttributes.messaging_destination_name(),
+      SemConv.Incubating.MessagingAttributes.messaging_message_id(),
+      SemConv.Incubating.MessagingAttributes.messaging_operation_name(),
+      SemConv.Incubating.MessagingAttributes.messaging_operation_type(),
+      SemConv.Incubating.MessagingAttributes.messaging_system(),
+      SemConv.NetworkAttributes.network_protocol_name(),
+      SemConv.NetworkAttributes.network_protocol_version(),
+      :"oban.job.attempt",
+      :"oban.job.inserted_at",
+      :"oban.job.job_id",
+      :"oban.job.max_attempts",
+      :"oban.job.priority",
+      :"oban.job.scheduled_at",
+      :"oban.job.worker",
+      :"phoenix.action",
+      :"phoenix.plug",
+      :query_time_microseconds,
+      :queue_time_microseconds,
+      SemConv.ServerAttributes.server_port(),
+      :source,
+      :total_time_microseconds,
+      SemConv.URLAttributes.url_scheme()
     ]
   end
 end
