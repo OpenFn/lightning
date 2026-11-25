@@ -409,8 +409,8 @@ export function AIAssistantPanelWrapper({
           content,
           ...(attached.attach_logs && { attach_logs: true }),
           ...(attached.attach_io_data && { attach_io_data: true }),
-          // The first message needs the run the checkbox was gated on too,
-          // otherwise session creation falls back to the URL param.
+          // The first message needs the attached run too, otherwise session
+          // creation falls back to the URL param.
           ...(attached.follow_run_id && {
             follow_run_id: attached.follow_run_id,
           }),
@@ -508,8 +508,8 @@ export function AIAssistantPanelWrapper({
             : `workflows/${workflowName}`;
 
           // Only follow_run_id, not the whole context: a job_id here would
-          // route the message to job chat. The fallback for a send that
-          // carried no checkbox.
+          // route the message to job chat. The fallback for a send with no
+          // run attached.
           if (!options.follow_run_id && context?.follow_run_id) {
             options.follow_run_id = context.follow_run_id;
           }

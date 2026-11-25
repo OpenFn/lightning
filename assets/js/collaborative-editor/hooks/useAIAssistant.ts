@@ -252,31 +252,6 @@ export const useAISessionListPagination = () => {
 };
 
 /**
- * Get computed storage key for persisting chat input drafts.
- * Returns a unique key based on session type and context (job_id, workflow_id, or project_id).
- */
-export const useAIStorageKey = (): string | undefined => {
-  const store = useAIStore();
-  return useSyncExternalStore(
-    store.subscribe,
-    store.withSelector(state => {
-      if (state.sessionType === 'job_code' && state.jobCodeContext?.job_id) {
-        return `ai-job-${state.jobCodeContext.job_id}`;
-      }
-      if (state.sessionType === 'workflow_template') {
-        if (state.workflowTemplateContext?.workflow_id) {
-          return `ai-workflow-${state.workflowTemplateContext.workflow_id}`;
-        }
-        if (state.workflowTemplateContext?.project_id) {
-          return `ai-project-${state.workflowTemplateContext.project_id}`;
-        }
-      }
-      return undefined;
-    })
-  );
-};
-
-/**
  * Check if session context (job or workflow) is set
  */
 export const useAIHasSessionContext = () => {

@@ -58,6 +58,10 @@ and this project adheres to
 
 ### Changed
 
+- The AI assistant always reads the selected run's logs and data unless you
+  detach it, replacing the "Send run logs" and "Send run data" boxes. A long log
+  sends its latest part, marked as cut, instead of failing the message.
+  [#5271](https://github.com/OpenFn/lightning/pull/5271)
 - The web app's interactive pages now run on React 19, up from React 18. They
   look and behave the same.
   [#5256](https://github.com/OpenFn/lightning/pull/5256)

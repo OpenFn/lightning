@@ -4,7 +4,6 @@ import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
 import {
-  useAIStorageKey,
   useAISessionType,
   useAIHasSessionContext,
   useAIHasCompletedSessionLoad,
@@ -116,7 +115,6 @@ export function AIAssistantPanel({
   const prevViewRef = useRef(view);
 
   // Use hooks to get state from AI Assistant store
-  const storageKey = useAIStorageKey();
   const storeSessionType = useAISessionType();
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const hasSessionContext = useAIHasSessionContext();
@@ -471,7 +469,6 @@ export function AIAssistantPanel({
           (view === 'sessions' &&
             (!hasSessionContext || !hasCompletedSessionLoad))
         }
-        storageKey={storageKey}
         enableAutoFocus={
           isOpen &&
           !isAboutOpen &&
@@ -554,8 +551,8 @@ export function AIAssistantPanel({
                 for a new line
               </li>
               <li>
-                When you have a run open you can attach its logs and its data to
-                a message
+                Selecting a run attaches it to your messages; click the x on its
+                chip to detach it
               </li>
               <li>
                 Generated workflows appear as artifacts with Apply and Copy
@@ -620,11 +617,10 @@ export function AIAssistantPanel({
               changes it makes are applied to the canvas as they arrive.
             </p>
             <p>
-              <strong>What you attach:</strong> with a run open, two tickboxes
-              above the message box add that run to what you send. "Send run
-              logs" adds every log line. "Send run data" adds the shape of each
-              step's input and output, where the field names go as they are and
-              the values are replaced by their types.
+              <strong>What you attach:</strong> with a run selected, the latest
+              part of its logs and the shape of each step's input and output go
+              with your message until you detach it. In the shape, the field
+              names go as they are and the values are replaced by their types.
             </p>
             <p>
               All chat sessions are shared with project collaborators. Everyone

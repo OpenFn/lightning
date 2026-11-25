@@ -177,8 +177,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     )
   end
 
-  # Run context the user ticked on the chat input; an unresolvable source is
-  # omitted rather than sent as an empty attachment.
+  # The run attached on the chat input; an unresolvable source is omitted
+  # rather than sent as an empty attachment.
   @spec build_attachments(AiAssistant.ChatSession.t()) :: [map()]
   defp build_attachments(session) do
     opts = get_in(session.meta, ["message_options"]) || %{}
