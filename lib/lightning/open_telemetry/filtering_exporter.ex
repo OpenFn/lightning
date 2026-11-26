@@ -7,6 +7,9 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
   For each span:
 
     * Attributes not on the allowlist are removed.
+    * Attributes that are on the allowlist but with a value that has the wrong
+      type are removed. At the time of writing the only example of this is the
+      :phoenix.action attribute which is only allowed if the value is an atom.
     * The status message is cleared and the status code kept, where relevant.
     * Links are removed.
 
@@ -34,6 +37,8 @@ defmodule Lightning.OpenTelemetry.FilteringExporter do
     Record.extract(:span, from_lib: "opentelemetry/include/otel_span.hrl")
   )
 
+  # A map listing the allowed atributes and the value type that is permitted.
+  # Value types are either :anything or :atom.
   @allowed_attributes %{
     :"db.instance" => :anything,
     # SemConv replaces name wth namespace, but Ecto does not emit namespace
