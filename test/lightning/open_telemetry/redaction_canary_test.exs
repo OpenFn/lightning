@@ -598,6 +598,69 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
            "no event was offered - this test is not exercising suppression"
   end
 
+  # Raises a MatchError whose term is the caller's canary. MatchError has no
+  # :message field, so the cowboy instrumentation puts the raw crash reason in
+  # error.type: the exception, its stacktrace and the plug call, conn included.
+  # Nothing in Lightning raises one on purpose, so this plug stands in.
+  defmodule CrashingPlug do
+    @behaviour Plug
+
+    def init(opts), do: opts
+
+    def call(conn, _opts) do
+      conn = Plug.Conn.fetch_query_params(conn)
+      raise MatchError, term: conn.query_params["canary"]
+      conn
+    end
+  end
+
+  @tag :capture_log
+  test "a crash reason carrying request data does not leave in error.type" do
+    # A listener of its own, with Plug.Cowboy's default stream handlers, the same
+    # ones the endpoint uses. The reason is shaped by the real Plug.Cowboy, not
+    # by a copy of it in this test.
+    ref = :"canary_crash_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Plug.Cowboy,
+       scheme: :http, plug: CrashingPlug, options: [port: 0, ref: ref]}
+    )
+
+    port = :ranch.get_port(ref)
+
+    response =
+      Finch.build(:get, "http://localhost:#{port}/?canary=#{@canary}")
+      |> Finch.request(Lightning.Finch)
+
+    assert {:ok, %Finch.Response{status: 500}} = response
+
+    assert_receive {:span,
+                    span_rec(kind: :server, attributes: attrs, status: status) =
+                      span},
+                   2_000
+
+    otel_attrs = :otel_attributes.map(attrs)
+
+    # The control. The plug has no path that returns a response, so a 500 and an
+    # error status mean the request crashed and the exception handler ran.
+    assert %{"http.response.status_code": 500} = otel_attrs
+    assert {:status, :error, _} = status
+
+    # Today the SDK drops error.type outright, because the raw reason is a tuple
+    # of mixed types. An atom would also be safe. Anything else means a library
+    # has changed how the reason reaches the span.
+    case Map.fetch(otel_attrs, :"error.type") do
+      :error ->
+        :ok
+
+      {:ok, error_type} ->
+        assert is_atom(error_type),
+               "error.type carries a crash reason: #{inspect(error_type)}"
+    end
+
+    refute_leaks_in(span)
+  end
+
   # The exporter the running batch processor holds, as opposed to the one the
   # application env asks for. Two things separate them. The SDK merges OS
   # variables over the app env when it starts. And an exporter whose `init/1`
@@ -685,7 +748,7 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
   # `filtering_exporter_test.exs`. The denied list lives here, so widening the
   # allowlist to cover one of its keys fails this file as well.
   defp assert_only_allowed(attrs_map) do
-    allowed = FilteringExporter.allowed_attributes()
+    allowed = FilteringExporter.allowed_attributes() |> Map.keys()
 
     outside =
       attrs_map |> Map.keys() |> Enum.reject(&(&1 in allowed)) |> Enum.sort()
