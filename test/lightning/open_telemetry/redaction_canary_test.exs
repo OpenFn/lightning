@@ -607,6 +607,16 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     def init(opts), do: opts
 
+    def call(%Plug.Conn{path_info: ["throw"]} = conn, _opts) do
+      conn = Plug.Conn.fetch_query_params(conn)
+      throw(conn.query_params["canary"])
+    end
+
+    def call(%Plug.Conn{path_info: ["exit"]} = conn, _opts) do
+      conn = Plug.Conn.fetch_query_params(conn)
+      exit(conn.query_params["canary"])
+    end
+
     def call(conn, _opts) do
       conn = Plug.Conn.fetch_query_params(conn)
       raise MatchError, term: conn.query_params["canary"]
@@ -628,8 +638,42 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     port = :ranch.get_port(ref)
 
+    refute_reason_in_span(
+      "http://localhost:#{port}/match_error?canary=#{@canary}"
+    )
+  end
+
+  @tag :capture_log
+  test "a thrown value carrying request data does not leave in error.type" do
+    ref = :"canary_crash_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Plug.Cowboy,
+       scheme: :http, plug: CrashingPlug, options: [port: 0, ref: ref]}
+    )
+
+    port = :ranch.get_port(ref)
+
+    refute_reason_in_span("http://localhost:#{port}/throw?canary=#{@canary}")
+  end
+
+  @tag :capture_log
+  test "an exit reason carrying request data does not leave in error.type" do
+    ref = :"canary_crash_#{System.unique_integer([:positive])}"
+
+    start_supervised!(
+      {Plug.Cowboy,
+       scheme: :http, plug: CrashingPlug, options: [port: 0, ref: ref]}
+    )
+
+    port = :ranch.get_port(ref)
+
+    refute_reason_in_span("http://localhost:#{port}/exit?canary=#{@canary}")
+  end
+
+  defp refute_reason_in_span(target_url) do
     response =
-      Finch.build(:get, "http://localhost:#{port}/?canary=#{@canary}")
+      Finch.build(:get, target_url)
       |> Finch.request(Lightning.Finch)
 
     assert {:ok, %Finch.Response{status: 500}} = response
@@ -641,14 +685,11 @@ defmodule Lightning.OpenTelemetry.RedactionCanaryTest do
 
     otel_attrs = :otel_attributes.map(attrs)
 
-    # The control. The plug has no path that returns a response, so a 500 and an
+    # The control. The exit clause never returns a response, so a 500 and an
     # error status mean the request crashed and the exception handler ran.
     assert %{"http.response.status_code": 500} = otel_attrs
     assert {:status, :error, _} = status
 
-    # Today the SDK drops error.type outright, because the raw reason is a tuple
-    # of mixed types. An atom would also be safe. Anything else means a library
-    # has changed how the reason reaches the span.
     case Map.fetch(otel_attrs, :"error.type") do
       :error ->
         :ok
