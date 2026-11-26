@@ -516,9 +516,22 @@ Lightning does not continue traces started by callers: an incoming `traceparent`
 header starts a new trace, and the link back to the caller's trace is removed
 before export.
 
-Span names are not filtered. They are an HTTP method and route template,
-`process <queue>` for Oban jobs, or the repo and table for a query. None of them
-is taken from request data.
+Span names are not filtered. Lightning creates no spans of its own, so every
+name comes from an instrumentation library: an HTTP method and route template,
+`process <queue>` for Oban jobs, or the repo and table for a query. Route
+templates, queue names and table names are fixed by Lightning's code and
+configuration, not taken from requests.
+
+The HTTP method is the exception. Most routes accept only the standard methods,
+but `/health_check` accepts any method, and its span is named after the method
+the caller sent. A request such as `PURGE /health_check` produces a span named
+`PURGE /health_check`. A caller can put text of their own choosing into a span
+name this way, but no one else's data.
+
+Because names are not filtered, a span name added in a later release, by
+Lightning or by an upgraded instrumentation library, is exported as written. If
+a trace shows a name built from request data, such as a path with ids in it,
+treat it as a bug and report it.
 
 #### Instance id
 
