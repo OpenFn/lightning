@@ -45,7 +45,8 @@ MFA answers 401 `mfa_required` and sets a session that can only finish signing
 in: read its CSRF token from `GET /api/session`, then post `mfa_code` or
 `backup_code`. Every other refused sign-in is the same 401
 `invalid_credentials`. After ten failures in 15 minutes an account answers 429
-`too_many_requests` until the window ends.
+`too_many_requests` until the window ends. Every node in a cluster shares the
+count.
 
 ## Conventions
 

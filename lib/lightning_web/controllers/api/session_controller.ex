@@ -113,26 +113,33 @@ defmodule LightningWeb.API.SessionController do
   defp sign_in(conn, body) do
     with {:ok, %{email: email, password: password, code: code}} <-
            SessionParams.sign_in(body),
-         :ok <- SignInAttempts.check(email),
+         :ok <- SignInAttempts.sign_in_attempt(email),
          {:ok, user} <- authenticate(email, password) do
       cond do
         not user.mfa_enabled ->
+          SignInAttempts.sign_in_succeeded(email)
           conn |> fetch_session() |> UserAuth.log_in_user(user) |> signed_in()
 
-        code ->
-          with :ok <- counted(valid_code?(user, code), user.email) do
-            conn |> fetch_session() |> UserAuth.log_in_user(user) |> signed_in()
-          end
+        is_nil(code) ->
+          # The password was right, so this attempt comes off the count; each
+          # try at the code counts on its own. The session is set on this
+          # answer, so it is sent here rather than returned to the fallback,
+          # which answers the conn it was handed.
+          SignInAttempts.sign_in_succeeded(email)
 
-        true ->
-          # The session is set on this answer, so it is sent here rather than
-          # returned to the fallback, which answers the conn it was handed.
           conn
           |> fetch_session()
           |> UserAuth.log_in_user(user)
           |> UserAuth.mark_totp_pending()
           |> put_resp_header("cache-control", "no-store")
           |> Problem.respond(Auth.session_problem(:mfa_required))
+
+        valid_code?(user, code) ->
+          SignInAttempts.sign_in_succeeded(email)
+          conn |> fetch_session() |> UserAuth.log_in_user(user) |> signed_in()
+
+        true ->
+          invalid_credentials()
       end
     end
   end
@@ -142,7 +149,7 @@ defmodule LightningWeb.API.SessionController do
       {%{state: :mfa_required, user: user}, conn} ->
         with :ok <- SessionToken.check_csrf(conn),
              {:ok, code} <- SessionParams.continuation(body),
-             :ok <- SignInAttempts.check(user.email),
+             :ok <- SignInAttempts.sign_in_attempt(user.email),
              do: finish_pending(conn, user, code)
 
       # A code with no email finishes a pending sign-in, so without one it is
@@ -167,14 +174,13 @@ defmodule LightningWeb.API.SessionController do
 
     cond do
       attempt != :spent and valid_code?(user, code) ->
+        SignInAttempts.sign_in_succeeded(user.email)
         conn |> UserAuth.totp_validated() |> signed_in()
 
       attempt == :ok ->
-        counted(false, user.email)
+        invalid_credentials()
 
       true ->
-        SignInAttempts.failed(user.email)
-
         conn
         |> UserAuth.end_session()
         |> Problem.respond(Auth.session_problem(:invalid_credentials))
@@ -187,15 +193,8 @@ defmodule LightningWeb.API.SessionController do
          false <- Accounts.login_blocked?(user) do
       {:ok, user}
     else
-      _refused -> counted(false, email)
+      _refused -> invalid_credentials()
     end
-  end
-
-  defp counted(true, _email), do: :ok
-
-  defp counted(false, email) do
-    SignInAttempts.failed(email)
-    invalid_credentials()
   end
 
   defp valid_code?(%User{mfa_enabled: true} = user, {:totp, code}),
