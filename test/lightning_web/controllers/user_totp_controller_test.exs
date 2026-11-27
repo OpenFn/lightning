@@ -2,6 +2,7 @@ defmodule LightningWeb.UserTOTPControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import Lightning.SignInAttemptHelpers, only: [assert_retry_after: 1]
 
   @totp_session :user_totp_pending
 
@@ -119,13 +120,13 @@ defmodule LightningWeb.UserTOTPControllerTest do
     end
   end
 
-  describe "POST /users/two-factor with wrong codes" do
-    defp send_code(conn, code),
-      do:
-        post(conn, ~p"/users/two-factor", %{
-          "user" => %{"code" => code, "authentication_type" => "totp"}
-        })
+  defp send_code(conn, code),
+    do:
+      post(conn, ~p"/users/two-factor", %{
+        "user" => %{"code" => code, "authentication_type" => "totp"}
+      })
 
+  describe "POST /users/two-factor with wrong codes" do
     test "five wrong codes end the sign-in, so the password is needed again",
          %{conn: conn} do
       token = get_session(conn, :user_token)
@@ -143,6 +144,24 @@ defmodule LightningWeb.UserTOTPControllerTest do
                "Too many invalid codes. Please log in again."
 
       refute Lightning.Accounts.get_user_by_session_token(token)
+    end
+  end
+
+  describe "POST /users/two-factor on a limited account" do
+    test "refuses the right code with a 429 and says when to try again", %{
+      conn: conn,
+      user: user
+    } do
+      for _attempt <- 1..10,
+          do: Lightning.Accounts.SignInAttempts.check_password(user.email, "no")
+
+      conn =
+        send_code(conn, NimbleTOTP.verification_code(user.user_totp.secret))
+
+      assert html_response(conn, 429) =~
+               LightningWeb.UserAuth.too_many_attempts_message()
+
+      assert_retry_after(conn)
     end
   end
 

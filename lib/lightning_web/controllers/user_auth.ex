@@ -45,6 +45,22 @@ defmodule LightningWeb.UserAuth do
   def login_blocked_message(:scheduled_deletion),
     do: "This user account is scheduled for deletion"
 
+  @doc "What a page says when a sign-in attempt is refused at the limit."
+  @spec too_many_attempts_message() :: String.t()
+  def too_many_attempts_message,
+    do: "Too many failed attempts. Please try again later."
+
+  @doc """
+  Answers a page's sign-in attempt that was refused at the limit: a 429 with
+  `retry-after` giving the seconds left in the window.
+  """
+  @spec too_many_attempts(Plug.Conn.t(), pos_integer()) :: Plug.Conn.t()
+  def too_many_attempts(conn, seconds) do
+    conn
+    |> put_status(429)
+    |> put_resp_header("retry-after", Integer.to_string(seconds))
+  end
+
   @doc """
   Assigns the token to a new session.
 

@@ -4,6 +4,7 @@ defmodule LightningWeb.ReAuthenticateLive.New do
   """
   use LightningWeb, :live_view
   alias Lightning.Accounts
+  alias Lightning.Accounts.SignInAttempts
 
   @impl true
   def mount(_params, %{"user_return_to" => return_to}, socket) do
@@ -35,13 +36,21 @@ defmodule LightningWeb.ReAuthenticateLive.New do
   def handle_event("reauthenticate-user", %{"user" => params}, socket) do
     current_user = socket.assigns.current_user
 
-    if valid_user_input?(current_user, params) do
-      token = Accounts.generate_sudo_session_token(current_user)
-      return_to = append_token(socket.assigns.return_to, Base.encode64(token))
+    case check_user_input(current_user, params) do
+      :ok ->
+        token = Accounts.generate_sudo_session_token(current_user)
+        return_to = append_token(socket.assigns.return_to, Base.encode64(token))
 
-      {:noreply, socket |> push_navigate(to: return_to, replace: true)}
-    else
-      {:noreply, assign(socket, error_message: error_msg(params))}
+        {:noreply, socket |> push_navigate(to: return_to, replace: true)}
+
+      {:error, {:rate_limited, _seconds}} ->
+        {:noreply,
+         assign(socket,
+           error_message: LightningWeb.UserAuth.too_many_attempts_message()
+         )}
+
+      {:error, _wrong} ->
+        {:noreply, assign(socket, error_message: error_msg(params))}
     end
   end
 
@@ -50,12 +59,12 @@ defmodule LightningWeb.ReAuthenticateLive.New do
     |> assign(:page_title, "Confirm access")
   end
 
-  defp valid_user_input?(current_user, %{"code" => code}) do
-    Accounts.valid_user_totp?(current_user, code)
+  defp check_user_input(current_user, %{"code" => code}) do
+    SignInAttempts.check_code(current_user, {:totp, code})
   end
 
-  defp valid_user_input?(current_user, %{"password" => password}) do
-    Accounts.User.valid_password?(current_user, password)
+  defp check_user_input(current_user, %{"password" => password}) do
+    SignInAttempts.confirm_password(current_user, password)
   end
 
   defp error_msg(%{"password" => _password}) do
