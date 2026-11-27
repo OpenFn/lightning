@@ -299,6 +299,7 @@ defmodule Lightning.Config.Bootstrap do
       {"*/5 * * * *", Lightning.Janitor},
       {"*/5 * * * *", Lightning.AiAssistant.StuckMessageReaper},
       {"*/10 * * * *", Lightning.ServiceAccount.Assertion},
+      {"*/15 * * * *", Lightning.Accounts.SignInAttempts},
       {"0 10 * * *", Lightning.DigestEmailWorker,
        args: %{"type" => "daily_project_digest"}},
       {"0 10 * * 1", Lightning.DigestEmailWorker,

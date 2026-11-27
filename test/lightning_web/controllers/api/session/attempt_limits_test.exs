@@ -45,6 +45,25 @@ defmodule LightningWeb.API.Session.AttemptLimitsTest do
     assert get_resp_header(conn, "set-cookie") == []
   end
 
+  test "signing in doesn't count, nor clear the failures before it" do
+    user = insert(:user)
+    fail_sign_ins(user, 9)
+
+    for _attempt <- 1..2 do
+      build_conn()
+      |> from_own_page()
+      |> sign_in(%{email: user.email, password: @password})
+      |> json_response(201)
+    end
+
+    fail_sign_ins(user, 1)
+
+    build_conn()
+    |> from_own_page()
+    |> sign_in(%{email: user.email, password: @password})
+    |> assert_problem(429, :too_many_requests, [])
+  end
+
   test "an empty password counts as a failed sign-in" do
     user = insert(:user)
 
