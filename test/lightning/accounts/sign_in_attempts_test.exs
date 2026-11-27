@@ -1,15 +1,12 @@
 defmodule Lightning.Accounts.SignInAttemptsTest do
-  # Not async: the racing processes share the test's connection.
-  use Lightning.DataCase, async: false
+  use Lightning.DataCase, async: true
 
   import Lightning.Factories
+  import Lightning.SignInAttemptHelpers
 
   alias Lightning.Accounts.SignInAttempts
 
   @password "hello world!"
-
-  defp wrong_passwords(email, times),
-    do: for(_ <- 1..times, do: SignInAttempts.check_password(email, "wrong"))
 
   defp mfa_user do
     insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
@@ -18,14 +15,17 @@ defmodule Lightning.Accounts.SignInAttemptsTest do
   defp totp(user),
     do: {:totp, NimbleTOTP.verification_code(user.user_totp.secret)}
 
-  defp end_windows do
+  defp start_windows_ago(minutes) do
     Repo.update_all("sign_in_attempts",
       set: [
         window_started_at:
-          DateTime.add(DateTime.utc_now(), -16, :minute) |> DateTime.to_naive()
+          DateTime.add(DateTime.utc_now(), -minutes, :minute)
+          |> DateTime.to_naive()
       ]
     )
   end
+
+  defp end_windows, do: start_windows_ago(16)
 
   describe "check_password/2" do
     test "answers the account for the right password" do
@@ -46,11 +46,32 @@ defmodule Lightning.Accounts.SignInAttemptsTest do
       assert wrong_passwords(email, 10) ==
                List.duplicate({:error, :invalid_credentials}, 10)
 
-      assert SignInAttempts.check_password(String.upcase(email), "wrong") ==
-               {:error, :rate_limited}
+      assert {:error, {:rate_limited, seconds}} =
+               SignInAttempts.check_password(String.upcase(email), "wrong")
+
+      assert seconds in 1..900
 
       assert SignInAttempts.check_password("other-" <> email, "wrong") ==
                {:error, :invalid_credentials}
+    end
+
+    # Needs a database whose ctype lowercases İ (U+0130) to i, as glibc does and
+    # the C locale doesn't; elsewhere there is nothing to show.
+    test "every spelling the database treats as one address shares a count" do
+      %{rows: [[same?]]} =
+        Repo.query!("select 'admİn@x.com'::citext = 'admin@x.com'::citext")
+
+      if same? do
+        user = insert(:user, email: "admin@example.com")
+        wrong_passwords("admİn@example.com", 5)
+        wrong_passwords(user.email, 5)
+
+        assert {:error, {:rate_limited, _seconds}} =
+                 SignInAttempts.check_password("admİn@example.com", "wrong")
+
+        assert {:error, {:rate_limited, _seconds}} =
+                 SignInAttempts.check_password(user.email, "wrong")
+      end
     end
 
     test "the right password doesn't count, nor clear the failures before it" do
@@ -65,8 +86,8 @@ defmodule Lightning.Accounts.SignInAttemptsTest do
 
       wrong_passwords(user.email, 1)
 
-      assert SignInAttempts.check_password(user.email, @password) ==
-               {:error, :rate_limited}
+      assert {:error, {:rate_limited, _seconds}} =
+               SignInAttempts.check_password(user.email, @password)
     end
 
     test "the count starts again once its window has ended" do
@@ -76,8 +97,24 @@ defmodule Lightning.Accounts.SignInAttemptsTest do
       assert wrong_passwords("someone@example.com", 10) ==
                List.duplicate({:error, :invalid_credentials}, 10)
 
-      assert SignInAttempts.check_password("someone@example.com", "wrong") ==
-               {:error, :rate_limited}
+      assert {:error, {:rate_limited, _seconds}} =
+               SignInAttempts.check_password("someone@example.com", "wrong")
+    end
+
+    test "a refusal says how many seconds are left in the window" do
+      wrong_passwords("clock@example.com", 10)
+
+      assert {:error, {:rate_limited, seconds}} =
+               SignInAttempts.check_password("clock@example.com", "wrong")
+
+      assert seconds in 895..900
+
+      start_windows_ago(10)
+
+      assert {:error, {:rate_limited, seconds}} =
+               SignInAttempts.check_password("clock@example.com", "wrong")
+
+      assert seconds in 295..301
     end
 
     test "attempts sent together each get their own count" do
@@ -100,7 +137,7 @@ defmodule Lightning.Accounts.SignInAttemptsTest do
       results = Task.await_many(tasks)
 
       assert Enum.count(results, &(&1 == {:error, :invalid_credentials})) == 10
-      assert Enum.count(results, &(&1 == {:error, :rate_limited})) == 30
+      assert Enum.count(results, &match?({:error, {:rate_limited, _}}, &1)) == 30
     end
   end
 
@@ -120,7 +157,7 @@ defmodule Lightning.Accounts.SignInAttemptsTest do
               SignInAttempts.check_code(user, {:totp, "000000"}, "session token")
 
       assert tries ==
-               List.duplicate({:error, :invalid_code}, 4) ++
+               List.duplicate({:error, :invalid_credentials}, 4) ++
                  [{:error, :tries_spent}]
 
       assert SignInAttempts.check_code(user, totp(user), "session token") ==
@@ -135,8 +172,30 @@ defmodule Lightning.Accounts.SignInAttemptsTest do
       for n <- 1..10,
           do: SignInAttempts.check_code(user, {:totp, "000000"}, "token #{n}")
 
-      assert SignInAttempts.check_code(user, totp(user), "fresh token") ==
-               {:error, :rate_limited}
+      assert {:error, {:rate_limited, _seconds}} =
+               SignInAttempts.check_code(user, totp(user), "fresh token")
+    end
+  end
+
+  describe "confirm_password/2, for a signed-in user" do
+    test "counts a wrong password and takes a right one back" do
+      user = insert(:user)
+
+      assert SignInAttempts.confirm_password(user, "wrong") ==
+               {:error, :invalid_credentials}
+
+      assert SignInAttempts.confirm_password(user, @password) == :ok
+      assert_attempts_left(user.email, 9)
+    end
+
+    test "refuses the right password once the account is limited" do
+      user = insert(:user)
+      wrong_passwords(user.email, 10)
+
+      assert {:error, {:rate_limited, seconds}} =
+               SignInAttempts.confirm_password(user, @password)
+
+      assert seconds in 1..900
     end
   end
 
@@ -144,7 +203,7 @@ defmodule Lightning.Accounts.SignInAttemptsTest do
     user = mfa_user()
 
     assert SignInAttempts.check_code(user, {:totp, "000000"}) ==
-             {:error, :invalid_code}
+             {:error, :invalid_credentials}
 
     assert SignInAttempts.check_code(user, totp(user)) == :ok
   end

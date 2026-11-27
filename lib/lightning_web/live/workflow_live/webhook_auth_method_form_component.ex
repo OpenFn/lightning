@@ -3,7 +3,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   use LightningWeb, :live_component
 
-  alias Lightning.Accounts
+  alias Lightning.Accounts.SignInAttempts
   alias Lightning.Projects.Project
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
@@ -47,11 +47,23 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   def handle_event("reauthenticate-user", %{"user" => params}, socket) do
     current_user = socket.assigns.current_user
 
-    if valid_user_input?(current_user, params) do
-      {:noreply,
-       assign(socket, sudo_mode?: true, show_2fa_options: false, error_msg: nil)}
-    else
-      {:noreply, assign(socket, error_msg: "Invalid! Please try again")}
+    case check_user_input(current_user, params) do
+      :ok ->
+        {:noreply,
+         assign(socket,
+           sudo_mode?: true,
+           show_2fa_options: false,
+           error_msg: nil
+         )}
+
+      {:error, {:rate_limited, _seconds}} ->
+        {:noreply,
+         assign(socket,
+           error_msg: LightningWeb.UserAuth.too_many_attempts_message()
+         )}
+
+      {:error, _wrong} ->
+        {:noreply, assign(socket, error_msg: "Invalid! Please try again")}
     end
   end
 
@@ -205,10 +217,19 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     })
   end
 
-  defp valid_user_input?(current_user, %{"password" => password, "code" => code}) do
-    Accounts.User.valid_password?(current_user, password) ||
-      Accounts.valid_user_totp?(current_user, code)
+  # Either field is enough: the password is tried if filled in, then the code.
+  # A blank field is not a guess.
+  defp check_user_input(current_user, %{"password" => password, "code" => code}) do
+    with {:error, :invalid_credentials} <-
+           maybe(password, &SignInAttempts.confirm_password(current_user, &1)) do
+      maybe(code, &SignInAttempts.check_code(current_user, {:totp, &1}))
+    end
   end
+
+  defp maybe(value, _check) when value in [nil, ""],
+    do: {:error, :invalid_credentials}
+
+  defp maybe(value, check), do: check.(value)
 
   @impl true
   slot :subtitle

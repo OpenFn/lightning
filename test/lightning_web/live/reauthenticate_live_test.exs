@@ -2,7 +2,9 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Ecto.Query
   import Lightning.Factories
+  import Lightning.SignInAttemptHelpers, only: [assert_attempts_left: 2]
 
   setup :register_and_log_in_user
 
@@ -175,6 +177,66 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
       |> element("form#reauthentication-form")
       |> render_submit(user: %{code: "wrongcode"}) =~
         "Invalid OTP code!. Try again"
+    end
+  end
+
+  describe "New, guessing" do
+    setup %{conn: conn} do
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+
+      conn = conn |> log_in_user(user) |> put_session(:user_return_to, "/x")
+      {:ok, live, _html} = live(conn, ~p"/auth/confirm_access")
+      render_click(live, "toggle-option", %{"option" => "totp"})
+      %{live: live, user: user}
+    end
+
+    defp submit(live, params),
+      do:
+        live
+        |> element("form#reauthentication-form")
+        |> render_submit(user: params)
+
+    defp sudo_tokens(user) do
+      Lightning.Repo.all(
+        from t in Lightning.Accounts.UserToken,
+          where: t.user_id == ^user.id and t.context == "sudo_session"
+      )
+    end
+
+    test "ten wrong codes, then the right password is refused and no token is minted",
+         %{live: live, user: user} do
+      for _guess <- 1..10, do: submit(live, %{code: "000000"})
+
+      render_click(live, "toggle-option", %{"option" => "password"})
+
+      assert submit(live, %{password: user.password}) =~
+               LightningWeb.UserAuth.too_many_attempts_message()
+
+      assert sudo_tokens(user) == []
+    end
+
+    test "a right answer after nine wrong ones works and leaves the count at nine",
+         %{live: live, user: user} do
+      for _guess <- 1..9, do: submit(live, %{code: "000000"})
+
+      code = NimbleTOTP.verification_code(user.user_totp.secret)
+      assert {:error, _redirect} = submit(live, %{code: code})
+
+      assert length(sudo_tokens(user)) == 1
+      assert_attempts_left(user.email, 1)
+    end
+
+    test "wrong guesses here limit the account's sign-in too", %{
+      live: live,
+      user: user
+    } do
+      for _guess <- 1..10, do: submit(live, %{code: "000000"})
+
+      assert {:error, {:rate_limited, _seconds}} =
+               Lightning.Accounts.SignInAttempts.check_password(
+                 user.email,
+                 user.password
+               )
     end
   end
 end

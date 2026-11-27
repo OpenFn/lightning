@@ -3,6 +3,7 @@ defmodule LightningWeb.UserSessionControllerTest do
 
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import Lightning.SignInAttemptHelpers, only: [assert_retry_after: 1]
 
   alias Lightning.AuthProviders
 
@@ -278,7 +279,9 @@ defmodule LightningWeb.UserSessionControllerTest do
         })
 
       assert html_response(conn, 429) =~
-               "Too many failed attempts. Please try again later."
+               LightningWeb.UserAuth.too_many_attempts_message()
+
+      assert_retry_after(conn)
 
       refute get_session(conn, :user_token)
     end

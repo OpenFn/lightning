@@ -24,13 +24,13 @@ defmodule LightningWeb.UserTOTPController do
         |> UserAuth.totp_validated()
         |> UserAuth.redirect_with_return_to(params)
 
-      {:error, :invalid_code} ->
+      {:error, :invalid_credentials} ->
         refuse(conn, params, "Invalid two-factor authentication code")
 
-      {:error, :rate_limited} ->
+      {:error, {:rate_limited, seconds}} ->
         conn
-        |> put_status(429)
-        |> refuse(params, "Too many failed attempts. Please try again later.")
+        |> UserAuth.too_many_attempts(seconds)
+        |> refuse(params, UserAuth.too_many_attempts_message())
 
       {:error, :tries_spent} ->
         conn

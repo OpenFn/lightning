@@ -7,6 +7,7 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.AccountsFixtures
   import Lightning.AdaptorTestHelpers
   import Lightning.Factories
+  import Lightning.SignInAttemptHelpers, only: [assert_attempts_left: 2]
   import Lightning.RaceHelpers
   import LightningWeb.CredentialLiveHelpers
 
@@ -2771,6 +2772,87 @@ defmodule LightningWeb.ProjectLiveTest do
 
       # modal doesn't exist
       refute view |> element("#webhook_auth_method_modal") |> has_element?()
+    end
+
+    defp open_reauthentication_form(conn, user) do
+      project = insert(:project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :api,
+          api_key: "someverystrongapikey1234",
+          username: nil,
+          password: nil
+        )
+
+      insert(:project_user, role: :admin, project: project, user: user)
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#edit_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      view
+      |> element("#webhook_auth_method_api_key_action_button")
+      |> render_click()
+
+      {view, auth_method}
+    end
+
+    test "the reauthentication form counts each filled-in field as a guess and stops at the limit",
+         %{conn: conn} do
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+      {view, _auth_method} = open_reauthentication_form(conn, user)
+
+      submit = fn params ->
+        view |> form("#reauthentication-form", user: params) |> render_submit()
+      end
+
+      # a blank code is not a guess
+      assert submit.(%{password: "wrongpass", code: ""}) =~
+               "Invalid! Please try again"
+
+      # both filled in: each is a guess
+      submit.(%{password: "wrongpass", code: "000000"})
+
+      # a right password, with a blank code, takes its attempt back
+      submit.(%{password: user.password, code: ""})
+      refute view |> has_element?("#reauthentication-form")
+
+      # one guess, then two, and the right password cost nothing
+      assert_attempts_left(user.email, 7)
+    end
+
+    test "the reauthentication form refuses the right password after ten wrong guesses",
+         %{conn: conn} do
+      user = insert(:user)
+      {view, auth_method} = open_reauthentication_form(conn, user)
+
+      for _guess <- 1..10 do
+        view
+        |> form("#reauthentication-form", user: %{password: "wrongpass"})
+        |> render_submit()
+      end
+
+      html =
+        view
+        |> form("#reauthentication-form", user: %{password: user.password})
+        |> render_submit()
+
+      assert html =~ LightningWeb.UserAuth.too_many_attempts_message()
+      assert has_element?(view, "#reauthentication-form")
+      refute render(view) =~ auth_method.api_key
+
+      assert {:error, {:rate_limited, _seconds}} =
+               Lightning.Accounts.SignInAttempts.check_password(
+                 user.email,
+                 user.password
+               )
     end
 
     test "password is required before displaying the API KEY of a project webhook auth method",

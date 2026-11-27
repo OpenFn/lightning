@@ -24,10 +24,10 @@ defmodule LightningWeb.UserSessionController do
         |> put_flash(:error, "Invalid email or password")
         |> render("new.html", auth_handler_url: auth_handler_url())
 
-      {:error, :rate_limited} ->
+      {:error, {:rate_limited, seconds}} ->
         conn
-        |> put_status(429)
-        |> put_flash(:error, "Too many failed attempts. Please try again later.")
+        |> UserAuth.too_many_attempts(seconds)
+        |> put_flash(:error, UserAuth.too_many_attempts_message())
         |> render("new.html", auth_handler_url: auth_handler_url())
     end
   end

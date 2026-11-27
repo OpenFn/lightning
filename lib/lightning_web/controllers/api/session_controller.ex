@@ -17,9 +17,10 @@ defmodule LightningWeb.API.SessionController do
   Failed passwords and codes are limited per account
   (`Lightning.Accounts.SignInAttempts`): once an account has failed too often,
   every attempt on it, right or wrong, is 429 `too_many_requests` until the
-  window ends, and a pending MFA sign-in that fails five codes is ended, so the
-  password has to be entered again. A `POST` with only a code and no pending
-  sign-in to continue is 401 `unauthenticated`.
+  window ends, with a `retry-after` header giving the seconds left, and a
+  pending MFA sign-in that fails five codes is ended, so the password has to be
+  entered again. A `POST` with only a code and no pending sign-in to continue is
+  401 `unauthenticated`.
 
   `GET /api/session` reads the session, with a CSRF token for writes, and
   answers 401 without one. `DELETE /api/session` signs out and answers 204
@@ -180,7 +181,7 @@ defmodule LightningWeb.API.SessionController do
           do: invalid_credentials(),
           else: {:ok, user}
 
-      {:error, :rate_limited} = limited ->
+      {:error, {:rate_limited, _seconds}} = limited ->
         limited
 
       {:error, :invalid_credentials} ->
@@ -189,8 +190,8 @@ defmodule LightningWeb.API.SessionController do
   end
 
   defp refuse_code(:ok), do: :ok
-  defp refuse_code({:error, :rate_limited} = limited), do: limited
-  defp refuse_code({:error, :invalid_code}), do: invalid_credentials()
+  defp refuse_code({:error, {:rate_limited, _seconds}} = limited), do: limited
+  defp refuse_code({:error, :invalid_credentials}), do: invalid_credentials()
 
   defp invalid_credentials,
     do: {:error, Auth.session_problem(:invalid_credentials)}
