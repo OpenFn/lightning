@@ -1,7 +1,7 @@
 defmodule LightningWeb.UserTOTPController do
   use LightningWeb, :controller
 
-  alias Lightning.Accounts
+  alias Lightning.Accounts.SignInAttempts
   alias LightningWeb.UserAuth
 
   plug :redirect_if_totp_is_not_pending
@@ -15,19 +15,36 @@ defmodule LightningWeb.UserTOTPController do
   end
 
   def create(conn, %{"user" => params}) do
-    current_user = conn.assigns.current_user
+    user = conn.assigns.current_user
+    token = get_session(conn, :user_token)
 
-    if valid_user_code?(current_user, params) do
-      conn
-      |> UserAuth.totp_validated()
-      |> UserAuth.redirect_with_return_to(params)
-    else
-      render(conn, "new.html",
-        remember_me: params["remember_me"],
-        authentication_type: params["authentication_type"],
-        error_message: "Invalid two-factor authentication code"
-      )
+    case SignInAttempts.check_code(user, code(params), token) do
+      :ok ->
+        conn
+        |> UserAuth.totp_validated()
+        |> UserAuth.redirect_with_return_to(params)
+
+      {:error, :invalid_code} ->
+        refuse(conn, params, "Invalid two-factor authentication code")
+
+      {:error, :rate_limited} ->
+        conn
+        |> put_status(429)
+        |> refuse(params, "Too many failed attempts. Please try again later.")
+
+      {:error, :tries_spent} ->
+        conn
+        |> put_flash(:error, "Too many invalid codes. Please log in again.")
+        |> UserAuth.log_out_user()
     end
+  end
+
+  defp refuse(conn, params, message) do
+    render(conn, "new.html",
+      remember_me: params["remember_me"],
+      authentication_type: params["authentication_type"],
+      error_message: message
+    )
   end
 
   defp redirect_if_totp_is_not_pending(conn, _opts) do
@@ -50,17 +67,9 @@ defmodule LightningWeb.UserTOTPController do
     end
   end
 
-  defp valid_user_code?(user, %{
-         "code" => code,
-         "authentication_type" => "backup_code"
-       }) do
-    Accounts.valid_user_backup_code?(user, code)
-  end
+  defp code(%{"code" => code, "authentication_type" => "backup_code"}),
+    do: {:backup_code, code}
 
-  defp valid_user_code?(user, %{
-         "code" => code,
-         "authentication_type" => "totp"
-       }) do
-    Accounts.valid_user_totp?(user, code)
-  end
+  defp code(%{"code" => code, "authentication_type" => "totp"}),
+    do: {:totp, code}
 end

@@ -80,6 +80,21 @@ defmodule LightningWeb.API.Session.AttemptLimitsTest do
     |> assert_problem(429, :too_many_requests, [])
   end
 
+  test "failures on the log-in page count against the same limit" do
+    user = insert(:user)
+
+    for _attempt <- 1..10 do
+      post(build_conn(), ~p"/users/log_in", %{
+        "user" => %{"email" => user.email, "password" => "not the password"}
+      })
+    end
+
+    build_conn()
+    |> from_own_page()
+    |> sign_in(%{email: user.email, password: @password})
+    |> assert_problem(429, :too_many_requests, [])
+  end
+
   test "finishing an MFA sign-in counts against the same limit" do
     user = mfa_user()
     fail_sign_ins(user, 10)

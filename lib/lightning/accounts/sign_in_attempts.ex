@@ -1,31 +1,26 @@
 defmodule Lightning.Accounts.SignInAttempts do
   @moduledoc """
-  Limits attempts to prove who someone is: a password or MFA code sent to sign
-  in, or to finish an MFA sign-in.
-
-  Only `POST /api/session` counts and checks them so far. The log-in and
-  two-factor pages don't, so the limits here don't yet hold for an account as a
-  whole.
-
-  The counts live in the `sign_in_attempts` table, so every node in a cluster
-  shares them and a deploy doesn't reset them. Each count runs for a fixed
-  15-minute window from its first attempt, by the database's clock, and starts
-  again from one once the window has ended. This module is also the Oban
-  worker that deletes counts whose window has ended.
+  Checks a password or MFA code sent to sign in, and limits how often someone
+  can try. The API (`POST /api/session`) and the log-in and two-factor pages
+  check through here, so they share one limit per account.
 
   Attempts are counted per account, by its email address in lower case,
   whether or not an account has it, so the limit can't be used to find
-  accounts. `sign_in_attempt/1` counts an attempt before the password is
-  checked, so requests sent together can't all be checked against a count
-  none of them has raised yet, and refuses once there have been more than ten
-  in the window, right or wrong. `sign_in_succeeded/1` takes a successful
-  attempt back off the count, so only failures add up: a person who signs in
-  often is never limited, and signing in doesn't clear the failures someone
-  else ran up.
+  accounts. Each attempt is counted before it is checked, so requests sent
+  together can't all be checked against a count none of them has raised yet,
+  and after ten in 15 minutes every attempt is refused, right or wrong, until
+  the window ends. A right password or code takes its attempt back off the
+  count, so only failures add up: a person who signs in often is never
+  limited, and signing in doesn't clear the failures someone else ran up.
 
-  A sign-in waiting for its MFA code also gets five tries at it
-  (`code_attempt/1`), taken before each code is checked: when the fifth fails
-  the caller ends that session, so the password has to be entered again.
+  A sign-in waiting for its MFA code also gets five tries at it: when the
+  fifth fails the caller ends that session, so the password has to be entered
+  again.
+
+  The counts live in the `sign_in_attempts` table, so every node in a cluster
+  shares them and a deploy doesn't reset them. Each runs for a fixed 15-minute
+  window from its first attempt, by the database's clock. This module is also
+  the Oban worker that deletes counts whose window has ended.
 
   There is no limit per client address: behind a load balancer every request
   comes from the balancer's address, so such a limit would lock everyone out
@@ -35,29 +30,86 @@ defmodule Lightning.Accounts.SignInAttempts do
 
   import Ecto.Query
 
+  alias Lightning.Accounts
+  alias Lightning.Accounts.User
   alias Lightning.Repo
 
   @attempt_limit 10
   @code_limit 5
 
+  @type code :: {:totp, String.t()} | {:backup_code, String.t()}
+
   @doc """
-  Counts an attempt to sign in as the account with `email`, before its
-  password is checked: `:ok` while it is within the limit, or
-  `{:error, :rate_limited}` once there have been too many.
+  Checks `password` for the account with `email`, counting the attempt. The
+  account may still be disabled or scheduled for deletion; that is the
+  caller's to check.
   """
-  @spec sign_in_attempt(String.t()) :: :ok | {:error, :rate_limited}
-  def sign_in_attempt(email) when is_binary(email) do
+  @spec check_password(String.t(), String.t()) ::
+          {:ok, User.t()} | {:error, :invalid_credentials | :rate_limited}
+  def check_password(email, password)
+      when is_binary(email) and is_binary(password) do
+    with :ok <- attempt(email) do
+      case Accounts.get_user_by_email_and_password(email, password) do
+        %User{} = user ->
+          take_back(email)
+          {:ok, user}
+
+        nil ->
+          {:error, :invalid_credentials}
+      end
+    end
+  end
+
+  @doc """
+  Checks an MFA `code` for `user`, counting the attempt, when there is no
+  pending sign-in: the password came in the same request.
+  """
+  @spec check_code(User.t(), code()) ::
+          :ok | {:error, :invalid_code | :rate_limited}
+  def check_code(%User{} = user, code) do
+    with :ok <- attempt(user.email) do
+      if valid_code?(user, code),
+        do: take_back(user.email),
+        else: {:error, :invalid_code}
+    end
+  end
+
+  @doc """
+  Checks an MFA `code` to finish the pending sign-in holding `session_token`,
+  counting the attempt and taking one of the sign-in's five tries.
+  `{:error, :tries_spent}` means the last try has gone, so the caller must end
+  that session.
+  """
+  @spec check_code(User.t(), code(), binary()) ::
+          :ok | {:error, :invalid_code | :tries_spent | :rate_limited}
+  def check_code(%User{} = user, code, session_token)
+      when is_binary(session_token) do
+    with :ok <- attempt(user.email) do
+      tries = code_tries(session_token)
+
+      cond do
+        tries != :spent and valid_code?(user, code) -> take_back(user.email)
+        tries == :ok -> {:error, :invalid_code}
+        true -> {:error, :tries_spent}
+      end
+    end
+  end
+
+  defp valid_code?(%User{mfa_enabled: true} = user, {:totp, code}),
+    do: Accounts.valid_user_totp?(user, code)
+
+  defp valid_code?(%User{mfa_enabled: true} = user, {:backup_code, code}),
+    do: Accounts.valid_user_backup_code?(user, code)
+
+  defp valid_code?(_user, _code), do: false
+
+  defp attempt(email) do
     if count(email_key(email)) <= @attempt_limit,
       do: :ok,
       else: {:error, :rate_limited}
   end
 
-  @doc """
-  Takes the attempt `sign_in_attempt/1` counted back off, once it has signed
-  in.
-  """
-  @spec sign_in_succeeded(String.t()) :: :ok
-  def sign_in_succeeded(email) when is_binary(email) do
+  defp take_back(email) do
     key = email_key(email)
 
     from(a in "sign_in_attempts",
@@ -69,15 +121,8 @@ defmodule Lightning.Accounts.SignInAttempts do
     :ok
   end
 
-  @doc """
-  Takes one of the five tries the pending sign-in holding `session_token` has
-  at its MFA code. Call it before checking the code: `:ok` while tries remain
-  after this one, `:last` for the fifth, after which a wrong code must end
-  that session, and `:spent` once there are none, when the code must not be
-  checked at all.
-  """
-  @spec code_attempt(binary()) :: :ok | :last | :spent
-  def code_attempt(session_token) when is_binary(session_token) do
+  # :ok while tries remain after this one, :last for the fifth, :spent after.
+  defp code_tries(session_token) do
     case count("pending_mfa_attempts::" <> digest(session_token)) do
       count when count < @code_limit -> :ok
       @code_limit -> :last

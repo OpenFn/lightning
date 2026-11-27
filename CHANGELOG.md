@@ -49,9 +49,10 @@ and this project adheres to
   and its CSRF token; `DELETE /api/session` signs out. The session cookie then
   works on the `/api` routes that take a personal access token, but only on
   requests from Lightning's own pages, and a write also needs the `x-csrf-token`
-  header. Failed sign-ins through the API are limited per account: ten in 15
-  minutes, and five wrong MFA codes end a pending sign-in. The counts are kept
-  in the database, so every node in a cluster shares them.
+  header. Failed sign-ins are limited per account, through the API and the
+  log-in and two-factor pages alike: ten in 15 minutes, and five wrong MFA codes
+  end a pending sign-in. The counts are kept in the database, so every node in a
+  cluster shares them.
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
   metrics are enabled, where they're sent, and the instance UUID and its hash.
   [#5262](https://github.com/OpenFn/lightning/issues/5262)
