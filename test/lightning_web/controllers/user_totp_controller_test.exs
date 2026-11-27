@@ -119,6 +119,33 @@ defmodule LightningWeb.UserTOTPControllerTest do
     end
   end
 
+  describe "POST /users/two-factor with wrong codes" do
+    defp send_code(conn, code),
+      do:
+        post(conn, ~p"/users/two-factor", %{
+          "user" => %{"code" => code, "authentication_type" => "totp"}
+        })
+
+    test "five wrong codes end the sign-in, so the password is needed again",
+         %{conn: conn} do
+      token = get_session(conn, :user_token)
+
+      for _attempt <- 1..4 do
+        assert conn |> send_code("000000") |> html_response(200) =~
+                 "Invalid two-factor authentication code"
+      end
+
+      conn = send_code(conn, "000000")
+
+      assert redirected_to(conn) == ~p"/users/log_in"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Too many invalid codes. Please log in again."
+
+      refute Lightning.Accounts.get_user_by_session_token(token)
+    end
+  end
+
   describe "POST /users/two-factor using backup code" do
     test "validates the backup code correctly", %{conn: conn, user: user} do
       backup_code = Enum.random(user.backup_codes)

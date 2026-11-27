@@ -261,6 +261,28 @@ defmodule LightningWeb.UserSessionControllerTest do
       assert redirected_to(conn) == "/foo/bar"
     end
 
+    test "after ten failed log-ins refuses the right password too", %{
+      user: user
+    } do
+      for _attempt <- 1..10 do
+        build_conn()
+        |> post(~p"/users/log_in", %{
+          "user" => %{"email" => user.email, "password" => "invalid_password"}
+        })
+        |> html_response(200)
+      end
+
+      conn =
+        post(build_conn(), ~p"/users/log_in", %{
+          "user" => %{"email" => user.email, "password" => valid_user_password()}
+        })
+
+      assert html_response(conn, 429) =~
+               "Too many failed attempts. Please try again later."
+
+      refute get_session(conn, :user_token)
+    end
+
     test "emits error message with invalid credentials", %{
       conn: conn,
       user: user

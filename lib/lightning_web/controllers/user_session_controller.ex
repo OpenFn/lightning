@@ -2,7 +2,7 @@ defmodule LightningWeb.UserSessionController do
   use LightningWeb, :controller
 
   alias Lightning.Accounts
-  alias Lightning.Accounts.User
+  alias Lightning.Accounts.SignInAttempts
   alias LightningWeb.UserAuth
 
   def new(conn, _params) do
@@ -15,13 +15,19 @@ defmodule LightningWeb.UserSessionController do
   def create(conn, %{"user" => user_params}) do
     %{"email" => email, "password" => password} = user_params
 
-    case Accounts.get_user_by_email_and_password(email, password) do
-      %User{} = user ->
+    case SignInAttempts.check_password(email, password) do
+      {:ok, user} ->
         log_in_with_password(conn, user, user_params)
 
-      _ ->
+      {:error, :invalid_credentials} ->
         conn
         |> put_flash(:error, "Invalid email or password")
+        |> render("new.html", auth_handler_url: auth_handler_url())
+
+      {:error, :rate_limited} ->
+        conn
+        |> put_status(429)
+        |> put_flash(:error, "Too many failed attempts. Please try again later.")
         |> render("new.html", auth_handler_url: auth_handler_url())
     end
   end
