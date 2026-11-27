@@ -15,6 +15,8 @@ defmodule LightningWeb.API.Codes do
     invalid_header: {400, "A request header is not valid. See errors."},
     unauthenticated: {401, "Authentication is required."},
     invalid_token: {401, "The token is not valid."},
+    invalid_credentials: {401, "The sign-in details are not valid."},
+    mfa_required: {401, "Signing in needs an MFA code or backup code as well."},
     exceeds_limit: {402, "This would exceed a limit of your plan."},
     forbidden: {403, "You may not do this (or it might not exist)."},
     insufficient_scope: {403, "The token lacks the token grant this needs."},

@@ -16,7 +16,7 @@ Send a token in the `Authorization` header on every request:
 Authorization: Bearer <token>
 ```
 
-Two kinds of token work:
+Two kinds of bearer token work:
 
 - The service account's access token, for automation that sets up an instance.
   [Service accounts](SERVICE_ACCOUNTS.md) explains how to get one. It carries
@@ -28,6 +28,24 @@ Two kinds of token work:
   token. It answers a personal access token with 403 `forbidden`, and a project
   repo connection's token with 403 `insufficient_scope` naming `users:read` or
   `users:write`.
+
+Lightning's own web app calls the API with a session token instead: the session
+cookie that signing in sets, whether through the sign-in page, a single sign-on
+provider or `POST /api/session`. A request with no `Authorization` header is
+authenticated by that cookie, but only when the request comes from Lightning's
+own pages, as the browser says in `Sec-Fetch-Site` (or `Origin`). A request from
+another site is treated as sending no token. A write also needs the session's
+CSRF token, from `GET /api/session`, in the `x-csrf-token` header; without it
+the answer is 400 `invalid_header`. A session token acts as the person, with
+their project roles, on the `/api` routes that take a personal access token. The
+`/collections` routes don't take it.
+
+To sign in, post `email` and `password` to `POST /api/session`. An account with
+MFA answers 401 `mfa_required` and sets a session that can only finish signing
+in: read its CSRF token from `GET /api/session`, then post `mfa_code` or
+`backup_code`. Every other refused sign-in is the same 401
+`invalid_credentials`. After ten failures in 15 minutes an account answers 429
+`too_many_requests` until the window ends.
 
 ## Conventions
 
@@ -80,7 +98,8 @@ in `LightningWeb.API.Codes`.
 | 400    | `invalid_request`        | The `Authorization: Bearer` header is malformed.                                                                                                                                                        |
 | 400    | `invalid_parameter`      | A path or query parameter isn't valid. See `errors`.                                                                                                                                                    |
 | 400    | `malformed`              | The body isn't a JSON object.                                                                                                                                                                           |
-| 401    | `unauthenticated`        | The request has no bearer token.                                                                                                                                                                        |
+| 400    | `invalid_header`         | A header isn't valid. See `errors`. A write on a session token without the session's `x-csrf-token` gets this.                                                                                          |
+| 401    | `unauthenticated`        | The request has no bearer token, or no session token from Lightning's own pages.                                                                                                                        |
 | 401    | `invalid_token`          | The token is unknown, revoked or expired, or the route doesn't take that kind of token. An expired service account token says so in `WWW-Authenticate`: `error_description="The access token expired"`. |
 | 403    | `insufficient_scope`     | The token lacks the token grant the route needs. `scope` in the body and in `WWW-Authenticate` names it.                                                                                                |
 | 403    | `forbidden`              | You may not do this, or the record might not exist.                                                                                                                                                     |
@@ -120,19 +139,23 @@ be allowed.
 
 ## Routes
 
-"Session only" routes serve Lightning's own web app and take no token. A route
-"not open to the service account" answers its token with 403 `forbidden`.
+"Session only" routes serve Lightning's own web app and take its session cookie,
+not a bearer token. A route "not open to the service account" answers its token
+with 403 `forbidden`.
 
 ### Accounts
 
-| Method  | Path                  | What it does                                        | Token grant   |
-| ------- | --------------------- | --------------------------------------------------- | ------------- |
-| `POST`  | `/api/oauth/token`    | Exchanges a service account's assertion for a token | None          |
-| `GET`   | `/api/users`          | Lists users, or finds one by `email`                | `users:read`  |
-| `GET`   | `/api/users/:id`      | Reads a user                                        | `users:read`  |
-| `POST`  | `/api/users`          | Creates a user                                      | `users:write` |
-| `PATCH` | `/api/users/:id`      | Changes a user                                      | `users:write` |
-| `POST`  | `/api/users/register` | Signs up, where the instance offers it              | None          |
+| Method   | Path                  | What it does                                        | Token grant   |
+| -------- | --------------------- | --------------------------------------------------- | ------------- |
+| `POST`   | `/api/oauth/token`    | Exchanges a service account's assertion for a token | None          |
+| `POST`   | `/api/session`        | Signs in, or finishes signing in with an MFA code   | None          |
+| `GET`    | `/api/session`        | Reads the session and its CSRF token                | Session only  |
+| `DELETE` | `/api/session`        | Signs out                                           | Session only  |
+| `GET`    | `/api/users`          | Lists users, or finds one by `email`                | `users:read`  |
+| `GET`    | `/api/users/:id`      | Reads a user                                        | `users:read`  |
+| `POST`   | `/api/users`          | Creates a user                                      | `users:write` |
+| `PATCH`  | `/api/users/:id`      | Changes a user                                      | `users:write` |
+| `POST`   | `/api/users/register` | Signs up, where the instance offers it              | None          |
 
 ### Projects
 

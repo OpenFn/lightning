@@ -113,10 +113,24 @@ defmodule LightningWeb.UserAuth do
   signed in.
   """
   def log_out_user(conn) do
+    conn
+    |> end_session()
+    |> redirect(to: "/users/log_in")
+  end
+
+  @doc """
+  Ends the session as `log_out_user/1` does, without the redirect: revokes its
+  session and sudo tokens, hangs up the account's LiveView connections, clears
+  the session and drops the remember-me cookie. For the API's sign-out.
+  """
+  def end_session(conn) do
     user_token = get_session(conn, :user_token)
     user_token && Accounts.delete_session_token(user_token)
-    sudo_token = get_session(conn, :sudo_token)
-    sudo_token && Accounts.delete_sudo_session_token(sudo_token)
+    # The session holds the sudo token Base64-encoded; the table holds it raw.
+    with encoded when is_binary(encoded) <- get_session(conn, :sudo_token),
+         {:ok, sudo_token} <- Base.decode64(encoded) do
+      Accounts.delete_sudo_session_token(sudo_token)
+    end
 
     # Read from the session rather than derived from the user: a session still
     # holding the old token-keyed id can only be reached at the id it was
@@ -129,7 +143,6 @@ defmodule LightningWeb.UserAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
-    |> redirect(to: "/users/log_in")
   end
 
   @doc """
@@ -191,6 +204,15 @@ defmodule LightningWeb.UserAuth do
       do: conn,
       else: put_session(conn, :live_socket_id, topic)
   end
+
+  @doc """
+  The session token the request carries, from the session or else the
+  remember-me cookie, which it copies into the session as
+  `fetch_current_user/2` does. `nil` when there is neither. The session must
+  already be fetched.
+  """
+  @spec session_user_token(Plug.Conn.t()) :: {binary() | nil, Plug.Conn.t()}
+  def session_user_token(conn), do: ensure_user_token(conn)
 
   defp ensure_user_token(conn) do
     if user_token = get_session(conn, :user_token) do
