@@ -104,6 +104,16 @@ defmodule LightningWeb.API.SentinelSweepTest do
     }
   }
 
+  # Lightning's own app signs in and out here, reading the session cookie
+  # itself. The sweep's requests don't come from Lightning's pages, so a
+  # session cookie counts for nothing: signing in is refused, so another site
+  # can't sign a browser in, and the rest answer as for no session at all.
+  @session_api %{
+    {:post, "/api/session"} => @forbidden,
+    {:get, "/api/session"} => @session,
+    {:delete, "/api/session"} => {204, nil, []}
+  }
+
   setup do
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
@@ -295,6 +305,9 @@ defmodule LightningWeb.API.SentinelSweepTest do
               attempt in [:planted, :array],
        do: @forbidden
 
+  defp expected(%{pipeline: [:session_api], verb: verb, path: path}, _attempt),
+    do: Map.fetch!(@session_api, {verb, path})
+
   defp expected(%{pipeline: pipeline} = route, attempt) do
     row =
       Map.get(@pipelines, pipeline) || Map.get(@exceptions, pipeline) ||
@@ -366,7 +379,10 @@ defmodule LightningWeb.API.SentinelSweepTest do
       if code == :invalid_parameter, do: planted_ids(route, attempt), else: []
 
     with_route(route, attempt, fn ->
-      assert_problem(conn, status, code, entries)
+      if code,
+        do: assert_problem(conn, status, code, entries),
+        else: assert(conn.status == status)
+
       assert get_resp_header(conn, "www-authenticate") == challenges
       refute_sentinel(conn)
     end)

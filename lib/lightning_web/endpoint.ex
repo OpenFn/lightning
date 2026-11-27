@@ -21,10 +21,16 @@ defmodule LightningWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
+  #
+  # `SameSite=Lax` is what browsers already assume for a cookie that names no
+  # policy. It is written out because the API accepts this cookie as a
+  # person's credentials (`LightningWeb.SessionToken`), so the policy is one
+  # Lightning relies on rather than a browser default.
   @session_options [
     store: :cookie,
     key: "_lightning_key",
-    signing_salt: "XWf+17Ne"
+    signing_salt: "XWf+17Ne",
+    same_site: "Lax"
   ]
 
   socket "/live", Phoenix.LiveView.Socket,

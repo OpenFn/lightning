@@ -54,6 +54,14 @@ defmodule LightningWeb.Router do
     plug LightningWeb.Plugs.PersonOrServiceAccountAuth
   end
 
+  # Lightning's own app signing in and out, and what it reads before anyone
+  # has. The actions read the session cookie themselves, through
+  # `LightningWeb.SessionToken`.
+  pipeline :session_api do
+    plug :accepts, ["json"]
+    plug :refuse_unparsed
+  end
+
   pipeline :authenticated_api do
     plug :accepts, ["json"]
     plug :refuse_unparsed
@@ -168,6 +176,15 @@ defmodule LightningWeb.Router do
     pipe_through [:api]
 
     post "/users/register", API.RegistrationController, :create
+  end
+
+  ## Lightning's own app, before and while signing in
+  scope "/api", LightningWeb, as: :api do
+    pipe_through [:session_api]
+
+    resources "/session", API.SessionController,
+      singleton: true,
+      only: [:create, :show, :delete]
   end
 
   ## Cookie-authenticated JSON, for the app's own React components

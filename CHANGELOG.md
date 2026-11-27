@@ -43,6 +43,14 @@ and this project adheres to
 
 ### Added
 
+- Lightning's own web app can sign in to the API and call it as the person using
+  it. `POST /api/session` signs in with an email and password, and an MFA code
+  or backup code where the account has MFA; `GET /api/session` reads the session
+  and its CSRF token; `DELETE /api/session` signs out. The session cookie then
+  works on the `/api` routes that take a personal access token, but only on
+  requests from Lightning's own pages, and a write also needs the `x-csrf-token`
+  header. Failed sign-ins through the API are limited per account: ten in 15
+  minutes, and five wrong MFA codes end a pending sign-in.
 - An "Anonymous Usage Metrics" card on the Maintenance page shows whether usage
   metrics are enabled, where they're sent, and the instance UUID and its hash.
   [#5262](https://github.com/OpenFn/lightning/issues/5262)
@@ -95,6 +103,9 @@ and this project adheres to
 
 ### Fixed
 
+- Logging out now revokes the session's sudo token. It was looked up in its
+  Base64 form, which never matched, so it stayed valid until it expired five
+  minutes after it was made.
 - A form that loses a save race with another user, or saves a record someone
   else deleted, shows a message instead of crashing.
   [#5272](https://github.com/OpenFn/lightning/pull/5272)

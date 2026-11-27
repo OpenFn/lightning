@@ -19,9 +19,11 @@ config :logger, level: :info
 config :phoenix, :filter_parameters, [
   "assertion",
   "authorization",
+  "backup_code",
   "body",
   "credential",
   "key",
+  "mfa_code",
   "output_dataclip",
   "password",
   "pem",
