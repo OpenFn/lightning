@@ -480,12 +480,7 @@ LiveView is not traced, so the workflow editor produces no spans.
 #### What a span carries
 
 Every span is filtered before it leaves the instance. Only attributes on a
-reviewed list are exported, and every other attribute is removed. Lightning puts
-single-use tokens, collection keys and caller record identifiers in URLs, and an
-address identifies the person behind a request, so request paths, query strings,
-headers, user agents and network addresses are not on the list. Spans carry the
-route template instead, so a trace shows `GET /projects/:project_id/w` without
-the project id.
+reviewed list are exported, and every other attribute is removed.
 
 The exported attributes are:
 
@@ -495,43 +490,14 @@ The exported attributes are:
 | Oban jobs        | `messaging.system`, `messaging.operation.name`, `messaging.operation.type`, `messaging.message.id`, `messaging.client.id`, `messaging.destination.name`, `oban.job.job_id`, `oban.job.worker`, `oban.job.priority`, `oban.job.attempt`, `oban.job.max_attempts`, `oban.job.inserted_at`, `oban.job.scheduled_at`, `error.type` |
 | Database queries | `db.system`, `db.type`, `db.name`, `db.instance`, `source`, `total_time_microseconds`, `query_time_microseconds`, `queue_time_microseconds`, `decode_time_microseconds`, `idle_time_microseconds`                                                                                                                              |
 
-An attribute added by a new version of an instrumentation library is not
-exported until it has been reviewed and added to the list.
+Exception messages are not exported. An status of a form that Lightning does not
+recognise is exported as an error with the message
+`Lightning scrubbed unexpected status`. Span events are not recorded, so
+exceptions are not attached to spans as events. Lightning does not continue
+traces started by callers: an incoming `traceparent` header starts a new trace,
+and the link back to the caller's trace is removed before export.
 
-A trace will not tell you which client made a request. Use your proxy or load
-balancer logs for that.
-
-Exception messages are not exported. A span records that a request or job
-failed, and the exception type in `error.type`, but not what the exception said.
-The status message is cleared on every span, and the status code is kept. The
-application logs and Sentry still have the message.
-
-If the OpenTelemetry SDK records a status in a form Lightning does not
-recognise, the span is exported as an error with the message
-`Lightning scrubbed unexpected status`. If every span shows this after an
-upgrade, the cause is the upgrade, not a failure in Lightning.
-
-Span events are not recorded, so exceptions are not attached to spans as events.
-Lightning does not continue traces started by callers: an incoming `traceparent`
-header starts a new trace, and the link back to the caller's trace is removed
-before export.
-
-Span names are not filtered. Lightning creates no spans of its own, so every
-name comes from an instrumentation library: an HTTP method and route template,
-`process <queue>` for Oban jobs, or the repo and table for a query. Route
-templates, queue names and table names are fixed by Lightning's code and
-configuration, not taken from requests.
-
-The HTTP method is the exception. Most routes accept only the standard methods,
-but `/health_check` accepts any method, and its span is named after the method
-the caller sent. A request such as `PURGE /health_check` produces a span named
-`PURGE /health_check`. A caller can put text of their own choosing into a span
-name this way, but no one else's data.
-
-Because names are not filtered, a span name added in a later release, by
-Lightning or by an upgraded instrumentation library, is exported as written. If
-a trace shows a name built from request data, such as a path with ids in it,
-treat it as a bug and report it.
+Span names are not filtered.
 
 #### Instance id
 
@@ -549,9 +515,7 @@ The SDK keeps at most 128 attributes per span, or the value of
 `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT` if you set it. Attributes over the limit are
 dropped before Lightning filters the span, so a listed attribute can be among
 them. When that happens, Lightning logs a warning that starts
-`Spans with dropped attributes detected:` and names the affected spans.
-Lightning's spans carry far fewer than 128 attributes, so this warning usually
-means the limit has been set lower.
+`Spans with dropped attributes detected:`.
 
 #### Settings that stop the boot
 
@@ -559,18 +523,11 @@ Four mistakes stop the boot rather than being logged and ignored:
 
 - `OTEL_SDK_DISABLED` set to anything other than `true` or `false`.
 - Tracing on with neither endpoint variable set.
-- Tracing on with `OTEL_TRACES_EXPORTER` set. It replaces the exporter that
-  filters spans.
-- Tracing on with `OTEL_SPAN_EVENT_COUNT_LIMIT` set. It overrides the setting
-  that stops span events being recorded, and events are not filtered.
-
-For the last two, unset the variable or turn tracing off. Any value counts as
-set, including an empty one, because the SDK acts on an empty value instead of
-ignoring it.
-
-An empty value counts as unset for `OTEL_SDK_DISABLED` and for both endpoint
-variables, so a template or a Kubernetes operator that expands to nothing leaves
-the default in place.
+- Tracing on with `OTEL_TRACES_EXPORTER` set (this includes being 'set' to an
+  empty value). It replaces the exporter that filters spans.
+- Tracing on with `OTEL_SPAN_EVENT_COUNT_LIMIT` set (this includes being 'set'
+  to an empty value). It overrides the setting that stops span events being
+  recorded, and events are not filtered.
 
 The OpenTelemetry SDK reads its own variables from the real process environment,
 so `OTEL_*` entries in `.env` have no effect on it. If you wish to use the
@@ -605,7 +562,6 @@ when tracing is on.
 TRACING_ECTO_ENABLED=true
 ```
 
-Turn this on deliberately. It spans every query, so there is volume to plan for.
-Query spans carry the table, the database name and timings, as listed above. The
 statement, its parameters and the database URL are not exported, and the status
-message from a failed query is cleared like any other.
+message from a failed query is cleared like any other, but enabling this setting
+may result in large number of spans being exported.
