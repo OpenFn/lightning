@@ -72,6 +72,10 @@ defmodule Lightning.OpenTelemetryTest do
     refute OpentelemetryOban.PluginHandler in modules
   end
 
+  test "exposes the configuration options for opentelemetry_cowboy" do
+    assert OpenTelemetry.cowboy_config() == %{public_endpoint: true}
+  end
+
   defp otel_handlers do
     :telemetry.list_handlers([])
     |> Enum.filter(&(handler_module(&1) in @otel_modules))

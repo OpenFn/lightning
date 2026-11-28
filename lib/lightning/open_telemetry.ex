@@ -8,13 +8,11 @@ defmodule Lightning.OpenTelemetry do
   makes them cheap but not free.
   """
 
+  @cowboy_config %{public_endpoint: true}
+
   def setup do
     if Lightning.Config.otel_enabled?() do
-      # When changing the cowboy configuration, please look for any
-      # calls to :opentelemetry_cowboy.setup/1 in the tests and update them
-      # appropriately. As of October 2026, this would be
-      # Lightning.OpenTelemetry.RedactionCanaryTest.
-      :opentelemetry_cowboy.setup(%{public_endpoint: true})
+      :opentelemetry_cowboy.setup(cowboy_config())
 
       OpentelemetryPhoenix.setup(adapter: :cowboy2, liveview: false)
 
@@ -29,4 +27,6 @@ defmodule Lightning.OpenTelemetry do
 
     :ok
   end
+
+  def cowboy_config, do: @cowboy_config
 end
