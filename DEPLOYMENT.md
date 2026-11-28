@@ -278,6 +278,12 @@ For SMTP, the following environment variables are required:
 | `MIX_ENV`                                         | Your mix env, likely `prod` for deployment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `NODE_ENV`                                        | Node env, likely `production` for deployment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `ORIGINS`                                         | The allowed origins for web traffic to the backend                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                     | Base URL of the OTLP collector traces are sent to, for example `http://collector:4318`. Required when tracing is on, unless `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` is set. An empty value counts as unset. See [Tracing](#tracing).                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`              | Collector URL for traces only. Takes precedence over `OTEL_EXPORTER_OTLP_ENDPOINT`. An empty value counts as unset.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `OTEL_SDK_DISABLED`                               | The standard OpenTelemetry switch. Overrides `TRACING_ENABLED` wherever it is set to `true` or `false`. Any other value stops the boot. An empty value counts as unset.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `OTEL_SERVICE_NAME`                               | Name traces are reported under. Defaults to `lightning`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `OTEL_TRACES_SAMPLER`                             | Which sampler to use, for example `always_on` or `parentbased_traceidratio`. Defaults to parent based sampling at a 5% ratio.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `OTEL_TRACES_SAMPLER_ARG`                         | Argument for the chosen sampler, for example `0.1` for a ratio based one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `PER_WORKFLOW_CLAIM_LIMIT`                        | The maximum number of runs per workflow to consider during run claiming. This prevents any single workflow from dominating the processing queue while ensuring fairness across workflows.<br>Default is `50`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `CLAIM_WORK_MEM`                                  | PostgreSQL `work_mem` setting for the run claim query. Helps optimize complex sorting operations. Set to a valid PostgreSQL memory value (e.g., `32MB`, `64MB`, `1GB`). Set to empty string to disable.<br>Default: disabled in dev/test, `32MB` in production.                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `PORT`                                            | The port your Phoenix app runs on                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -296,6 +302,8 @@ For SMTP, the following environment variables are required:
 | `SECRET_KEY_BASE`                                 | A secret key used as a base to generate secrets for encrypting and signing data.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `SENTRY_DSN`                                      | If using Sentry for error monitoring, your DSN                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `SERVICE_ACCOUNT_PUBLIC_KEY`                      | An RSA public key of at least 2048 bits, as the PEM file's contents or that file base64-encoded. It sets up a service account that configures this instance through its API. While it is set, first setup is turned off. Lightning will not start if the value is wrong. See [Service accounts](SERVICE_ACCOUNTS.md) and [PEM keys in environment variables](#pem-keys-in-environment-variables).                                                                                                                                                                                                                                                                             |
+| `TRACING_ECTO_ENABLED`                            | Set to `true` to add a span for every database query. Needs tracing to be on. Off by default: it spans every query, and it exports database error messages, which can contain column values and so may expose sensitive data. See [Tracing](#tracing).                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `TRACING_ENABLED`                                 | Set to `true` to export OpenTelemetry traces. Off by default. An endpoint is required when it is on. See [Tracing](#tracing).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `URL_HOST`                                        | The host used for writing URLs (e.g., `demo.openfn.org`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `URL_PORT`                                        | The port, usually `443` for production                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `URL_SCHEME`                                      | The scheme for writing URLs (e.g., `https`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -449,3 +457,111 @@ attempts), stopping sooner if `WEBHOOK_RETRY_TIMEOUT_MS` elapses.
 **Server timeout alignment:** Set your Phoenix `IDLE_TIMEOUT` to be **at least**
 `WEBHOOK_RETRY_TIMEOUT_MS + 15000` (in milliseconds) so long retries finish
 before the connection is closed.
+
+### Tracing
+
+Lightning can export OpenTelemetry traces for HTTP requests and Oban jobs.
+Tracing is off unless you turn it on, and an endpoint is required when you do.
+
+```
+TRACING_ENABLED=true
+OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
+```
+
+Use `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` instead if traces go somewhere other
+than the rest of your telemetry. It wins over `OTEL_EXPORTER_OTLP_ENDPOINT`.
+
+`OTEL_SDK_DISABLED` is the standard OpenTelemetry switch, and it overrides
+`TRACING_ENABLED` wherever it is set. Use it to turn tracing off on one instance
+without changing the rest of its configuration.
+
+LiveView is not traced, so the workflow editor produces no spans.
+
+#### What a span carries
+
+Every span is filtered before it leaves the instance. Only attributes on a
+reviewed list are exported, and every other attribute is removed.
+
+The exported attributes are:
+
+| Spans for        | Attributes                                                                                                                                                                                                                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| HTTP requests    | `http.request.method`, `http.route`, `http.response.status_code`, `url.scheme`, `server.port`, `network.protocol.name`, `network.protocol.version`, `phoenix.plug`, `phoenix.action`, `error.type`                                                                                                                             |
+| Oban jobs        | `messaging.system`, `messaging.operation.name`, `messaging.operation.type`, `messaging.message.id`, `messaging.client.id`, `messaging.destination.name`, `oban.job.job_id`, `oban.job.worker`, `oban.job.priority`, `oban.job.attempt`, `oban.job.max_attempts`, `oban.job.inserted_at`, `oban.job.scheduled_at`, `error.type` |
+| Database queries | `db.system`, `db.type`, `db.name`, `db.instance`, `source`, `total_time_microseconds`, `query_time_microseconds`, `queue_time_microseconds`, `decode_time_microseconds`, `idle_time_microseconds`                                                                                                                              |
+
+Exception messages are not exported. An status of a form that Lightning does not
+recognise is exported as an error with the message
+`Lightning scrubbed unexpected status`. Span events are not recorded, so
+exceptions are not attached to spans as events. Lightning does not continue
+traces started by callers: an incoming `traceparent` header starts a new trace,
+and the link back to the caller's trace is removed before export.
+
+Span names are not filtered.
+
+#### Instance id
+
+`service.instance.id` is set to the host name, which is the pod name on
+Kubernetes. Without it, the SDK would use the Erlang node name, and on
+Kubernetes that contains the pod's IP address. Pods running with
+`hostNetwork: true` report the Kubernetes node's host name, so they share an id.
+
+To set the id yourself, use `OTEL_SERVICE_INSTANCE`. A `service.instance.id` in
+`OTEL_RESOURCE_ATTRIBUTES` is overridden by Lightning's value.
+
+#### Dropped attributes
+
+The SDK keeps at most 128 attributes per span, or the value of
+`OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT` if you set it. Attributes over the limit are
+dropped before Lightning filters the span, so a listed attribute can be among
+them. When that happens, Lightning logs a warning that starts
+`Spans with dropped attributes detected:`.
+
+#### Settings that stop the boot
+
+Four mistakes stop the boot rather than being logged and ignored:
+
+- `OTEL_SDK_DISABLED` set to anything other than `true` or `false`.
+- Tracing on with neither endpoint variable set.
+- Tracing on with `OTEL_TRACES_EXPORTER` set (this includes being 'set' to an
+  empty value). It replaces the exporter that filters spans.
+- Tracing on with `OTEL_SPAN_EVENT_COUNT_LIMIT` set (this includes being 'set'
+  to an empty value). It overrides the setting that stops span events being
+  recorded, and events are not filtered.
+
+The OpenTelemetry SDK reads its own variables from the real process environment,
+so `OTEL_*` entries in `.env` have no effect on it. If you wish to use the
+`OTEL_*` variables in a local dev instance, they will need to be set as OS ENV
+variables. The two endpoint variables (`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and
+`OTEL_EXPORTER_OTLP_ENDPOINT`) are the exception, because Lightning reads those
+itself and passes them on. Lightning also checks `.env` for
+`OTEL_TRACES_EXPORTER` and `OTEL_SPAN_EVENT_COUNT_LIMIT`, so an entry there
+stops the boot even though the SDK would not read it.
+
+A complete list of OpenTelemetry-supported environment variables can be found
+[here](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/).
+
+#### Sampling
+
+Lightning samples 5% of traces by default, decided once at the root of each
+trace. Set `OTEL_TRACES_SAMPLER=always_on` while you are checking that a
+collector works, or 19 of every 20 traces will be missing. It is not recommended
+to run with `always_on` in production.
+
+```
+OTEL_TRACES_SAMPLER=parentbased_traceidratio
+OTEL_TRACES_SAMPLER_ARG=0.1
+```
+
+#### Database query spans
+
+Query spans are a separate decision, and need to be independently enabled, even
+when tracing is on.
+
+```
+TRACING_ECTO_ENABLED=true
+```
+
+statement, its parameters and the database URL are not exported, and the status
+message from a failed query is cleared like any other, but enabling this setting
+may result in large number of spans being exported.
